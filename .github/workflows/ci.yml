@@ -35,11 +35,15 @@ jobs:
           xcrun simctl boot "$udid"
           echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
 
+      - name: Hash the package versions
+        id: packages
+        run: echo "hash=$(shasum -a 256 Overhead.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
       - name: Restore the Swift packages
         uses: actions/cache@v6
         with:
           path: SourcePackages
-          key: swiftpm-${{ hashFiles('Overhead.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: swiftpm-${{ steps.packages.outputs.hash }}
           restore-keys: swiftpm-
 
       - name: Lint the sources
