@@ -1,6 +1,6 @@
-# Lexicon
+# Overhead
 
-[![CI](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml/badge.svg)](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml)
+[![CI](https://github.com/mazzsva/Overhead/actions/workflows/ci.yml/badge.svg)](https://github.com/mazzsva/Overhead/actions/workflows/ci.yml)
 
 A vocabulary app for iOS that never loses a word.
 
