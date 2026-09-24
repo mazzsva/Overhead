@@ -23,12 +23,22 @@ jobs:
         run: |
           xcodebuild -version
           swift format --version
-          xcrun simctl list devices available
+
+      - name: Boot the simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | jq -r '
+            [.devices | to_entries[]
+              | select(.key | contains("SimRuntime.iOS-"))
+              | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone Air"))}]
+            | sort_by(.version) | last | .device.udid')
+          echo "Booting iPhone Air ($udid)"
+          xcrun simctl boot "$udid"
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
 
       - name: Restore the Swift packages
         uses: actions/cache@v6
         with:
-          path: ~/Library/Caches/org.swift.swiftpm
+          path: SourcePackages
           key: swiftpm-${{ hashFiles('Overhead.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: swiftpm-
 
@@ -39,7 +49,9 @@ jobs:
         run: |
           xcodebuild test \
             -scheme Overhead \
-            -destination 'platform=iOS Simulator,name=iPhone Air,OS=latest' \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -parallel-testing-enabled NO \
             -skipMacroValidation \
             -resultBundlePath TestResults.xcresult
 
