@@ -4,6 +4,6 @@
 
 ## Testing
 
-- [ ] Tests pass
-- [ ] No new warnings
+- [ ] All tests pass
+- [ ] No build warnings
 - [ ] I reviewed and understand every change
