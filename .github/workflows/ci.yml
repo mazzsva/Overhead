@@ -42,7 +42,7 @@ jobs:
       - name: Restore the Swift packages
         uses: actions/cache@v6
         with:
-          path: SourcePackages
+          path: ${{ runner.temp }}/SourcePackages
           key: swiftpm-${{ steps.packages.outputs.hash }}
           restore-keys: swiftpm-
 
@@ -54,7 +54,7 @@ jobs:
           xcodebuild test \
             -scheme Overhead \
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-            -clonedSourcePackagesDirPath SourcePackages \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -parallel-testing-enabled NO \
             -skipMacroValidation \
             -resultBundlePath TestResults.xcresult
