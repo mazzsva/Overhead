@@ -277,49 +277,6 @@ extension BaseSuite {
             #expect(!store.state.canFilterBookmarks)
         }
 
-        // The user can remember the meaning of an entry but not its term
-        @Test
-        func theSearchTextMatchesTheTermsAndTheDefinitions() async {
-            let state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.binding(.set(\.searchText, "candle"))) {
-                $0.searchText = "candle"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
-
-            await store.send(.binding(.set(\.searchText, "easiest"))) {
-                $0.searchText = "easiest"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
-        }
-
-        // The search runs inside the filter, so an unbookmarked match stays hidden
-        @Test
-        func theSearchTextAndTheBookmarkFilterApplyTogether() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.isShowingBookmarkedOnly = true
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.binding(.set(\.searchText, "candle"))) {
-                $0.searchText = "candle"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [])
-
-            await store.send(.binding(.set(\.searchText, "moon"))) {
-                $0.searchText = "moon"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
-        }
-
         // An empty list has three reasons, and each one needs its own message
         @Test
         func theEmptyStateFollowsTheEntriesAndTheFilters() async {
@@ -337,10 +294,6 @@ extension BaseSuite {
             }
             state.isShowingBookmarkedOnly = true
             expectNoDifference(state.emptyState, .bookmarks)
-
-            state.isShowingBookmarkedOnly = false
-            state.searchText = "nothing matches this"
-            expectNoDifference(state.emptyState, .search)
         }
 
         // A form without an entry creates one, and a form with an entry edits it

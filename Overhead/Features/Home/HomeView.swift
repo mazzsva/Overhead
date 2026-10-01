@@ -28,7 +28,6 @@ struct HomeView: View {
             }
             .scrollIndicators(.hidden)
             .groupedBackground()
-            .searchable(text: $store.searchText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarRole(.editor)
             .toolbar {
@@ -65,7 +64,6 @@ struct HomeView: View {
                     }
                     .buttonStyle(.borderedProminent)
                 }
-                DefaultToolbarItem(kind: .search, placement: .bottomBar)
             }
             .overlay {
                 switch store.emptyState {
@@ -81,8 +79,6 @@ struct HomeView: View {
                         systemImage: "tray.fill",
                         description: Text("Tap the plus button to add an entry.")
                     )
-                case .search:
-                    ContentUnavailableView.search(text: store.searchText)
                 case nil:
                     EmptyView()
                 }
