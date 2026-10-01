@@ -53,12 +53,6 @@ struct HomeView: View {
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Settings", systemImage: "gear") {
-                        store.send(.settingsButtonTapped)
-                    }
-                }
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                ToolbarItem(placement: .topBarTrailing) {
                     Button("New Entry", systemImage: "plus") {
                         store.send(.newEntryButtonTapped)
                     }
@@ -86,67 +80,61 @@ struct HomeView: View {
         } destination: { detailStore in
             EntryDetailView(store: detailStore)
         }
-        .task { await store.send(.task).finish() }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .sheet(
             item: $store.scope(state: \.destination?.createEntry, action: \.destination.createEntry)
         ) { formStore in
             EntryFormView(store: formStore)
         }
-        .sheet(
-            item: $store.scope(state: \.destination?.settings, action: \.destination.settings)
-        ) { settingsStore in
-            SettingsView(store: settingsStore)
-        }
     }
 }
 
 #Preview("Populated") {
-    HomeView(
-        store: Store(initialState: Home.State(user: .mock)) {
-            Home()
-        }
-    )
+    let store = Store(initialState: Home.State(user: .mock)) {
+        Home()
+    }
+    HomeView(store: store)
+        .task { await store.send(.task).finish() }
 }
 
 #Preview("Empty") {
-    HomeView(
-        store: Store(initialState: Home.State(user: .mock)) {
-            Home()
-        } withDependencies: {
-            $0.entriesClient.entries = { _ in
-                AsyncThrowingStream { continuation in
-                    continuation.yield(.empty)
-                }
+    let store = Store(initialState: Home.State(user: .mock)) {
+        Home()
+    } withDependencies: {
+        $0.entriesClient.entries = { _ in
+            AsyncThrowingStream { continuation in
+                continuation.yield(.empty)
             }
         }
-    )
+    }
+    HomeView(store: store)
+        .task { await store.send(.task).finish() }
 }
 
 #Preview("Syncing") {
-    HomeView(
-        store: Store(initialState: Home.State(user: .mock)) {
-            Home()
-        } withDependencies: {
-            $0.entriesClient.entries = { _ in
-                AsyncThrowingStream { continuation in
-                    continuation.yield(.syncing)
-                }
+    let store = Store(initialState: Home.State(user: .mock)) {
+        Home()
+    } withDependencies: {
+        $0.entriesClient.entries = { _ in
+            AsyncThrowingStream { continuation in
+                continuation.yield(.syncing)
             }
         }
-    )
+    }
+    HomeView(store: store)
+        .task { await store.send(.task).finish() }
 }
 
 #Preview("Offline") {
-    HomeView(
-        store: Store(initialState: Home.State(user: .mock)) {
-            Home()
-        } withDependencies: {
-            $0.networkMonitorClient.connectivityChanges = {
-                AsyncStream { continuation in
-                    continuation.yield(false)
-                }
+    let store = Store(initialState: Home.State(user: .mock)) {
+        Home()
+    } withDependencies: {
+        $0.networkMonitorClient.connectivityChanges = {
+            AsyncStream { continuation in
+                continuation.yield(false)
             }
         }
-    )
+    }
+    HomeView(store: store)
+        .task { await store.send(.task).finish() }
 }

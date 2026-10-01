@@ -35,7 +35,7 @@ extension BaseSuite {
 
                 authChanges.continuation.yield(.mock)
                 await store.receive(\.authUserChanged) {
-                    $0.scene = .home(Home.State(user: .mock))
+                    $0.scene = .tabs(Tabs.State(user: .mock))
                 }
 
                 revocations.continuation.yield()
@@ -63,7 +63,7 @@ extension BaseSuite {
                 }
 
                 await store.send(.authUserChanged(.mock)) {
-                    $0.scene = .home(Home.State(user: .mock))
+                    $0.scene = .tabs(Tabs.State(user: .mock))
                 }
                 await store.finish()
             }
@@ -183,7 +183,7 @@ extension BaseSuite {
                 }
 
                 await store.send(.authUserChanged(.mock)) {
-                    $0.scene = .home(Home.State(user: .mock, sessionOrigin: .restored))
+                    $0.scene = .tabs(Tabs.State(user: .mock, sessionOrigin: .restored))
                 }
                 await store.finish()
             }
@@ -202,8 +202,8 @@ extension BaseSuite {
             }
 
             await store.send(.authUserChanged(.mock)) {
-                $0.scene = .home(
-                    Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
+                $0.scene = .tabs(
+                    Tabs.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
                 )
             }
             await store.finish()
@@ -213,7 +213,7 @@ extension BaseSuite {
         @Test
         func theSameSignedInUserIsIgnored() async {
             var state = AppFeature.State()
-            state.scene = .home(Home.State(user: .mock))
+            state.scene = .tabs(Tabs.State(user: .mock))
 
             let store = TestStore(initialState: state) {
                 AppFeature()
@@ -226,7 +226,7 @@ extension BaseSuite {
         @Test
         func becomingActiveSignsTheUserOutWhenTheCredentialIsRevoked() async {
             var state = AppFeature.State()
-            state.scene = .home(Home.State(user: .mock))
+            state.scene = .tabs(Tabs.State(user: .mock))
 
             await confirmation("Signs the user out") { signsOut in
                 let store = TestStore(initialState: state) {
@@ -246,12 +246,10 @@ extension BaseSuite {
         // The deletion revokes the credential itself, and a sign out would stop it
         @Test
         func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
-            var settings = Settings.State(user: .mock)
-            settings.deletionStep = .credentialRevoked
-            var home = Home.State(user: .mock)
-            home.destination = .settings(settings)
+            var tabs = Tabs.State(user: .mock)
+            tabs.settings.deletionStep = .credentialRevoked
             var state = AppFeature.State()
-            state.scene = .home(home)
+            state.scene = .tabs(tabs)
 
             let store = TestStore(initialState: state) {
                 AppFeature()
@@ -277,22 +275,17 @@ extension BaseSuite {
             state.scene?.modify(\.signIn) { $0.step = .signingIn(isNewAccount: true) }
             expectNoDifference(state.loadingMessage, "Creating your account…")
 
-            var settings = Settings.State(user: .mock)
-            settings.deletionStep = .reauthenticating
-            var home = Home.State(user: .mock)
-            home.destination = .settings(settings)
-            state.scene = .home(home)
+            var tabs = Tabs.State(user: .mock)
+            tabs.settings.deletionStep = .reauthenticating
+            state.scene = .tabs(tabs)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, nil)
 
-            state.scene?
-                .modify(\.home) {
-                    $0.destination?.modify(\.settings) { $0.deletionStep = .deleting }
-                }
+            state.scene?.modify(\.tabs) { $0.settings.deletionStep = .deleting }
             expectNoDifference(state.loadingMessage, "Deleting your account…")
 
-            state.scene = .home(
-                Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            state.scene = .tabs(
+                Tabs.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
             )
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
@@ -307,7 +300,7 @@ extension BaseSuite {
         @Test
         func theLoadingMessageAppearsOnceTheAccountDeletionStarts() async {
             var state = AppFeature.State()
-            state.scene = .home(Home.State(user: .mock))
+            state.scene = .tabs(Tabs.State(user: .mock))
 
             let store = TestStore(initialState: state) {
                 AppFeature()
@@ -318,14 +311,11 @@ extension BaseSuite {
             }
             store.exhaustivity = .off
 
-            await store.send(\.scene.home.settingsButtonTapped)
-            await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped)
-            await store.send(
-                .scene(.home(.destination(.presented(.settings(.alert(.presented(.confirmAccountDeletion)))))))
-            )
+            await store.send(\.scene.tabs.settings.deleteAccountButtonTapped)
+            await store.send(.scene(.tabs(.settings(.alert(.presented(.confirmAccountDeletion))))))
             expectNoDifference(store.state.loadingMessage, nil)
 
-            await store.receive(\.scene.home.destination.settings.appleCredentialReceived)
+            await store.receive(\.scene.tabs.settings.appleCredentialReceived)
             expectNoDifference(store.state.loadingMessage, "Deleting your account…")
         }
 
@@ -334,7 +324,7 @@ extension BaseSuite {
         func switchingAccountsRestartsTheSession() async {
             let other = User(email: "other@example.com", uid: "other-uid")
             var state = AppFeature.State()
-            state.scene = .home(Home.State(user: .mock))
+            state.scene = .tabs(Tabs.State(user: .mock))
 
             let store = TestStore(initialState: state) {
                 AppFeature()
@@ -349,7 +339,7 @@ extension BaseSuite {
                 }
             }
             await store.receive(\.authUserChanged) {
-                $0.scene = .home(Home.State(user: other))
+                $0.scene = .tabs(Tabs.State(user: other))
             }
             await store.finish()
         }
@@ -358,7 +348,7 @@ extension BaseSuite {
         @Test
         func signingOutSettlesBeforeTheSignInAppears() async {
             var state = AppFeature.State()
-            state.scene = .home(Home.State(user: .mock))
+            state.scene = .tabs(Tabs.State(user: .mock))
 
             let clock = TestClock()
             await confirmation("Clears the local data") { clearsLocalData in

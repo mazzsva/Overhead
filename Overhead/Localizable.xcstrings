@@ -19,6 +19,9 @@
     "Bookmark an entry to find it here." : {
 
     },
+    "Bookmark your favorite entries to find them quickly." : {
+
+    },
     "Bookmarked" : {
 
     },
@@ -61,8 +64,8 @@
     "Email" : {
 
     },
-    "Overhead" : {
-      "shouldTranslate" : false
+    "Home" : {
+
     },
     "New Entry" : {
 
@@ -76,6 +79,9 @@
     "No Internet" : {
 
     },
+    "Overhead" : {
+      "shouldTranslate" : false
+    },
     "Remove Bookmark" : {
 
     },
@@ -83,9 +89,6 @@
 
     },
     "Save any word or phrase with a definition in your own words." : {
-
-    },
-    "Bookmark your favorite entries to find them quickly." : {
 
     },
     "Settings" : {

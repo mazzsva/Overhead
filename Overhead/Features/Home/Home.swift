@@ -15,7 +15,6 @@ struct Home {
     enum Destination {
         case alert(AlertState<Home.Alert>)
         case createEntry(EntryForm)
-        case settings(Settings)
     }
 
     enum Alert: Equatable {}
@@ -66,13 +65,9 @@ struct Home {
                 .map { SharedReader($0) }
         }
 
-        var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
-
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
         var isLoadingFirstEntries: Bool { entries == nil }
-
-        var isReauthenticating: Bool { destination?.settings?.isReauthenticating ?? false }
 
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
@@ -95,7 +90,6 @@ struct Home {
         case entrySaveFailed(Entry.ID, any Error)
         case newEntryButtonTapped
         case path(StackActionOf<EntryDetail>)
-        case settingsButtonTapped
         case task
     }
 
@@ -190,10 +184,6 @@ struct Home {
                 return save(entry, uid: state.user.uid)
 
             case .path:
-                return .none
-
-            case .settingsButtonTapped:
-                state.destination = .settings(Settings.State(user: state.user))
                 return .none
 
             case .task:

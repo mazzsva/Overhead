@@ -17,10 +17,10 @@ struct AppView: View {
         ZStack {
             if let sceneStore = store.scope(state: \.scene, action: \.scene) {
                 switch sceneStore.case {
-                case .home(let homeStore):
-                    HomeView(store: homeStore)
                 case .signIn(let signInStore):
                     SignInView(store: signInStore)
+                case .tabs(let tabsStore):
+                    TabsView(store: tabsStore)
                 }
             } else {
                 Color(.systemGroupedBackground)

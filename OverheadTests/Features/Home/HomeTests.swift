@@ -541,18 +541,6 @@ extension BaseSuite {
             await store.send(.entriesUpdated(.mock))
         }
 
-        // The settings need the user, and home is the scene that holds it
-        @Test
-        func theSettingsButtonOpensTheSettings() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
-            }
-
-            await store.send(.settingsButtonTapped) {
-                $0.destination = .settings(Settings.State(user: .mock))
-            }
-        }
-
         private struct EntriesFailure: Error {}
     }
 }

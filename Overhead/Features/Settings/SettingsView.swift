@@ -66,14 +66,6 @@ struct SettingsView: View {
                         .font(.title)
                         .fontWeight(.bold)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Dismiss", systemImage: "xmark") {
-                        store.send(.dismissButtonTapped)
-                    }
-                    .foregroundStyle(.secondary)
-                    .labelStyle(.iconOnly)
-                    .disabled(store.isDeletingAccount)
-                }
             }
             .alert($store.scope(state: \.alert, action: \.alert))
         }
@@ -84,8 +76,6 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom)
         }
-        // The swipe stays disabled at every step so the user leaves Settings only through the Dismiss button
-        .interactiveDismissDisabled()
     }
 }
 
