@@ -49,7 +49,7 @@ extension BaseSuite {
 
         // Apple can revoke the credential while the app does not run
         @Test
-        func aSignedInUserAtLaunchRoutesToHomeAndVerifiesTheCredential() async {
+        func aSignedInUserAtLaunchRoutesToTabsAndVerifiesTheCredential() async {
             await confirmation("Verifies the Apple credential") { verifiesCredential in
                 let store = TestStore(initialState: AppFeature.State()) {
                     AppFeature()
@@ -167,7 +167,7 @@ extension BaseSuite {
 
         // The sign in scene shows first at launch, so a restored session comes through it
         @Test
-        func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
+        func aRestoredSessionRoutesToTabsAndVerifiesTheCredential() async {
             var state = AppFeature.State()
             state.scene = .signIn(SignIn.State())
 
@@ -191,7 +191,7 @@ extension BaseSuite {
 
         // Apple authorized the user a moment ago, so the app does not check the credential again
         @Test
-        func finishingTheSignInRoutesToHomeAsAFreshSignIn() async {
+        func finishingTheSignInRoutesToTabsAsAFreshSignIn() async {
             var signIn = SignIn.State()
             signIn.step = .signingIn(isNewAccount: true)
             var state = AppFeature.State()
