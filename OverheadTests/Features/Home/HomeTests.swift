@@ -16,7 +16,7 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct HomeTests {
-        // The entries stream and the network monitor start with the scene
+        // The entries stream and the network monitor start with the session
         @Test
         func theTaskObservesTheEntriesAndTheConnectivity() async {
             let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
@@ -72,13 +72,17 @@ extension BaseSuite {
             }
         }
 
-        // The count ignores the search text and the bookmark filter
+        // The count includes the entries that the bookmark filter hides
         @Test
         func theEntryCountFollowsTheEntries() {
-            let state = Home.State(user: .mock)
+            var state = Home.State(user: .mock)
             expectNoDifference(state.entryCount, 0)
 
             state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            expectNoDifference(state.entryCount, 3)
+
+            state.isShowingBookmarkedOnly = true
+            expectNoDifference(state.filteredEntries.count, 1)
             expectNoDifference(state.entryCount, 3)
         }
 
@@ -277,7 +281,7 @@ extension BaseSuite {
             #expect(!store.state.canFilterBookmarks)
         }
 
-        // An empty list has three reasons, and each one needs its own message
+        // An empty list has two reasons, and each one needs its own message
         @Test
         func theEmptyStateFollowsTheEntriesAndTheFilters() async {
             var state = Home.State(user: .mock)
