@@ -1,5 +1,5 @@
 //
-//  EntriesClient.swift
+//  ExpensesClient.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 15/07/26.
@@ -13,32 +13,32 @@ import IssueReporting
 import os
 
 @DependencyClient
-struct EntriesClient: Sendable {
+struct ExpensesClient: Sendable {
     var clearLocalData: @Sendable () async throws -> Void
-    var delete: @Sendable (_ id: Entry.ID, _ uid: String) async throws -> Void
+    var delete: @Sendable (_ id: Expense.ID, _ uid: String) async throws -> Void
     var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
-    var entries: @Sendable (_ uid: String) async -> AsyncThrowingStream<EntriesSnapshot, any Error> = { _ in
+    var expenses: @Sendable (_ uid: String) async -> AsyncThrowingStream<ExpensesSnapshot, any Error> = { _ in
         AsyncThrowingStream { _ in }
     }
 
-    var save: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
+    var save: @Sendable (_ expense: Expense, _ uid: String) async throws -> Void
 }
 
-struct EntriesSnapshot: Equatable, Sendable {
-    let entries: [Entry]
+struct ExpensesSnapshot: Equatable, Sendable {
+    let expenses: [Expense]
     let isSyncing: Bool
 }
 
-extension EntriesSnapshot {
-    static let empty = EntriesSnapshot(entries: [], isSyncing: false)
-    static let mock = EntriesSnapshot(entries: Entry.mocks, isSyncing: false)
-    static let syncing = EntriesSnapshot(entries: Entry.mocks, isSyncing: true)
+extension ExpensesSnapshot {
+    static let empty = ExpensesSnapshot(expenses: [], isSyncing: false)
+    static let mock = ExpensesSnapshot(expenses: Expense.mocks, isSyncing: false)
+    static let syncing = ExpensesSnapshot(expenses: Expense.mocks, isSyncing: true)
 }
 
-extension EntriesClient: DependencyKey {
-    static var liveValue: EntriesClient {
-        EntriesClient(
+extension ExpensesClient: DependencyKey {
+    static var liveValue: ExpensesClient {
+        ExpensesClient(
             clearLocalData: {
                 try await FirestoreStorage.shared.clearLocalData()
             },
@@ -48,21 +48,21 @@ extension EntriesClient: DependencyKey {
             deleteAll: { uid in
                 try await FirestoreStorage.shared.deleteAll(uid: uid)
             },
-            entries: { uid in
-                await FirestoreStorage.shared.entries(uid: uid)
+            expenses: { uid in
+                await FirestoreStorage.shared.expenses(uid: uid)
             },
-            save: { entry, uid in
-                try await FirestoreStorage.shared.save(entry, uid: uid)
+            save: { expense, uid in
+                try await FirestoreStorage.shared.save(expense, uid: uid)
             }
         )
     }
 
-    static var previewValue: EntriesClient {
-        EntriesClient(
+    static var previewValue: ExpensesClient {
+        ExpensesClient(
             clearLocalData: {},
             delete: { _, _ in },
             deleteAll: { _ in },
-            entries: { _ in
+            expenses: { _ in
                 AsyncThrowingStream { continuation in
                     continuation.yield(.mock)
                 }
@@ -71,15 +71,15 @@ extension EntriesClient: DependencyKey {
         )
     }
 
-    static var testValue: EntriesClient {
-        EntriesClient()
+    static var testValue: ExpensesClient {
+        ExpensesClient()
     }
 }
 
 extension DependencyValues {
-    var entriesClient: EntriesClient {
-        get { self[EntriesClient.self] }
-        set { self[EntriesClient.self] = newValue }
+    var expensesClient: ExpensesClient {
+        get { self[ExpensesClient.self] }
+        set { self[ExpensesClient.self] = newValue }
     }
 }
 
@@ -102,16 +102,16 @@ private actor FirestoreStorage {
         try await clearing.value
     }
 
-    func delete(id: Entry.ID, uid: String) async throws {
+    func delete(id: Expense.ID, uid: String) async throws {
         await waitForClearing()
-        try await entriesCollection(uid: uid).document(id.uuidString).delete()
+        try await expensesCollection(uid: uid).document(id.uuidString).delete()
     }
 
     func deleteAll(uid: String) async throws {
         await waitForClearing()
         while true {
             try Task.checkCancellation()
-            let snapshot = try await entriesCollection(uid: uid).limit(to: 500).getDocuments()
+            let snapshot = try await expensesCollection(uid: uid).limit(to: 500).getDocuments()
             guard !snapshot.documents.isEmpty else { return }
             let batch = Firestore.firestore().batch()
             for document in snapshot.documents {
@@ -121,10 +121,10 @@ private actor FirestoreStorage {
         }
     }
 
-    func entries(uid: String) async -> AsyncThrowingStream<EntriesSnapshot, any Error> {
+    func expenses(uid: String) async -> AsyncThrowingStream<ExpensesSnapshot, any Error> {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
-            nonisolated(unsafe) let listener = entriesCollection(uid: uid)
+            nonisolated(unsafe) let listener = expensesCollection(uid: uid)
                 .order(by: "createdAt", descending: true)
                 .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
                     if let error {
@@ -132,12 +132,12 @@ private actor FirestoreStorage {
                         return
                     }
                     guard let snapshot else {
-                        reportIssue("Entries listener reported neither a snapshot nor an error.")
+                        reportIssue("Expenses listener reported neither a snapshot nor an error.")
                         return
                     }
                     continuation.yield(
-                        EntriesSnapshot(
-                            entries: snapshot.documents.compactMap(Entry.init(document:)),
+                        ExpensesSnapshot(
+                            expenses: snapshot.documents.compactMap(Expense.init(document:)),
                             isSyncing: snapshot.metadata.isFromCache || snapshot.metadata.hasPendingWrites
                         )
                     )
@@ -148,9 +148,9 @@ private actor FirestoreStorage {
         }
     }
 
-    func save(_ entry: Entry, uid: String) async throws {
+    func save(_ expense: Expense, uid: String) async throws {
         await waitForClearing()
-        try await entriesCollection(uid: uid).document(entry.id.uuidString).setData(entry.documentData)
+        try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData)
     }
 
     private func waitForClearing() async {
@@ -158,11 +158,11 @@ private actor FirestoreStorage {
     }
 }
 
-private func entriesCollection(uid: String) -> CollectionReference {
+private func expensesCollection(uid: String) -> CollectionReference {
     Firestore.firestore().collection("users").document(uid).collection("entries")
 }
 
-extension Entry {
+extension Expense {
     fileprivate init?(document: QueryDocumentSnapshot) {
         let data = document.data()
         guard
@@ -172,8 +172,8 @@ extension Entry {
             let isBookmarked = data["isBookmarked"] as? Bool,
             let term = data["term"] as? String
         else {
-            logger.error("Skipping entry document \(document.documentID, privacy: .public) that failed to decode.")
-            reportIssue("Skipping entry document \(document.documentID) that failed to decode.")
+            logger.error("Skipping expense document \(document.documentID, privacy: .public) that failed to decode.")
+            reportIssue("Skipping expense document \(document.documentID) that failed to decode.")
             return nil
         }
         self.init(
@@ -195,4 +195,4 @@ extension Entry {
     }
 }
 
-private let logger = Logger(category: "EntriesClient")
+private let logger = Logger(category: "ExpensesClient")

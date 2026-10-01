@@ -14,7 +14,7 @@ enum SyncStatus: Equatable {
 }
 
 struct SyncStatusLabel: View {
-    let entryCount: Int
+    let expenseCount: Int
     let status: SyncStatus
 
     var body: some View {
@@ -42,7 +42,7 @@ struct SyncStatusLabel: View {
         case .offline:
             "No Internet"
         case .synced, .syncing:
-            entryCount == 0 ? "No Entries" : "^[\(entryCount) Entry](inflect: true)"
+            expenseCount == 0 ? "No Expenses" : "^[\(expenseCount) Expense](inflect: true)"
         }
     }
 }
@@ -58,7 +58,7 @@ struct SyncStatusLabel: View {
                         Text("Overhead")
                             .font(.title)
                             .fontWeight(.bold)
-                        SyncStatusLabel(entryCount: 24, status: .syncing)
+                        SyncStatusLabel(expenseCount: 24, status: .syncing)
                     }
                 }
             }
@@ -67,11 +67,11 @@ struct SyncStatusLabel: View {
 
 #Preview("States") {
     VStack(alignment: .leading, spacing: 16) {
-        SyncStatusLabel(entryCount: 24, status: .synced)
-        SyncStatusLabel(entryCount: 1, status: .synced)
-        SyncStatusLabel(entryCount: 0, status: .synced)
-        SyncStatusLabel(entryCount: 24, status: .syncing)
-        SyncStatusLabel(entryCount: 24, status: .offline)
+        SyncStatusLabel(expenseCount: 24, status: .synced)
+        SyncStatusLabel(expenseCount: 1, status: .synced)
+        SyncStatusLabel(expenseCount: 0, status: .synced)
+        SyncStatusLabel(expenseCount: 24, status: .syncing)
+        SyncStatusLabel(expenseCount: 24, status: .offline)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .groupedBackground()

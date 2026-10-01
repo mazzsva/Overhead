@@ -12,13 +12,13 @@ struct HomeView: View {
     @Bindable var store: StoreOf<Home>
 
     var body: some View {
-        let visibleEntries = store.filteredEntries
+        let visibleExpenses = store.filteredExpenses
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    ForEach(visibleEntries) { $entry in
-                        NavigationLink(state: EntryDetail.State(entry: $entry)) {
-                            EntryCardView(entry: entry)
+                    ForEach(visibleExpenses) { $expense in
+                        NavigationLink(state: ExpenseDetail.State(expense: $expense)) {
+                            ExpenseCardView(expense: expense)
                         }
                         .buttonStyle(.plain)
                     }
@@ -36,13 +36,13 @@ struct HomeView: View {
                         Text("Overhead")
                             .font(.title)
                             .fontWeight(.bold)
-                        SyncStatusLabel(entryCount: store.entryCount, status: store.syncStatus)
+                        SyncStatusLabel(expenseCount: store.expenseCount, status: store.syncStatus)
                     }
                 }
                 if store.canFilterBookmarks {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(
-                            store.isShowingBookmarkedOnly ? "Show All Entries" : "Show Bookmarked Entries",
+                            store.isShowingBookmarkedOnly ? "Show All Expenses" : "Show Bookmarked Expenses",
                             systemImage: store.isShowingBookmarkedOnly ? "bookmark.fill" : "bookmark"
                         ) {
                             store.send(.bookmarkFilterButtonTapped)
@@ -53,8 +53,8 @@ struct HomeView: View {
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("New Entry", systemImage: "plus") {
-                        store.send(.newEntryButtonTapped)
+                    Button("New Expense", systemImage: "plus") {
+                        store.send(.newExpenseButtonTapped)
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -65,25 +65,25 @@ struct HomeView: View {
                     ContentUnavailableView(
                         "No Bookmarks",
                         systemImage: "bookmark.fill",
-                        description: Text("Bookmark an entry to find it here.")
+                        description: Text("Bookmark an expense to find it here.")
                     )
-                case .entries:
+                case .expenses:
                     ContentUnavailableView(
-                        "No Entries",
+                        "No Expenses",
                         systemImage: "tray.fill",
-                        description: Text("Tap the plus button to add an entry.")
+                        description: Text("Tap the plus button to add an expense.")
                     )
                 case nil:
                     EmptyView()
                 }
             }
         } destination: { detailStore in
-            EntryDetailView(store: detailStore)
+            ExpenseDetailView(store: detailStore)
         }
         .sheet(
-            item: $store.scope(state: \.destination?.createEntry, action: \.destination.createEntry)
+            item: $store.scope(state: \.destination?.createExpense, action: \.destination.createExpense)
         ) { formStore in
-            EntryFormView(store: formStore)
+            ExpenseFormView(store: formStore)
         }
     }
 }
@@ -100,7 +100,7 @@ struct HomeView: View {
     let store = Store(initialState: Home.State(user: .mock)) {
         Home()
     } withDependencies: {
-        $0.entriesClient.entries = { _ in
+        $0.expensesClient.expenses = { _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.empty)
             }
@@ -114,7 +114,7 @@ struct HomeView: View {
     let store = Store(initialState: Home.State(user: .mock)) {
         Home()
     } withDependencies: {
-        $0.entriesClient.entries = { _ in
+        $0.expensesClient.expenses = { _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.syncing)
             }

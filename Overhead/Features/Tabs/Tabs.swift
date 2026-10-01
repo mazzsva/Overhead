@@ -10,7 +10,7 @@ import Foundation
 
 @Reducer
 struct Tabs {
-    enum EntryOperation: Hashable {
+    enum ExpenseOperation: Hashable {
         case delete
         case save
     }
@@ -23,7 +23,7 @@ struct Tabs {
 
     @ObservableState
     struct State: Equatable {
-        var failedEntryOperations: Set<EntryOperation> = []
+        var failedExpenseOperations: Set<ExpenseOperation> = []
         @SharedReader(.hasDismissedWelcome) var hasDismissedWelcome
         var home: Home.State
         var selectedTab = Tab.overview
@@ -36,12 +36,12 @@ struct Tabs {
             self.user = user
         }
 
-        var entryFailureMessage: String {
-            switch failedEntryOperations {
+        var expenseFailureMessage: String {
+            switch failedExpenseOperations {
             case [.delete]:
-                return String(localized: "Your entry couldn't be deleted.")
+                return String(localized: "Your expense couldn't be deleted.")
             case [.save]:
-                return String(localized: "Your entry couldn't be saved.")
+                return String(localized: "Your expense couldn't be saved.")
             default:
                 return String(localized: "Some of your changes couldn't be saved.")
             }
@@ -49,10 +49,10 @@ struct Tabs {
 
         var isDeletingAccount: Bool { settings.isDeletingAccount }
 
-        var isLoadingFirstEntries: Bool { home.isLoadingFirstEntries }
+        var isLoadingFirstExpenses: Bool { home.isLoadingFirstExpenses }
 
-        var isPresentingEntryFailure: Bool {
-            !failedEntryOperations.isEmpty && !isPresentingAnythingElse
+        var isPresentingExpenseFailure: Bool {
+            !failedExpenseOperations.isEmpty && !isPresentingAnythingElse
         }
 
         var isReauthenticating: Bool { settings.isReauthenticating }
@@ -60,12 +60,12 @@ struct Tabs {
         var sessionOrigin: Home.State.SessionOrigin { home.sessionOrigin }
 
         private var isPresentingAnythingElse: Bool {
-            home.isPresenting || settings.isPresenting || isLoadingFirstEntries || !hasDismissedWelcome
+            home.isPresenting || settings.isPresenting || isLoadingFirstExpenses || !hasDismissedWelcome
         }
     }
 
     enum Action {
-        case entryFailurePresentationChanged(Bool)
+        case expenseFailurePresentationChanged(Bool)
         case home(Home.Action)
         case selectedTabChanged(Tab)
         case settings(Settings.Action)
@@ -80,20 +80,20 @@ struct Tabs {
         }
         Reduce { state, action in
             switch action {
-            case .entryFailurePresentationChanged(false):
-                guard state.isPresentingEntryFailure else { return .none }
-                state.failedEntryOperations.removeAll()
+            case .expenseFailurePresentationChanged(false):
+                guard state.isPresentingExpenseFailure else { return .none }
+                state.failedExpenseOperations.removeAll()
                 return .none
 
-            case .entryFailurePresentationChanged(true):
+            case .expenseFailurePresentationChanged(true):
                 return .none
 
             case .home(.delegate(.didFailToDelete)):
-                state.failedEntryOperations.insert(.delete)
+                state.failedExpenseOperations.insert(.delete)
                 return .none
 
             case .home(.delegate(.didFailToSave)):
-                state.failedEntryOperations.insert(.save)
+                state.failedExpenseOperations.insert(.save)
                 return .none
 
             case .home, .settings:

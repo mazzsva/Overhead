@@ -13,23 +13,23 @@ import os
 struct Home {
     @Reducer
     enum Destination {
-        case createEntry(EntryForm)
+        case createExpense(ExpenseForm)
     }
 
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @Shared var entries: IdentifiedArrayOf<Entry>?
+        @Shared var expenses: IdentifiedArrayOf<Expense>?
         var isOnline = true
         var isShowingBookmarkedOnly = false
         var isSyncing = true
-        var path = StackState<EntryDetail.State>()
+        var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User
 
         enum EmptyState: Equatable {
             case bookmarks
-            case entries
+            case expenses
         }
 
         @CasePathable
@@ -40,31 +40,31 @@ struct Home {
         }
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
-            _entries = Shared(value: nil)
+            _expenses = Shared(value: nil)
             self.sessionOrigin = sessionOrigin
             self.user = user
         }
 
-        var canFilterBookmarks: Bool { entryCount > 0 }
+        var canFilterBookmarks: Bool { expenseCount > 0 }
 
         var emptyState: EmptyState? {
-            guard entries != nil, filteredEntries.isEmpty else { return nil }
-            if entryCount == 0 { return .entries }
+            guard expenses != nil, filteredExpenses.isEmpty else { return nil }
+            if expenseCount == 0 { return .expenses }
             return .bookmarks
         }
 
-        var entryCount: Int { entries?.count ?? 0 }
+        var expenseCount: Int { expenses?.count ?? 0 }
 
-        var filteredEntries: [SharedReader<Entry>] {
-            guard let entries = Shared($entries) else { return [] }
-            return Array(entries)
+        var filteredExpenses: [SharedReader<Expense>] {
+            guard let expenses = Shared($expenses) else { return [] }
+            return Array(expenses)
                 .filter { isVisible($0.wrappedValue) }
                 .map { SharedReader($0) }
         }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
-        var isLoadingFirstEntries: Bool { entries == nil }
+        var isLoadingFirstExpenses: Bool { expenses == nil }
 
         var isPresenting: Bool {
             destination != nil || path.contains { $0.isPresenting }
@@ -75,8 +75,8 @@ struct Home {
             return isSyncing ? .syncing : .synced
         }
 
-        private func isVisible(_ entry: Entry) -> Bool {
-            !isShowingBookmarkedOnly || entry.isBookmarked
+        private func isVisible(_ expense: Expense) -> Bool {
+            !isShowingBookmarkedOnly || expense.isBookmarked
         }
     }
 
@@ -85,11 +85,11 @@ struct Home {
         case connectivityChanged(Bool)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
-        case entriesRetryTimerElapsed
-        case entriesStreamFailed
-        case entriesUpdated(EntriesSnapshot)
-        case newEntryButtonTapped
-        case path(StackActionOf<EntryDetail>)
+        case expensesRetryTimerElapsed
+        case expensesStreamFailed
+        case expensesUpdated(ExpensesSnapshot)
+        case newExpenseButtonTapped
+        case path(StackActionOf<ExpenseDetail>)
         case task
 
         @CasePathable
@@ -101,11 +101,11 @@ struct Home {
 
     enum CancelID {
         case connectivitySubscription
-        case entriesSubscription
+        case expensesSubscription
     }
 
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.entriesClient) var entriesClient
+    @Dependency(\.expensesClient) var expensesClient
     @Dependency(\.hapticsClient) var hapticsClient
     @Dependency(\.networkMonitorClient) var networkMonitorClient
 
@@ -123,62 +123,62 @@ struct Home {
             case .delegate:
                 return .none
 
-            case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
+            case .destination(.presented(.createExpense(.delegate(.didSubmit(let expense))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },
-                    save(entry, uid: state.user.uid)
+                    save(expense, uid: state.user.uid)
                 )
 
             case .destination:
                 return .none
 
-            case .entriesRetryTimerElapsed:
-                return subscribeToEntries(state)
+            case .expensesRetryTimerElapsed:
+                return subscribeToExpenses(state)
 
-            case .entriesStreamFailed:
+            case .expensesStreamFailed:
                 state.isSyncing = true
                 let retry: Effect<Action> =
                     .run { send in
                         try await clock.sleep(for: .seconds(5))
-                        await send(.entriesRetryTimerElapsed)
+                        await send(.expensesRetryTimerElapsed)
                     }
-                    .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
-                guard state.entries == nil else { return retry }
-                state.$entries.withLock { $0 = [] }
+                    .cancellable(id: CancelID.expensesSubscription, cancelInFlight: true)
+                guard state.expenses == nil else { return retry }
+                state.$expenses.withLock { $0 = [] }
                 return .merge(retry, celebrateFirstLoad(state))
 
-            case .entriesUpdated(let snapshot):
-                let isFirstLoad = state.entries == nil
+            case .expensesUpdated(let snapshot):
+                let isFirstLoad = state.expenses == nil
                 state.isSyncing = snapshot.isSyncing
-                let entries = IdentifiedArray(uniqueElements: snapshot.entries)
-                state.$entries.withLock { $0 = entries }
-                if entries.isEmpty {
+                let expenses = IdentifiedArray(uniqueElements: snapshot.expenses)
+                state.$expenses.withLock { $0 = expenses }
+                if expenses.isEmpty {
                     state.isShowingBookmarkedOnly = false
                 }
                 for id in Array(state.path.ids) {
                     guard
-                        let entryID = state.path[id: id]?.entry.id,
-                        entries[id: entryID] == nil
+                        let expenseID = state.path[id: id]?.expense.id,
+                        expenses[id: expenseID] == nil
                     else { continue }
                     state.path.pop(from: id)
                 }
                 guard isFirstLoad else { return .none }
                 return celebrateFirstLoad(state)
 
-            case .newEntryButtonTapped:
-                state.destination = .createEntry(EntryForm.State())
+            case .newExpenseButtonTapped:
+                state.destination = .createExpense(ExpenseForm.State())
                 return .none
 
-            case .path(.element(id: let id, action: .delegate(.didDelete(let entryID)))):
+            case .path(.element(id: let id, action: .delegate(.didDelete(let expenseID)))):
                 state.path.pop(from: id)
                 return .merge(
                     .run { _ in await hapticsClient.warning() },
-                    delete(entryID, uid: state.user.uid)
+                    delete(expenseID, uid: state.user.uid)
                 )
 
-            case .path(.element(id: _, action: .delegate(.didUpdate(let entry)))):
-                return save(entry, uid: state.user.uid)
+            case .path(.element(id: _, action: .delegate(.didUpdate(let expense)))):
+                return save(expense, uid: state.user.uid)
 
             case .path:
                 return .none
@@ -186,26 +186,26 @@ struct Home {
             case .task:
                 return .merge(
                     observeConnectivity(),
-                    subscribeToEntries(state)
+                    subscribeToExpenses(state)
                 )
             }
         }
         .ifLet(\.$destination, action: \.destination)
         .forEach(\.path, action: \.path) {
-            EntryDetail()
+            ExpenseDetail()
         }
     }
 
-    // The haptic welcomes the user into the app, so it plays even when the entries fail to load
+    // The haptic welcomes the user into the app, so it plays even when the expenses fail to load
     private func celebrateFirstLoad(_ state: State) -> Effect<Action> {
         state.isFreshSignIn ? .run { _ in await hapticsClient.success() } : .none
     }
 
-    private func delete(_ id: Entry.ID, uid: String) -> Effect<Action> {
+    private func delete(_ id: Expense.ID, uid: String) -> Effect<Action> {
         .run { _ in
-            try await entriesClient.delete(id: id, uid: uid)
+            try await expensesClient.delete(id: id, uid: uid)
         } catch: { error, send in
-            logger.error("Deleting entry \(id, privacy: .public) failed: \(error, privacy: .public)")
+            logger.error("Deleting expense \(id, privacy: .public) failed: \(error, privacy: .public)")
             await send(.delegate(.didFailToDelete))
         }
     }
@@ -219,30 +219,30 @@ struct Home {
         .cancellable(id: CancelID.connectivitySubscription, cancelInFlight: true)
     }
 
-    private func save(_ entry: Entry, uid: String) -> Effect<Action> {
+    private func save(_ expense: Expense, uid: String) -> Effect<Action> {
         .run { _ in
-            try await entriesClient.save(entry: entry, uid: uid)
+            try await expensesClient.save(expense: expense, uid: uid)
         } catch: { error, send in
-            logger.error("Saving entry \(entry.id, privacy: .public) failed: \(error, privacy: .public)")
+            logger.error("Saving expense \(expense.id, privacy: .public) failed: \(error, privacy: .public)")
             await send(.delegate(.didFailToSave))
         }
     }
 
-    private func subscribeToEntries(_ state: State) -> Effect<Action> {
+    private func subscribeToExpenses(_ state: State) -> Effect<Action> {
         let uid = state.user.uid
         return
             .run { send in
                 do {
-                    let snapshots = await entriesClient.entries(uid: uid)
+                    let snapshots = await expensesClient.expenses(uid: uid)
                     for try await snapshot in snapshots {
-                        await send(.entriesUpdated(snapshot))
+                        await send(.expensesUpdated(snapshot))
                     }
                 } catch {
-                    logger.error("Entries stream failed: \(error, privacy: .public)")
-                    await send(.entriesStreamFailed)
+                    logger.error("Expenses stream failed: \(error, privacy: .public)")
+                    await send(.expensesStreamFailed)
                 }
             }
-            .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
+            .cancellable(id: CancelID.expensesSubscription, cancelInFlight: true)
     }
 }
 

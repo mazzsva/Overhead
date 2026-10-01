@@ -1,5 +1,5 @@
 //
-//  EntryForm.swift
+//  ExpenseForm.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 20/07/26.
@@ -9,21 +9,21 @@ import ComposableArchitecture
 import Foundation
 
 @Reducer
-struct EntryForm {
+struct ExpenseForm {
     @ObservableState
     struct State: Equatable {
         var definition: String
-        let entry: Entry?
+        let expense: Expense?
         var term: String
 
-        init(entry: Entry? = nil) {
-            self.entry = entry
-            definition = entry?.definition ?? ""
-            term = entry?.term ?? ""
+        init(expense: Expense? = nil) {
+            self.expense = expense
+            definition = expense?.definition ?? ""
+            term = expense?.term ?? ""
         }
 
         var isCreating: Bool {
-            entry == nil
+            expense == nil
         }
 
         var isSubmittable: Bool {
@@ -39,7 +39,7 @@ struct EntryForm {
 
         @CasePathable
         enum Delegate {
-            case didSubmit(Entry)
+            case didSubmit(Expense)
         }
     }
 
@@ -64,15 +64,15 @@ struct EntryForm {
                 guard state.isSubmittable else { return .none }
                 let term = state.term.trimmingCharacters(in: .whitespacesAndNewlines)
                 let definition = state.definition.trimmingCharacters(in: .whitespacesAndNewlines)
-                let original = state.entry
-                let entry = Entry(
+                let original = state.expense
+                let expense = Expense(
                     createdAt: original?.createdAt ?? now,
                     definition: definition,
                     id: original?.id ?? uuid(),
                     isBookmarked: original?.isBookmarked ?? false,
                     term: term
                 )
-                return .send(.delegate(.didSubmit(entry)))
+                return .send(.delegate(.didSubmit(expense)))
             }
         }
     }

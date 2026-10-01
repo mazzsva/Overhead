@@ -24,10 +24,10 @@ extension BaseSuite {
             }
 
             await store.send(.home(.delegate(.didFailToSave))) {
-                $0.failedEntryOperations = [.save]
+                $0.failedExpenseOperations = [.save]
             }
-            #expect(store.state.isPresentingEntryFailure)
-            expectNoDifference(store.state.entryFailureMessage, "Your entry couldn't be saved.")
+            #expect(store.state.isPresentingExpenseFailure)
+            expectNoDifference(store.state.expenseFailureMessage, "Your expense couldn't be saved.")
         }
 
         @Test
@@ -39,14 +39,14 @@ extension BaseSuite {
             }
 
             await store.send(.home(.delegate(.didFailToSave))) {
-                $0.failedEntryOperations = [.save]
+                $0.failedExpenseOperations = [.save]
             }
             await store.send(.home(.delegate(.didFailToSave)))
             await store.send(.home(.delegate(.didFailToDelete))) {
-                $0.failedEntryOperations = [.delete, .save]
+                $0.failedExpenseOperations = [.delete, .save]
             }
             expectNoDifference(
-                store.state.entryFailureMessage,
+                store.state.expenseFailureMessage,
                 "Some of your changes couldn't be saved."
             )
         }
@@ -54,77 +54,77 @@ extension BaseSuite {
         @Test
         func dismissingTheAlertClearsTheFailures() async {
             var state = makeReadyState()
-            state.failedEntryOperations = [.delete, .save]
+            state.failedExpenseOperations = [.delete, .save]
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.entryFailurePresentationChanged(false)) {
-                $0.failedEntryOperations = []
+            await store.send(.expenseFailurePresentationChanged(false)) {
+                $0.failedExpenseOperations = []
             }
         }
 
         @Test
         func aHiddenAlertKeepsTheFailures() async {
             var state = makeReadyState()
-            state.failedEntryOperations = [.save]
+            state.failedExpenseOperations = [.save]
             state.settings.alert = .signOutFailed
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.entryFailurePresentationChanged(false))
+            await store.send(.expenseFailurePresentationChanged(false))
         }
 
         // A save that fails in the background must not interrupt the form on screen
         @Test
         func aFailedSaveWaitsForThePresentedForm() async {
             var state = makeReadyState()
-            state.home.destination = .createEntry(EntryForm.State())
+            state.home.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
             await store.send(.home(.delegate(.didFailToSave))) {
-                $0.failedEntryOperations = [.save]
+                $0.failedExpenseOperations = [.save]
             }
-            #expect(!store.state.isPresentingEntryFailure)
+            #expect(!store.state.isPresentingExpenseFailure)
 
             await store.send(.home(.destination(.dismiss))) {
                 $0.home.destination = nil
             }
-            #expect(store.state.isPresentingEntryFailure)
+            #expect(store.state.isPresentingExpenseFailure)
         }
 
-        // The deletion of one entry must not interrupt the creation of a different one
+        // The deletion of one expense must not interrupt the creation of a different one
         @Test
         func aFailedDeletionWaitsForThePresentedForm() async {
             var state = makeReadyState()
-            state.home.destination = .createEntry(EntryForm.State())
+            state.home.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
             await store.send(.home(.delegate(.didFailToDelete))) {
-                $0.failedEntryOperations = [.delete]
+                $0.failedExpenseOperations = [.delete]
             }
-            #expect(!store.state.isPresentingEntryFailure)
+            #expect(!store.state.isPresentingExpenseFailure)
 
             await store.send(.home(.destination(.dismiss))) {
                 $0.home.destination = nil
             }
-            #expect(store.state.isPresentingEntryFailure)
-            expectNoDifference(store.state.entryFailureMessage, "Your entry couldn't be deleted.")
+            #expect(store.state.isPresentingExpenseFailure)
+            expectNoDifference(store.state.expenseFailureMessage, "Your expense couldn't be deleted.")
         }
 
         @Test
         func aFailureWaitsForTheDetailPresentation() async {
             var state = makeReadyState()
-            state.home.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            state.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
             let detailID = Array(state.home.path.ids)[0]
             state.home.path[id: detailID]?.destination = .alert(.confirmDeletion)
 
@@ -133,14 +133,14 @@ extension BaseSuite {
             }
 
             await store.send(.home(.delegate(.didFailToSave))) {
-                $0.failedEntryOperations = [.save]
+                $0.failedExpenseOperations = [.save]
             }
-            #expect(!store.state.isPresentingEntryFailure)
+            #expect(!store.state.isPresentingExpenseFailure)
 
             await store.send(.home(.path(.element(id: detailID, action: .destination(.dismiss))))) {
                 $0.home.path[id: detailID]?.destination = nil
             }
-            #expect(store.state.isPresentingEntryFailure)
+            #expect(store.state.isPresentingExpenseFailure)
         }
 
         @Test
@@ -153,58 +153,58 @@ extension BaseSuite {
             }
 
             await store.send(.home(.delegate(.didFailToSave))) {
-                $0.failedEntryOperations = [.save]
+                $0.failedExpenseOperations = [.save]
             }
-            #expect(!store.state.isPresentingEntryFailure)
+            #expect(!store.state.isPresentingExpenseFailure)
 
             await store.send(.settings(.alert(.dismiss))) {
                 $0.settings.alert = nil
             }
-            #expect(store.state.isPresentingEntryFailure)
+            #expect(store.state.isPresentingExpenseFailure)
         }
 
         @Test
         func aFailureWaitsForTheAccountDeletion() {
             var state = makeReadyState()
-            state.failedEntryOperations = [.save]
+            state.failedExpenseOperations = [.save]
 
             state.settings.deletionStep = .deleting
-            #expect(!state.isPresentingEntryFailure)
+            #expect(!state.isPresentingExpenseFailure)
 
             state.settings.deletionStep = nil
-            #expect(state.isPresentingEntryFailure)
+            #expect(state.isPresentingExpenseFailure)
         }
 
         @Test
-        func aFailureWaitsForTheFirstEntries() {
+        func aFailureWaitsForTheFirstExpenses() {
             var state = makeReadyState()
-            state.failedEntryOperations = [.save]
+            state.failedExpenseOperations = [.save]
 
-            state.home.$entries.withLock { $0 = nil }
-            #expect(!state.isPresentingEntryFailure)
+            state.home.$expenses.withLock { $0 = nil }
+            #expect(!state.isPresentingExpenseFailure)
 
-            state.home.$entries.withLock { $0 = [] }
-            #expect(state.isPresentingEntryFailure)
+            state.home.$expenses.withLock { $0 = [] }
+            #expect(state.isPresentingExpenseFailure)
         }
 
         @Test
         func aFailureWaitsForTheWelcome() {
             @Shared(.hasDismissedWelcome) var hasDismissedWelcome
             var state = makeReadyState()
-            state.failedEntryOperations = [.save]
+            state.failedExpenseOperations = [.save]
 
             $hasDismissedWelcome.withLock { $0 = false }
-            #expect(!state.isPresentingEntryFailure)
+            #expect(!state.isPresentingExpenseFailure)
 
             $hasDismissedWelcome.withLock { $0 = true }
-            #expect(state.isPresentingEntryFailure)
+            #expect(state.isPresentingExpenseFailure)
         }
 
         private func makeReadyState() -> Tabs.State {
             @Shared(.hasDismissedWelcome) var hasDismissedWelcome
             $hasDismissedWelcome.withLock { $0 = true }
             let state = Tabs.State(user: .mock)
-            state.home.$entries.withLock { $0 = [] }
+            state.home.$expenses.withLock { $0 = [] }
             return state
         }
     }

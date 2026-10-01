@@ -36,7 +36,7 @@ struct AppFeature {
             case .signIn(let signIn):
                 return isSignedOutSettling || signIn.isAuthenticating
             case .tabs(let tabs):
-                return isDeletingAccount || tabs.isLoadingFirstEntries
+                return isDeletingAccount || tabs.isLoadingFirstExpenses
             }
         }
 
@@ -53,7 +53,7 @@ struct AppFeature {
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
             case .tabs where isDeletingAccount && !isReauthenticating:
                 return String(localized: "Deleting your account…")
-            case .tabs(let tabs) where tabs.isLoadingFirstEntries:
+            case .tabs(let tabs) where tabs.isLoadingFirstExpenses:
                 guard let isNewAccount = tabs.sessionOrigin.freshSignIn else { return nil }
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
             case nil, .tabs:
@@ -88,7 +88,7 @@ struct AppFeature {
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.entriesClient) var entriesClient
+    @Dependency(\.expensesClient) var expensesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
@@ -145,10 +145,10 @@ struct AppFeature {
 
     private func clearLocalData() -> Effect<Action> {
         .run { _ in
-            try await entriesClient.clearLocalData()
+            try await expensesClient.clearLocalData()
         } catch: { error, _ in
-            logger.error("Clearing the local entries data failed: \(error, privacy: .public)")
-            reportIssue(error, "Clearing the local entries data failed.")
+            logger.error("Clearing the local expenses data failed: \(error, privacy: .public)")
+            reportIssue(error, "Clearing the local expenses data failed.")
         }
     }
 

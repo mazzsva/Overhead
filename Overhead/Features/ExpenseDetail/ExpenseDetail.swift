@@ -1,5 +1,5 @@
 //
-//  EntryDetail.swift
+//  ExpenseDetail.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -9,11 +9,11 @@ import ComposableArchitecture
 import Foundation
 
 @Reducer
-struct EntryDetail {
+struct ExpenseDetail {
     @Reducer
     enum Destination {
-        case alert(AlertState<EntryDetail.Alert>)
-        case editEntry(EntryForm)
+        case alert(AlertState<ExpenseDetail.Alert>)
+        case editExpense(ExpenseForm)
     }
 
     enum Alert: Equatable {
@@ -23,7 +23,7 @@ struct EntryDetail {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @SharedReader var entry: Entry
+        @SharedReader var expense: Expense
 
         var isPresenting: Bool { destination != nil }
     }
@@ -37,8 +37,8 @@ struct EntryDetail {
 
         @CasePathable
         enum Delegate {
-            case didDelete(Entry.ID)
-            case didUpdate(Entry)
+            case didDelete(Expense.ID)
+            case didUpdate(Expense)
         }
     }
 
@@ -48,11 +48,11 @@ struct EntryDetail {
         Reduce { state, action in
             switch action {
             case .bookmarkButtonTapped:
-                var entry = state.entry
-                entry.isBookmarked.toggle()
+                var expense = state.expense
+                expense.isBookmarked.toggle()
                 return .merge(
                     .run { _ in await hapticsClient.selection() },
-                    .send(.delegate(.didUpdate(entry)))
+                    .send(.delegate(.didUpdate(expense)))
                 )
 
             case .delegate:
@@ -63,20 +63,20 @@ struct EntryDetail {
                 return .none
 
             case .destination(.presented(.alert(.confirmDeletion))):
-                return .send(.delegate(.didDelete(state.entry.id)))
+                return .send(.delegate(.didDelete(state.expense.id)))
 
-            case .destination(.presented(.editEntry(.delegate(.didSubmit(let entry))))):
+            case .destination(.presented(.editExpense(.delegate(.didSubmit(let expense))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },
-                    .send(.delegate(.didUpdate(entry)))
+                    .send(.delegate(.didUpdate(expense)))
                 )
 
             case .destination:
                 return .none
 
             case .editButtonTapped:
-                state.destination = .editEntry(EntryForm.State(entry: state.entry))
+                state.destination = .editExpense(ExpenseForm.State(expense: state.expense))
                 return .none
             }
         }
@@ -84,11 +84,11 @@ struct EntryDetail {
     }
 }
 
-extension EntryDetail.Destination.State: Equatable {}
+extension ExpenseDetail.Destination.State: Equatable {}
 
-extension AlertState where Action == EntryDetail.Alert {
+extension AlertState where Action == ExpenseDetail.Alert {
     static let confirmDeletion = AlertState {
-        TextState("Delete Entry")
+        TextState("Delete Expense")
     } actions: {
         ButtonState(role: .destructive, action: .confirmDeletion) {
             TextState("Delete")
@@ -97,6 +97,6 @@ extension AlertState where Action == EntryDetail.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Are you sure you want to delete this entry?")
+        TextState("Are you sure you want to delete this expense?")
     }
 }

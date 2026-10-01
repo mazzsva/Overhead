@@ -36,12 +36,12 @@ struct SettingsView: View {
                 #if DEBUG
                 Section("Developer") {
                     Button {
-                        store.send(.debugAddMockEntriesButtonTapped)
+                        store.send(.debugAddMockExpensesButtonTapped)
                     } label: {
-                        Text(verbatim: "Save Entry.mocks")
+                        Text(verbatim: "Save Expense.mocks")
                     }
                     Button(role: .destructive) {
-                        store.send(.debugDeleteAllEntriesButtonTapped)
+                        store.send(.debugDeleteAllExpensesButtonTapped)
                     } label: {
                         Text(verbatim: "Call deleteAll(uid:)")
                     }

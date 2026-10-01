@@ -16,7 +16,7 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
-        // A sign out clears the local entries
+        // A sign out clears the local expenses
         @Test
         func theSignOutButtonAsksForConfirmation() async {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -83,7 +83,7 @@ extension BaseSuite {
             }
         }
 
-        // The deletion removes the entries from every device
+        // The deletion removes the expenses from every device
         @Test
         func theDeleteAccountButtonAsksForConfirmation() async {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -95,7 +95,7 @@ extension BaseSuite {
             }
         }
 
-        // The account must exist until the entries and the Apple token are gone
+        // The account must exist until the expenses and the Apple token are gone
         @Test
         func confirmingTheAccountDeletionWalksThroughEveryStep() async {
             var state = Settings.State(user: .mock)
@@ -113,7 +113,7 @@ extension BaseSuite {
                     expectNoDifference(authorizationCode, AppleCredential.mock.authorizationCode)
                 }
                 $0.continuousClock = clock
-                $0.entriesClient.deleteAll = { uid in
+                $0.expensesClient.deleteAll = { uid in
                     expectNoDifference(uid, User.mock.uid)
                 }
                 $0.signInWithAppleClient.requestCredential = { .mock }
@@ -126,8 +126,8 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.entriesDeleted) {
-                $0.deletionStep = .entriesDeleted
+            await store.receive(\.expensesDeleted) {
+                $0.deletionStep = .expensesDeleted
             }
             await store.receive(\.appleCredentialRevoked) {
                 $0.deletionStep = .credentialRevoked
@@ -228,9 +228,9 @@ extension BaseSuite {
             await store.finish()
         }
 
-        // No entry is gone yet, so the alert must not report an unfinished deletion
+        // No expense is gone yet, so the alert must not report an unfinished deletion
         @Test
-        func aFailureBeforeTheEntriesAreDeletedReportsAFailedDeletion() async {
+        func aFailureBeforeTheExpensesAreDeletedReportsAFailedDeletion() async {
             var state = Settings.State(user: .mock)
             state.alert = .confirmAccountDeletion
 
@@ -240,7 +240,7 @@ extension BaseSuite {
             } withDependencies: {
                 $0.authClient.reauthenticate = { _ in }
                 $0.continuousClock = clock
-                $0.entriesClient.deleteAll = { _ in throw DeletionFailure() }
+                $0.expensesClient.deleteAll = { _ in throw DeletionFailure() }
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
@@ -258,9 +258,9 @@ extension BaseSuite {
             await store.finish()
         }
 
-        // The entries are already gone, so the alert must not report a deletion that did not start
+        // The expenses are already gone, so the alert must not report a deletion that did not start
         @Test
-        func aFailureAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
+        func aFailureAfterTheExpensesAreDeletedReportsAnUnfinishedDeletion() async {
             var state = Settings.State(user: .mock)
             state.alert = .confirmAccountDeletion
 
@@ -271,7 +271,7 @@ extension BaseSuite {
                 $0.authClient.reauthenticate = { _ in }
                 $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
                 $0.continuousClock = clock
-                $0.entriesClient.deleteAll = { _ in }
+                $0.expensesClient.deleteAll = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
@@ -282,8 +282,8 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.entriesDeleted) {
-                $0.deletionStep = .entriesDeleted
+            await store.receive(\.expensesDeleted) {
+                $0.deletionStep = .expensesDeleted
             }
             await store.receive(\.accountDeletionFailed) {
                 $0.alert = .accountDeletionUnfinished
@@ -308,7 +308,7 @@ extension BaseSuite {
                     $0.authClient.revokeAppleToken = { _ in }
                     $0.authClient.signOut = { signsOut() }
                     $0.continuousClock = clock
-                    $0.entriesClient.deleteAll = { _ in }
+                    $0.expensesClient.deleteAll = { _ in }
                     $0.signInWithAppleClient.requestCredential = { .mock }
                 }
 
@@ -319,8 +319,8 @@ extension BaseSuite {
                 await store.receive(\.appleCredentialReceived) {
                     $0.deletionStep = .deleting
                 }
-                await store.receive(\.entriesDeleted) {
-                    $0.deletionStep = .entriesDeleted
+                await store.receive(\.expensesDeleted) {
+                    $0.deletionStep = .expensesDeleted
                 }
                 await store.receive(\.appleCredentialRevoked) {
                     $0.deletionStep = .credentialRevoked
@@ -345,7 +345,7 @@ extension BaseSuite {
                 $0.authClient.revokeAppleToken = { _ in }
                 $0.authClient.signOut = { throw SignOutFailure() }
                 $0.continuousClock = clock
-                $0.entriesClient.deleteAll = { _ in }
+                $0.expensesClient.deleteAll = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
@@ -356,8 +356,8 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.entriesDeleted) {
-                $0.deletionStep = .entriesDeleted
+            await store.receive(\.expensesDeleted) {
+                $0.deletionStep = .expensesDeleted
             }
             await store.receive(\.appleCredentialRevoked) {
                 $0.deletionStep = .credentialRevoked
@@ -404,37 +404,37 @@ extension BaseSuite {
         #if DEBUG
         // The button fills an empty account in the debug builds
         @Test
-        func theDebugAddMockEntriesButtonSavesTheMockEntries() async {
-            let saved = LockIsolated<[Entry]>([])
+        func theDebugAddMockExpensesButtonSavesTheMockExpenses() async {
+            let saved = LockIsolated<[Expense]>([])
 
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
-                $0.entriesClient.save = { entry, uid in
+                $0.expensesClient.save = { expense, uid in
                     expectNoDifference(uid, User.mock.uid)
-                    saved.withValue { $0.append(entry) }
+                    saved.withValue { $0.append(expense) }
                 }
             }
 
-            await store.send(.debugAddMockEntriesButtonTapped)
+            await store.send(.debugAddMockExpensesButtonTapped)
             await store.finish()
-            expectNoDifference(saved.value, Entry.mocks)
+            expectNoDifference(saved.value, Expense.mocks)
         }
 
-        // The button clears the entries and keeps the account
+        // The button clears the expenses and keeps the account
         @Test
-        func theDebugDeleteAllEntriesButtonDeletesEveryEntry() async {
-            await confirmation("Deletes all the entries") { deletesAllEntries in
+        func theDebugDeleteAllExpensesButtonDeletesEveryExpense() async {
+            await confirmation("Deletes all the expenses") { deletesAllExpenses in
                 let store = TestStore(initialState: Settings.State(user: .mock)) {
                     Settings()
                 } withDependencies: {
-                    $0.entriesClient.deleteAll = { uid in
+                    $0.expensesClient.deleteAll = { uid in
                         expectNoDifference(uid, User.mock.uid)
-                        deletesAllEntries()
+                        deletesAllExpenses()
                     }
                 }
 
-                await store.send(.debugDeleteAllEntriesButtonTapped)
+                await store.send(.debugDeleteAllExpensesButtonTapped)
                 await store.finish()
             }
         }

@@ -24,7 +24,7 @@ struct Settings {
     enum DeletionStep: Equatable {
         case credentialRevoked
         case deleting
-        case entriesDeleted
+        case expensesDeleted
         case reauthenticating
     }
 
@@ -50,19 +50,19 @@ struct Settings {
         case appleCredentialReceived
         case appleCredentialRevoked
         #if DEBUG
-        case debugAddMockEntriesButtonTapped
-        case debugDeleteAllEntriesButtonTapped
+        case debugAddMockExpensesButtonTapped
+        case debugDeleteAllExpensesButtonTapped
         case debugResetWelcomeToggleChanged(Bool)
         #endif
         case deleteAccountButtonTapped
-        case entriesDeleted
+        case expensesDeleted
         case signOutButtonTapped
         case signOutFailed(any Error)
     }
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.entriesClient) var entriesClient
+    @Dependency(\.expensesClient) var expensesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
@@ -74,11 +74,11 @@ struct Settings {
                         "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
                     return signOut()
                 }
-                let hasDeletedEntries = state.deletionStep == .entriesDeleted
+                let hasDeletedExpenses = state.deletionStep == .expensesDeleted
                 state.deletionStep = nil
                 if !error.isSignInWithAppleCancellation {
                     logger.error("Account deletion failed: \(error, privacy: .public)")
-                    state.alert = hasDeletedEntries ? .accountDeletionUnfinished : .accountDeletionFailed
+                    state.alert = hasDeletedExpenses ? .accountDeletionUnfinished : .accountDeletionFailed
                 }
                 return .none
 
@@ -101,11 +101,11 @@ struct Settings {
                 return .none
 
             #if DEBUG
-            case .debugAddMockEntriesButtonTapped:
-                return addMockEntries(uid: state.user.uid)
+            case .debugAddMockExpensesButtonTapped:
+                return addMockExpenses(uid: state.user.uid)
 
-            case .debugDeleteAllEntriesButtonTapped:
-                return deleteAllEntries(uid: state.user.uid)
+            case .debugDeleteAllExpensesButtonTapped:
+                return deleteAllExpenses(uid: state.user.uid)
 
             case .debugResetWelcomeToggleChanged(let isOn):
                 state.$showsWelcomeAtNextLaunch.withLock { $0 = isOn }
@@ -117,8 +117,8 @@ struct Settings {
                 state.alert = .confirmAccountDeletion
                 return .none
 
-            case .entriesDeleted:
-                state.deletionStep = .entriesDeleted
+            case .expensesDeleted:
+                state.deletionStep = .expensesDeleted
                 return .none
 
             case .signOutButtonTapped:
@@ -137,21 +137,21 @@ struct Settings {
     }
 
     #if DEBUG
-    private func addMockEntries(uid: String) -> Effect<Action> {
+    private func addMockExpenses(uid: String) -> Effect<Action> {
         .run { _ in
-            for entry in Entry.mocks {
-                try await entriesClient.save(entry: entry, uid: uid)
+            for expense in Expense.mocks {
+                try await expensesClient.save(expense: expense, uid: uid)
             }
         } catch: { error, _ in
-            logger.error("Adding the mock entries failed: \(error, privacy: .public)")
+            logger.error("Adding the mock expenses failed: \(error, privacy: .public)")
         }
     }
 
-    private func deleteAllEntries(uid: String) -> Effect<Action> {
+    private func deleteAllExpenses(uid: String) -> Effect<Action> {
         .run { _ in
-            try await entriesClient.deleteAll(uid: uid)
+            try await expensesClient.deleteAll(uid: uid)
         } catch: { error, _ in
-            logger.error("Deleting all the entries failed: \(error, privacy: .public)")
+            logger.error("Deleting all the expenses failed: \(error, privacy: .public)")
         }
     }
     #endif
@@ -171,8 +171,8 @@ struct Settings {
                 group.addTask {
                     try await authClient.reauthenticate(credential: credential)
                     try Task.checkCancellation()
-                    try await entriesClient.deleteAll(uid: uid)
-                    await send(.entriesDeleted)
+                    try await expensesClient.deleteAll(uid: uid)
+                    await send(.expensesDeleted)
                     try Task.checkCancellation()
                     try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
                     await send(.appleCredentialRevoked)
@@ -219,7 +219,7 @@ extension AlertState where Action == Settings.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Your account and all your entries will be permanently deleted. Are you sure?")
+        TextState("Your account and all your expenses will be permanently deleted. Are you sure?")
     }
 
     static let confirmSignOut = AlertState {
