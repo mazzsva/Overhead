@@ -33,7 +33,6 @@ struct Tabs {
         case home(Home.Action)
         case selectedTabChanged(Tab)
         case settings(Settings.Action)
-        case task
     }
 
     var body: some Reducer<State, Action> {
@@ -51,9 +50,6 @@ struct Tabs {
             case .selectedTabChanged(let tab):
                 state.selectedTab = tab
                 return .none
-
-            case .task:
-                return .send(.home(.task))
             }
         }
     }

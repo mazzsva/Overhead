@@ -23,7 +23,7 @@ struct TabsView: View {
                 SettingsView(store: store.scope(state: \.settings, action: \.settings))
             }
         }
-        .task { await store.send(.task).finish() }
+        .task { await store.send(.home(.task)).finish() }
     }
 }
 
