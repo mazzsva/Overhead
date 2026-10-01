@@ -39,6 +39,8 @@ struct Settings {
 
         var isDeletingAccount: Bool { deletionStep != nil }
 
+        var isPresenting: Bool { alert != nil || isDeletingAccount }
+
         var isReauthenticating: Bool { deletionStep == .reauthenticating }
     }
 

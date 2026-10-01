@@ -408,7 +408,7 @@ extension BaseSuite {
 
         // The save leaves no trace on screen, so an alert must report the failure
         @Test
-        func aFailedSaveShowsAnAlert() async {
+        func aFailedSaveNotifiesTheSession() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -423,23 +423,7 @@ extension BaseSuite {
             await store.send(
                 .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
             )
-            await store.receive(\.entrySaveFailed) {
-                $0.destination = .alert(.entrySaveFailed)
-            }
-        }
-
-        // A save that fails in the background must not interrupt the form on screen
-        @Test
-        func aFailedSaveKeepsThePresentedForm() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.destination = .createEntry(EntryForm.State())
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
+            await store.receive(\.delegate.didFailToSave)
         }
 
         // The detail leaves the stack first because its entry is about to disappear
@@ -473,7 +457,7 @@ extension BaseSuite {
 
         // The detail pops before the delete reaches the server, so an alert must report the failure
         @Test
-        func aFailedDeletionShowsAnAlert() async {
+        func aFailedDeletionNotifiesTheSession() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -491,23 +475,7 @@ extension BaseSuite {
             ) {
                 $0.path.pop(from: detailID)
             }
-            await store.receive(\.entryDeleteFailed) {
-                $0.destination = .alert(.entryDeleteFailed)
-            }
-        }
-
-        // The deletion of one entry must not interrupt the creation of a different one
-        @Test
-        func aFailedDeletionKeepsThePresentedForm() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.destination = .createEntry(EntryForm.State())
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
+            await store.receive(\.delegate.didFailToDelete)
         }
 
         // A different device can delete the entry while its detail is on screen
