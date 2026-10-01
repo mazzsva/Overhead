@@ -80,7 +80,6 @@ struct HomeView: View {
         } destination: { detailStore in
             EntryDetailView(store: detailStore)
         }
-        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .sheet(
             item: $store.scope(state: \.destination?.createEntry, action: \.destination.createEntry)
         ) { formStore in

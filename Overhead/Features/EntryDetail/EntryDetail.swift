@@ -24,6 +24,8 @@ struct EntryDetail {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @SharedReader var entry: Entry
+
+        var isPresenting: Bool { destination != nil }
     }
 
     enum Action {

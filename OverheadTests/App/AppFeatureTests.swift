@@ -373,5 +373,46 @@ extension BaseSuite {
                 await store.finish()
             }
         }
+
+        @Test
+        func signingOutCancelsTheEntryWritesInFlight() async {
+            var tabs = Tabs.State(user: .mock)
+            tabs.home.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            let detailID = Array(tabs.home.path.ids)[0]
+            var state = AppFeature.State()
+            state.scene = .tabs(tabs)
+
+            let pendingSave = LockIsolated<CheckedContinuation<Void, Never>?>(nil)
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.continuousClock = ImmediateClock()
+                $0.entriesClient.clearLocalData = {}
+                $0.entriesClient.save = { _, _ in
+                    await withCheckedContinuation { pendingSave.setValue($0) }
+                    throw EntriesFailure()
+                }
+            }
+
+            await store.send(
+                .scene(.tabs(.home(.path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon)))))))
+            )
+            while pendingSave.value == nil {
+                await Task.yield()
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.receive(\.signedOutSettleTimerElapsed) {
+                $0.isSignedOutSettling = false
+            }
+
+            pendingSave.value?.resume()
+            await store.finish()
+        }
+
+        private struct EntriesFailure: Error {}
     }
 }

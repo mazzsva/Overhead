@@ -13,11 +13,8 @@ import os
 struct Home {
     @Reducer
     enum Destination {
-        case alert(AlertState<Home.Alert>)
         case createEntry(EntryForm)
     }
-
-    enum Alert: Equatable {}
 
     @ObservableState
     struct State: Equatable {
@@ -69,6 +66,10 @@ struct Home {
 
         var isLoadingFirstEntries: Bool { entries == nil }
 
+        var isPresenting: Bool {
+            destination != nil || path.contains { $0.isPresenting }
+        }
+
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
             return isSyncing ? .syncing : .synced
@@ -82,15 +83,20 @@ struct Home {
     enum Action {
         case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
+        case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case entriesRetryTimerElapsed
         case entriesStreamFailed
         case entriesUpdated(EntriesSnapshot)
-        case entryDeleteFailed(Entry.ID, any Error)
-        case entrySaveFailed(Entry.ID, any Error)
         case newEntryButtonTapped
         case path(StackActionOf<EntryDetail>)
         case task
+
+        @CasePathable
+        enum Delegate {
+            case didFailToDelete
+            case didFailToSave
+        }
     }
 
     enum CancelID {
@@ -112,6 +118,9 @@ struct Home {
 
             case .connectivityChanged(let isOnline):
                 state.isOnline = isOnline
+                return .none
+
+            case .delegate:
                 return .none
 
             case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
@@ -157,18 +166,6 @@ struct Home {
                 guard isFirstLoad else { return .none }
                 return celebrateFirstLoad(state)
 
-            case .entryDeleteFailed(let id, let error):
-                logger.error("Deleting entry \(id, privacy: .public) failed: \(error, privacy: .public)")
-                guard state.destination == nil else { return .none }
-                state.destination = .alert(.entryDeleteFailed)
-                return .none
-
-            case .entrySaveFailed(let id, let error):
-                logger.error("Saving entry \(id, privacy: .public) failed: \(error, privacy: .public)")
-                guard state.destination == nil else { return .none }
-                state.destination = .alert(.entrySaveFailed)
-                return .none
-
             case .newEntryButtonTapped:
                 state.destination = .createEntry(EntryForm.State())
                 return .none
@@ -208,7 +205,8 @@ struct Home {
         .run { _ in
             try await entriesClient.delete(id: id, uid: uid)
         } catch: { error, send in
-            await send(.entryDeleteFailed(id, error))
+            logger.error("Deleting entry \(id, privacy: .public) failed: \(error, privacy: .public)")
+            await send(.delegate(.didFailToDelete))
         }
     }
 
@@ -225,7 +223,8 @@ struct Home {
         .run { _ in
             try await entriesClient.save(entry: entry, uid: uid)
         } catch: { error, send in
-            await send(.entrySaveFailed(entry.id, error))
+            logger.error("Saving entry \(entry.id, privacy: .public) failed: \(error, privacy: .public)")
+            await send(.delegate(.didFailToSave))
         }
     }
 
@@ -248,19 +247,5 @@ struct Home {
 }
 
 extension Home.Destination.State: Equatable {}
-
-extension AlertState where Action == Home.Alert {
-    static let entryDeleteFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your entry couldn't be deleted.")
-    }
-
-    static let entrySaveFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your entry couldn't be saved.")
-    }
-}
 
 private let logger = Logger(category: "Home")

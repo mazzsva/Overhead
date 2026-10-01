@@ -23,6 +23,13 @@ struct TabsView: View {
                 SettingsView(store: store.scope(state: \.settings, action: \.settings))
             }
         }
+        .alert(
+            "Something Went Wrong",
+            isPresented: $store.isPresentingEntryFailure.sending(\.entryFailurePresentationChanged)
+        ) {
+        } message: {
+            Text(store.entryFailureMessage)
+        }
         .task { await store.send(.home(.task)).finish() }
     }
 }
