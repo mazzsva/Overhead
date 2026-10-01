@@ -235,16 +235,4 @@ struct AppFeature {
 
 extension AppFeature.Scene.State: Equatable {}
 
-extension SharedKey where Self == AppStorageKey<Bool>.Default {
-    static var hasDismissedWelcome: Self {
-        Self[.appStorage("hasDismissedWelcome"), default: false]
-    }
-
-    #if DEBUG
-    static var showsWelcomeAtNextLaunch: Self {
-        Self[.appStorage("showsWelcomeAtNextLaunch"), default: false]
-    }
-    #endif
-}
-
 private let logger = Logger(category: "AppFeature")
