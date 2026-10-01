@@ -14,46 +14,6 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct ExpenseDetailTests {
-        // The detail reads the expense, and only home can write it
-        @Test
-        func theBookmarkButtonBookmarksTheExpenseAndTellsTheParent() async {
-            await confirmation("Plays the selection haptic") { playsHaptic in
-                let store = TestStore(
-                    initialState: ExpenseDetail.State(expense: SharedReader(value: .burningCandle))
-                ) {
-                    ExpenseDetail()
-                } withDependencies: {
-                    $0.hapticsClient.selection = { playsHaptic() }
-                }
-
-                var bookmarked = Expense.burningCandle
-                bookmarked.isBookmarked = true
-
-                await store.send(.bookmarkButtonTapped)
-                await store.receive(\.delegate.didUpdate, bookmarked)
-            }
-        }
-
-        // Blue moon starts with a bookmark, so the same button removes it
-        @Test
-        func theBookmarkButtonRemovesTheBookmarkAndTellsTheParent() async {
-            await confirmation("Plays the selection haptic") { playsHaptic in
-                let store = TestStore(
-                    initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
-                ) {
-                    ExpenseDetail()
-                } withDependencies: {
-                    $0.hapticsClient.selection = { playsHaptic() }
-                }
-
-                var unbookmarked = Expense.blueMoon
-                unbookmarked.isBookmarked = false
-
-                await store.send(.bookmarkButtonTapped)
-                await store.receive(\.delegate.didUpdate, unbookmarked)
-            }
-        }
-
         // The form starts from the expense, so it edits and does not create
         @Test
         func theEditButtonOpensTheFormOnTheExpense() async {

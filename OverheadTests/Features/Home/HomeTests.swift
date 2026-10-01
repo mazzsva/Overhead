@@ -56,7 +56,7 @@ extension BaseSuite {
             let state = Home.State(user: .mock)
 
             #expect(state.isLoadingFirstExpenses)
-            expectNoDifference(state.filteredExpenses.map(\.wrappedValue), [])
+            expectNoDifference(state.listedExpenses.map(\.wrappedValue), [])
         }
 
         // A snapshot stops the syncing only when it comes from the server without a local write
@@ -72,17 +72,12 @@ extension BaseSuite {
             }
         }
 
-        // The count includes the expenses that the bookmark filter hides
         @Test
         func theExpenseCountFollowsTheExpenses() {
-            var state = Home.State(user: .mock)
+            let state = Home.State(user: .mock)
             expectNoDifference(state.expenseCount, 0)
 
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            expectNoDifference(state.expenseCount, 3)
-
-            state.isShowingBookmarkedOnly = true
-            expectNoDifference(state.filteredExpenses.count, 1)
             expectNoDifference(state.expenseCount, 3)
         }
 
@@ -143,8 +138,8 @@ extension BaseSuite {
                 $0.isSyncing = true
             }
             await clock.advance(by: .seconds(4))
-            await store.send(.bookmarkFilterButtonTapped) {
-                $0.isShowingBookmarkedOnly = true
+            await store.send(.connectivityChanged(false)) {
+                $0.isOnline = false
             }
             await clock.advance(by: .seconds(1))
             await store.receive(\.expensesRetryTimerElapsed)
@@ -227,77 +222,16 @@ extension BaseSuite {
             expectNoDifference(store.state.syncStatus, .syncing)
         }
 
-        // Blue moon is the only mock expense with a bookmark
         @Test
-        func theBookmarkFilterShowsOnlyBookmarkedExpenses() async {
+        func theEmptyStateFollowsTheExpenses() {
             let state = Home.State(user: .mock)
-            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.bookmarkFilterButtonTapped) {
-                $0.isShowingBookmarkedOnly = true
-            }
-            expectNoDifference(store.state.filteredExpenses.map(\.wrappedValue), [.blueMoon])
-        }
-
-        // The same button clears the filter, so the list comes back
-        @Test
-        func theBookmarkFilterClearsOnASecondTap() async {
-            var state = Home.State(user: .mock)
-            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.isShowingBookmarkedOnly = true
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.bookmarkFilterButtonTapped) {
-                $0.isShowingBookmarkedOnly = false
-            }
-            expectNoDifference(store.state.filteredExpenses.map(\.wrappedValue), Expense.mocks)
-        }
-
-        // The filter button disappears with the last expense, so the filter must clear itself
-        @Test
-        func anEmptyListClearsTheBookmarkFilter() async {
-            var state = Home.State(user: .mock)
-            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.isShowingBookmarkedOnly = true
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            #expect(store.state.canFilterBookmarks)
-
-            await store.send(.expensesUpdated(.empty)) {
-                $0.$expenses.withLock { $0 = [] }
-                $0.isShowingBookmarkedOnly = false
-                $0.isSyncing = false
-            }
-            #expect(!store.state.canFilterBookmarks)
-        }
-
-        // An empty list has two reasons, and each one needs its own message
-        @Test
-        func theEmptyStateFollowsTheExpensesAndTheFilters() async {
-            var state = Home.State(user: .mock)
-            expectNoDifference(state.emptyState, nil)
+            #expect(!state.isEmpty)
 
             state.$expenses.withLock { $0 = [] }
-            expectNoDifference(state.emptyState, .expenses)
+            #expect(state.isEmpty)
 
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            expectNoDifference(state.emptyState, nil)
-
-            state.$expenses.withLock {
-                $0 = IdentifiedArray(uniqueElements: [Expense.burningCandle, Expense.lowHangingFruit])
-            }
-            state.isShowingBookmarkedOnly = true
-            expectNoDifference(state.emptyState, .bookmarks)
+            #expect(!state.isEmpty)
         }
 
         // A form without an expense creates one, and a form with an expense edits it
@@ -320,7 +254,6 @@ extension BaseSuite {
                 createdAt: now,
                 definition: "The easiest wins, taken first.",
                 id: UUID(0),
-                isBookmarked: false,
                 term: "Low-hanging fruit"
             )
 
@@ -380,8 +313,8 @@ extension BaseSuite {
         // The detail stays on screen because it reads the expense from the shared state
         @Test
         func updatingFromTheDetailSavesTheExpense() async {
-            var bookmarked = Expense.burningCandle
-            bookmarked.isBookmarked = true
+            var updated = Expense.burningCandle
+            updated.term = "Burn the midnight oil"
 
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
@@ -392,15 +325,15 @@ extension BaseSuite {
                 let store = TestStore(initialState: state) {
                     Home()
                 } withDependencies: {
-                    $0.expensesClient.save = { [bookmarked] expense, uid in
-                        expectNoDifference(expense, bookmarked)
+                    $0.expensesClient.save = { [updated] expense, uid in
+                        expectNoDifference(expense, updated)
                         expectNoDifference(uid, User.mock.uid)
                         savesExpense()
                     }
                 }
 
                 await store.send(
-                    .path(.element(id: detailID, action: .delegate(.didUpdate(bookmarked))))
+                    .path(.element(id: detailID, action: .delegate(.didUpdate(updated))))
                 )
                 await store.finish()
             }

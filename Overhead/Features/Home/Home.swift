@@ -21,16 +21,10 @@ struct Home {
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
         var isOnline = true
-        var isShowingBookmarkedOnly = false
         var isSyncing = true
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User
-
-        enum EmptyState: Equatable {
-            case bookmarks
-            case expenses
-        }
 
         @CasePathable
         @dynamicMemberLookup
@@ -45,22 +39,9 @@ struct Home {
             self.user = user
         }
 
-        var canFilterBookmarks: Bool { expenseCount > 0 }
-
-        var emptyState: EmptyState? {
-            guard expenses != nil, filteredExpenses.isEmpty else { return nil }
-            if expenseCount == 0 { return .expenses }
-            return .bookmarks
-        }
-
         var expenseCount: Int { expenses?.count ?? 0 }
 
-        var filteredExpenses: [SharedReader<Expense>] {
-            guard let expenses = Shared($expenses) else { return [] }
-            return Array(expenses)
-                .filter { isVisible($0.wrappedValue) }
-                .map { SharedReader($0) }
-        }
+        var isEmpty: Bool { expenses?.isEmpty == true }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
@@ -70,18 +51,18 @@ struct Home {
             destination != nil || path.contains { $0.isPresenting }
         }
 
+        var listedExpenses: [SharedReader<Expense>] {
+            guard let expenses = Shared($expenses) else { return [] }
+            return Array(expenses).map { SharedReader($0) }
+        }
+
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
             return isSyncing ? .syncing : .synced
         }
-
-        private func isVisible(_ expense: Expense) -> Bool {
-            !isShowingBookmarkedOnly || expense.isBookmarked
-        }
     }
 
     enum Action {
-        case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
@@ -112,10 +93,6 @@ struct Home {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .bookmarkFilterButtonTapped:
-                state.isShowingBookmarkedOnly.toggle()
-                return .none
-
             case .connectivityChanged(let isOnline):
                 state.isOnline = isOnline
                 return .none
@@ -153,9 +130,6 @@ struct Home {
                 state.isSyncing = snapshot.isSyncing
                 let expenses = IdentifiedArray(uniqueElements: snapshot.expenses)
                 state.$expenses.withLock { $0 = expenses }
-                if expenses.isEmpty {
-                    state.isShowingBookmarkedOnly = false
-                }
                 for id in Array(state.path.ids) {
                     guard
                         let expenseID = state.path[id: id]?.expense.id,

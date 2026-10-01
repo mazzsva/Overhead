@@ -29,7 +29,6 @@ struct ExpenseDetail {
     }
 
     enum Action {
-        case bookmarkButtonTapped
         case delegate(Delegate)
         case deleteButtonTapped
         case destination(PresentationAction<Destination.Action>)
@@ -47,14 +46,6 @@ struct ExpenseDetail {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .bookmarkButtonTapped:
-                var expense = state.expense
-                expense.isBookmarked.toggle()
-                return .merge(
-                    .run { _ in await hapticsClient.selection() },
-                    .send(.delegate(.didUpdate(expense)))
-                )
-
             case .delegate:
                 return .none
 

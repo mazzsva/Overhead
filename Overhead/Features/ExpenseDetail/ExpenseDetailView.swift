@@ -34,17 +34,6 @@ struct ExpenseDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(
-                    store.expense.isBookmarked ? "Remove Bookmark" : "Bookmark",
-                    systemImage: store.expense.isBookmarked ? "bookmark.fill" : "bookmark"
-                ) {
-                    store.send(.bookmarkButtonTapped)
-                }
-                .labelStyle(.iconOnly)
-                .tint(store.expense.isBookmarked ? .bookmark : .secondary)
-            }
-            ToolbarSpacer(.fixed, placement: .topBarTrailing)
-            ToolbarItem(placement: .topBarTrailing) {
                 Button("Edit") {
                     store.send(.editButtonTapped)
                 }
@@ -65,20 +54,10 @@ struct ExpenseDetailView: View {
     }
 }
 
-#Preview("Bookmarked") {
+#Preview {
     NavigationStack {
         ExpenseDetailView(
             store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))) {
-                ExpenseDetail()
-            }
-        )
-    }
-}
-
-#Preview("Not Bookmarked") {
-    NavigationStack {
-        ExpenseDetailView(
-            store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .burningCandle))) {
                 ExpenseDetail()
             }
         )

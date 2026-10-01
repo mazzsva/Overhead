@@ -35,12 +35,6 @@ struct ExpenseCardView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
                 Spacer()
-                if expense.isBookmarked {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption)
-                        .foregroundStyle(.bookmark)
-                        .accessibilityLabel("Bookmarked")
-                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
