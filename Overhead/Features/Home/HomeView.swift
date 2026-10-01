@@ -58,14 +58,14 @@ struct HomeView: View {
                         store.send(.settingsButtonTapped)
                     }
                 }
-                DefaultToolbarItem(kind: .search, placement: .bottomBar)
-                ToolbarSpacer(placement: .bottomBar)
-                ToolbarItem(placement: .bottomBar) {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("New Entry", systemImage: "plus") {
                         store.send(.newEntryButtonTapped)
                     }
                     .buttonStyle(.borderedProminent)
                 }
+                DefaultToolbarItem(kind: .search, placement: .bottomBar)
             }
             .overlay {
                 switch store.emptyState {
