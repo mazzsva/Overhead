@@ -27,6 +27,14 @@ struct Tabs {
             settings = Settings.State(user: user)
             self.user = user
         }
+
+        var isDeletingAccount: Bool { settings.isDeletingAccount }
+
+        var isLoadingFirstEntries: Bool { home.isLoadingFirstEntries }
+
+        var isReauthenticating: Bool { settings.isReauthenticating }
+
+        var sessionOrigin: Home.State.SessionOrigin { home.sessionOrigin }
     }
 
     enum Action {

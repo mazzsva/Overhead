@@ -27,7 +27,7 @@ struct AppFeature {
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
 
-        var isDeletingAccount: Bool { scene?.tabs?.settings.isDeletingAccount ?? false }
+        var isDeletingAccount: Bool { scene?.tabs?.isDeletingAccount ?? false }
 
         var isLoading: Bool {
             switch scene {
@@ -36,7 +36,7 @@ struct AppFeature {
             case .signIn(let signIn):
                 return isSignedOutSettling || signIn.isAuthenticating
             case .tabs(let tabs):
-                return isDeletingAccount || tabs.home.isLoadingFirstEntries
+                return isDeletingAccount || tabs.isLoadingFirstEntries
             }
         }
 
@@ -44,7 +44,7 @@ struct AppFeature {
             !hasDismissedWelcome && !isLoading
         }
 
-        var isReauthenticating: Bool { scene?.tabs?.settings.isReauthenticating ?? false }
+        var isReauthenticating: Bool { scene?.tabs?.isReauthenticating ?? false }
 
         var loadingMessage: String? {
             switch scene {
@@ -53,8 +53,8 @@ struct AppFeature {
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
             case .tabs where isDeletingAccount && !isReauthenticating:
                 return String(localized: "Deleting your account…")
-            case .tabs(let tabs) where tabs.home.isLoadingFirstEntries:
-                guard let isNewAccount = tabs.home.sessionOrigin.freshSignIn else { return nil }
+            case .tabs(let tabs) where tabs.isLoadingFirstEntries:
+                guard let isNewAccount = tabs.sessionOrigin.freshSignIn else { return nil }
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
             case nil, .tabs:
                 return nil
