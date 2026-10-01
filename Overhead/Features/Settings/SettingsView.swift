@@ -52,8 +52,6 @@ struct SettingsView: View {
                 .disabled(store.isDeletingAccount)
                 #endif
             }
-            // Without this the navigation bar shows a back chevron at the root of the stack
-            .navigationBarBackButtonHidden()
             .scrollDisabled(true)
             .scrollContentBackground(.hidden)
             .groupedBackground()
@@ -66,14 +64,6 @@ struct SettingsView: View {
                         .font(.title)
                         .fontWeight(.bold)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Dismiss", systemImage: "xmark") {
-                        store.send(.dismissButtonTapped)
-                    }
-                    .foregroundStyle(.secondary)
-                    .labelStyle(.iconOnly)
-                    .disabled(store.isDeletingAccount)
-                }
             }
             .alert($store.scope(state: \.alert, action: \.alert))
         }
@@ -84,8 +74,6 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom)
         }
-        // The swipe stays disabled at every step so the user leaves Settings only through the Dismiss button
-        .interactiveDismissDisabled()
     }
 }
 

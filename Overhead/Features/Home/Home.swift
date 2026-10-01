@@ -15,7 +15,6 @@ struct Home {
     enum Destination {
         case alert(AlertState<Home.Alert>)
         case createEntry(EntryForm)
-        case settings(Settings)
     }
 
     enum Alert: Equatable {}
@@ -28,14 +27,12 @@ struct Home {
         var isShowingBookmarkedOnly = false
         var isSyncing = true
         var path = StackState<EntryDetail.State>()
-        var searchText = ""
         let sessionOrigin: SessionOrigin
         let user: User
 
         enum EmptyState: Equatable {
             case bookmarks
             case entries
-            case search
         }
 
         @CasePathable
@@ -56,7 +53,7 @@ struct Home {
         var emptyState: EmptyState? {
             guard entries != nil, filteredEntries.isEmpty else { return nil }
             if entryCount == 0 { return .entries }
-            return searchText.isEmpty ? .bookmarks : .search
+            return .bookmarks
         }
 
         var entryCount: Int { entries?.count ?? 0 }
@@ -68,13 +65,9 @@ struct Home {
                 .map { SharedReader($0) }
         }
 
-        var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
-
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
         var isLoadingFirstEntries: Bool { entries == nil }
-
-        var isReauthenticating: Bool { destination?.settings?.isReauthenticating ?? false }
 
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
@@ -82,15 +75,11 @@ struct Home {
         }
 
         private func isVisible(_ entry: Entry) -> Bool {
-            if isShowingBookmarkedOnly, !entry.isBookmarked { return false }
-            guard !searchText.isEmpty else { return true }
-            return entry.term.localizedStandardContains(searchText)
-                || entry.definition.localizedStandardContains(searchText)
+            !isShowingBookmarkedOnly || entry.isBookmarked
         }
     }
 
-    enum Action: BindableAction {
-        case binding(BindingAction<State>)
+    enum Action {
         case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
         case destination(PresentationAction<Destination.Action>)
@@ -101,7 +90,6 @@ struct Home {
         case entrySaveFailed(Entry.ID, any Error)
         case newEntryButtonTapped
         case path(StackActionOf<EntryDetail>)
-        case settingsButtonTapped
         case task
     }
 
@@ -116,12 +104,8 @@ struct Home {
     @Dependency(\.networkMonitorClient) var networkMonitorClient
 
     var body: some Reducer<State, Action> {
-        BindingReducer()
         Reduce { state, action in
             switch action {
-            case .binding:
-                return .none
-
             case .bookmarkFilterButtonTapped:
                 state.isShowingBookmarkedOnly.toggle()
                 return .none
@@ -200,10 +184,6 @@ struct Home {
                 return save(entry, uid: state.user.uid)
 
             case .path:
-                return .none
-
-            case .settingsButtonTapped:
-                state.destination = .settings(Settings.State(user: state.user))
                 return .none
 
             case .task:

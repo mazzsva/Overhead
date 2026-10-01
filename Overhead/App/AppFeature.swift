@@ -14,8 +14,8 @@ import os
 struct AppFeature {
     @Reducer
     enum Scene {
-        case home(Home)
         case signIn(SignIn)
+        case tabs(Tabs)
     }
 
     @ObservableState
@@ -27,16 +27,16 @@ struct AppFeature {
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
 
-        var isDeletingAccount: Bool { scene?.home?.isDeletingAccount ?? false }
+        var isDeletingAccount: Bool { scene?.tabs?.isDeletingAccount ?? false }
 
         var isLoading: Bool {
             switch scene {
             case nil:
                 return true
-            case .home(let home):
-                return isDeletingAccount || home.isLoadingFirstEntries
             case .signIn(let signIn):
                 return isSignedOutSettling || signIn.isAuthenticating
+            case .tabs(let tabs):
+                return isDeletingAccount || tabs.isLoadingFirstEntries
             }
         }
 
@@ -44,19 +44,19 @@ struct AppFeature {
             !hasDismissedWelcome && !isLoading
         }
 
-        var isReauthenticating: Bool { scene?.home?.isReauthenticating ?? false }
+        var isReauthenticating: Bool { scene?.tabs?.isReauthenticating ?? false }
 
         var loadingMessage: String? {
             switch scene {
-            case .home where isDeletingAccount && !isReauthenticating:
-                return String(localized: "Deleting your account…")
-            case .home(let home) where home.isLoadingFirstEntries:
-                guard let isNewAccount = home.sessionOrigin.freshSignIn else { return nil }
-                return Self.signInMessage(isCreatingAccount: isNewAccount)
             case .signIn(let signIn):
                 guard case .signingIn(let isNewAccount) = signIn.step else { return nil }
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
-            case nil, .home:
+            case .tabs where isDeletingAccount && !isReauthenticating:
+                return String(localized: "Deleting your account…")
+            case .tabs(let tabs) where tabs.isLoadingFirstEntries:
+                guard let isNewAccount = tabs.sessionOrigin.freshSignIn else { return nil }
+                return Self.signInMessage(isCreatingAccount: isNewAccount)
+            case nil, .tabs:
                 return nil
             }
         }
@@ -95,11 +95,11 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .appBecameActive:
-                guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
+                guard state.scene.is(\.tabs), !state.isDeletingAccount else { return .none }
                 return verifyAppleCredential()
 
             case .appleCredentialInvalidated(let credentialState):
-                guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
+                guard state.scene.is(\.tabs), !state.isDeletingAccount else { return .none }
                 logger.notice(
                     "Apple ID credential is \(credentialState.description, privacy: .public); signing out.")
                 return .run { _ in
@@ -177,13 +177,13 @@ struct AppFeature {
             return clearLocalData()
 
         case (nil, .some(let user)):
-            state.scene = .home(Home.State(user: user))
+            state.scene = .tabs(Tabs.State(user: user))
             return verifyAppleCredential()
 
         case (.signIn(let signIn), .some(let user)):
             let isFreshSignIn = signIn.isAuthenticating
-            state.scene = .home(
-                Home.State(
+            state.scene = .tabs(
+                Tabs.State(
                     user: user,
                     sessionOrigin: isFreshSignIn
                         ? .freshSignIn(isNewAccount: signIn.isCreatingAccount)
@@ -195,10 +195,10 @@ struct AppFeature {
         case (.signIn, nil):
             return .none
 
-        case (.home(let home), .some(let user)) where home.user.uid == user.uid:
+        case (.tabs(let tabs), .some(let user)) where tabs.user.uid == user.uid:
             return .none
 
-        case (.home, .some(let user)):
+        case (.tabs, .some(let user)):
             logger.notice("Auth changed accounts without signing out first; ending the session before the new one.")
             reportIssue("Auth changed accounts without signing out first.")
             state.scene = nil
@@ -207,7 +207,7 @@ struct AppFeature {
                 .send(.authUserChanged(user))
             )
 
-        case (.home, nil):
+        case (.tabs, nil):
             state.isSignedOutSettling = true
             state.scene = .signIn(SignIn.State())
             return .merge(

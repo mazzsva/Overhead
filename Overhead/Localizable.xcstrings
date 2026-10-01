@@ -19,10 +19,16 @@
     "Bookmark an entry to find it here." : {
 
     },
+    "Bookmark your favorite entries to find them quickly." : {
+
+    },
     "Bookmarked" : {
 
     },
     "Cancel" : {
+
+    },
+    "Coming Soon" : {
 
     },
     "Continue" : {
@@ -61,8 +67,8 @@
     "Email" : {
 
     },
-    "Overhead" : {
-      "shouldTranslate" : false
+    "Home" : {
+
     },
     "New Entry" : {
 
@@ -76,6 +82,12 @@
     "No Internet" : {
 
     },
+    "Overhead" : {
+      "shouldTranslate" : false
+    },
+    "Overview" : {
+
+    },
     "Remove Bookmark" : {
 
     },
@@ -83,9 +95,6 @@
 
     },
     "Save any word or phrase with a definition in your own words." : {
-
-    },
-    "Search by term or definition, and bookmark your favorites." : {
 
     },
     "Settings" : {

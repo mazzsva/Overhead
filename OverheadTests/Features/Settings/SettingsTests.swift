@@ -146,7 +146,6 @@ extension BaseSuite {
             }
 
             await store.send(.deleteAccountButtonTapped)
-            await store.send(.dismissButtonTapped)
             await store.send(.signOutButtonTapped)
         }
 
@@ -400,21 +399,6 @@ extension BaseSuite {
                 $0.deletionStep = nil
             }
             await store.finish()
-        }
-
-        // Home presents the settings, so only the dismiss effect can close them
-        @Test
-        func theDismissButtonClosesTheSettings() async {
-            await confirmation("Dismisses the settings") { dismissesSettings in
-                let store = TestStore(initialState: Settings.State(user: .mock)) {
-                    Settings()
-                } withDependencies: {
-                    $0.dismiss = DismissEffect { dismissesSettings() }
-                }
-
-                await store.send(.dismissButtonTapped)
-                await store.finish()
-            }
         }
 
         #if DEBUG

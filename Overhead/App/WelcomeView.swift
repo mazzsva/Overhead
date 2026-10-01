@@ -64,7 +64,7 @@ private struct WelcomeHighlight {
         ),
         WelcomeHighlight(
             systemImage: "bookmark.fill",
-            text: "Search by term or definition, and bookmark your favorites."
+            text: "Bookmark your favorite entries to find them quickly."
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",

@@ -53,7 +53,6 @@ struct Settings {
         case debugResetWelcomeToggleChanged(Bool)
         #endif
         case deleteAccountButtonTapped
-        case dismissButtonTapped
         case entriesDeleted
         case signOutButtonTapped
         case signOutFailed(any Error)
@@ -61,7 +60,6 @@ struct Settings {
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.dismiss) var dismiss
     @Dependency(\.entriesClient) var entriesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
@@ -116,10 +114,6 @@ struct Settings {
                 guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmAccountDeletion
                 return .none
-
-            case .dismissButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
-                return .run { _ in await dismiss() }
 
             case .entriesDeleted:
                 state.deletionStep = .entriesDeleted

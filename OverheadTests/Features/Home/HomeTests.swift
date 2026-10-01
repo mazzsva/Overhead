@@ -16,7 +16,7 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct HomeTests {
-        // The entries stream and the network monitor start with the scene
+        // The entries stream and the network monitor start with the session
         @Test
         func theTaskObservesTheEntriesAndTheConnectivity() async {
             let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
@@ -72,13 +72,17 @@ extension BaseSuite {
             }
         }
 
-        // The count ignores the search text and the bookmark filter
+        // The count includes the entries that the bookmark filter hides
         @Test
         func theEntryCountFollowsTheEntries() {
-            let state = Home.State(user: .mock)
+            var state = Home.State(user: .mock)
             expectNoDifference(state.entryCount, 0)
 
             state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            expectNoDifference(state.entryCount, 3)
+
+            state.isShowingBookmarkedOnly = true
+            expectNoDifference(state.filteredEntries.count, 1)
             expectNoDifference(state.entryCount, 3)
         }
 
@@ -277,50 +281,7 @@ extension BaseSuite {
             #expect(!store.state.canFilterBookmarks)
         }
 
-        // The user can remember the meaning of an entry but not its term
-        @Test
-        func theSearchTextMatchesTheTermsAndTheDefinitions() async {
-            let state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.binding(.set(\.searchText, "candle"))) {
-                $0.searchText = "candle"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
-
-            await store.send(.binding(.set(\.searchText, "easiest"))) {
-                $0.searchText = "easiest"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
-        }
-
-        // The search runs inside the filter, so an unbookmarked match stays hidden
-        @Test
-        func theSearchTextAndTheBookmarkFilterApplyTogether() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.isShowingBookmarkedOnly = true
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.binding(.set(\.searchText, "candle"))) {
-                $0.searchText = "candle"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [])
-
-            await store.send(.binding(.set(\.searchText, "moon"))) {
-                $0.searchText = "moon"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
-        }
-
-        // An empty list has three reasons, and each one needs its own message
+        // An empty list has two reasons, and each one needs its own message
         @Test
         func theEmptyStateFollowsTheEntriesAndTheFilters() async {
             var state = Home.State(user: .mock)
@@ -337,10 +298,6 @@ extension BaseSuite {
             }
             state.isShowingBookmarkedOnly = true
             expectNoDifference(state.emptyState, .bookmarks)
-
-            state.isShowingBookmarkedOnly = false
-            state.searchText = "nothing matches this"
-            expectNoDifference(state.emptyState, .search)
         }
 
         // A form without an entry creates one, and a form with an entry edits it
@@ -586,18 +543,6 @@ extension BaseSuite {
             }
 
             await store.send(.entriesUpdated(.mock))
-        }
-
-        // The settings need the user, and home is the scene that holds it
-        @Test
-        func theSettingsButtonOpensTheSettings() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
-            }
-
-            await store.send(.settingsButtonTapped) {
-                $0.destination = .settings(Settings.State(user: .mock))
-            }
         }
 
         private struct EntriesFailure: Error {}
