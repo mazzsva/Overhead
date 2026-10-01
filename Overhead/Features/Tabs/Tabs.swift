@@ -11,13 +11,14 @@ import ComposableArchitecture
 struct Tabs {
     enum Tab: Hashable {
         case home
+        case overview
         case settings
     }
 
     @ObservableState
     struct State: Equatable {
         var home: Home.State
-        var selectedTab = Tab.home
+        var selectedTab = Tab.overview
         var settings: Settings.State
         let user: User
 

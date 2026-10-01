@@ -23,7 +23,7 @@ extension BaseSuite {
                 state.home,
                 Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
             )
-            expectNoDifference(state.selectedTab, .home)
+            expectNoDifference(state.selectedTab, .overview)
             expectNoDifference(state.settings, Settings.State(user: .mock))
         }
 

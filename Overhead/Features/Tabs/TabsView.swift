@@ -13,6 +13,9 @@ struct TabsView: View {
 
     var body: some View {
         TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
+            Tab("Overview", systemImage: "square.grid.2x2", value: .overview) {
+                EmptyView()
+            }
             Tab("Home", systemImage: "house", value: .home) {
                 HomeView(store: store.scope(state: \.home, action: \.home))
             }
