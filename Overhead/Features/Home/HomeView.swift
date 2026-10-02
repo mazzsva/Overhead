@@ -33,7 +33,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .title) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Overhead")
+                        Text("Expenses")
                             .font(.title)
                             .fontWeight(.bold)
                         SyncStatusLabel(expenseCount: store.expenseCount, status: store.syncStatus)
