@@ -26,13 +26,6 @@ struct Expenses {
         let sessionOrigin: SessionOrigin
         let user: User
 
-        @CasePathable
-        @dynamicMemberLookup
-        enum SessionOrigin: Equatable {
-            case freshSignIn(isNewAccount: Bool)
-            case restored
-        }
-
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
             _expenses = Shared(value: nil)
             self.sessionOrigin = sessionOrigin
