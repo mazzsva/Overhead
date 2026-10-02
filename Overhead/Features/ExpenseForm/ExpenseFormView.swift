@@ -11,20 +11,24 @@ import SwiftUI
 struct ExpenseFormView: View {
     @Bindable var store: StoreOf<ExpenseForm>
 
-    @FocusState private var isTermFocused: Bool
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Term") {
-                    TextField("", text: $store.term)
-                        .focused($isTermFocused)
-                        .accessibilityLabel("Term")
+                Section("Name") {
+                    TextField("", text: $store.name)
+                        .focused($isNameFocused)
+                        .accessibilityLabel("Name")
                 }
-                Section("Definition") {
-                    TextEditor(text: $store.definition)
-                        .frame(minHeight: 180)
-                        .accessibilityLabel("Definition")
+                Section("Amount") {
+                    TextField(
+                        "",
+                        text: $store.amountText,
+                        prompt: Text(Decimal.zero, format: .currency(code: store.currencyCode).locale(store.locale))
+                    )
+                    .keyboardType(.decimalPad)
+                    .accessibilityLabel("Amount")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -53,7 +57,7 @@ struct ExpenseFormView: View {
 
     private func appeared() {
         guard store.isCreating else { return }
-        isTermFocused = true
+        isNameFocused = true
     }
 }
 
@@ -67,7 +71,7 @@ struct ExpenseFormView: View {
 
 #Preview("Edit") {
     ExpenseFormView(
-        store: Store(initialState: ExpenseForm.State(expense: .blueMoon)) {
+        store: Store(initialState: ExpenseForm.State(expense: .gym)) {
             ExpenseForm()
         }
     )

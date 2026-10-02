@@ -12,18 +12,15 @@ struct ExpenseCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(expense.term)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+            HStack(alignment: .firstTextBaseline) {
+                Text(expense.name)
                     .lineLimit(1)
-                if !expense.definition.isEmpty {
-                    Text(expense.definition)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                Spacer()
+                Text(expense.amount, format: .currency(code: expense.currencyCode))
+                    .monospacedDigit()
             }
+            .font(.headline)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
 

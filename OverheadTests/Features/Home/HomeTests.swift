@@ -251,10 +251,11 @@ extension BaseSuite {
         func creatingAnExpenseSavesItAndClosesTheForm() async {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
+                amount: Decimal(minorUnits: 1299, currencyCode: "USD"),
                 createdAt: now,
-                definition: "The easiest wins, taken first.",
+                currencyCode: "USD",
                 id: UUID(0),
-                term: "Low-hanging fruit"
+                name: "Phone Plan"
             )
 
             var state = Home.State(user: .mock)
@@ -279,10 +280,10 @@ extension BaseSuite {
                     store.exhaustivity = .off
 
                     await store.send(
-                        .destination(.presented(.createExpense(.binding(.set(\.term, "  Low-hanging fruit  ")))))
+                        .destination(.presented(.createExpense(.binding(.set(\.name, "  Phone Plan  ")))))
                     )
                     await store.send(
-                        .destination(.presented(.createExpense(.binding(.set(\.definition, created.definition)))))
+                        .destination(.presented(.createExpense(.binding(.set(\.amountText, "12.99")))))
                     )
                     await store.send(.destination(.presented(.createExpense(.saveButtonTapped))))
                     await store.receive(\.destination.presented.createExpense.delegate.didSubmit) {
@@ -298,7 +299,7 @@ extension BaseSuite {
         func aNonDelegateDetailActionIsHandledByTheDetail() async {
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
@@ -313,12 +314,12 @@ extension BaseSuite {
         // The detail stays on screen because it reads the expense from the shared state
         @Test
         func updatingFromTheDetailSavesTheExpense() async {
-            var updated = Expense.burningCandle
-            updated.term = "Burn the midnight oil"
+            var updated = Expense.gym
+            updated.amount = 45
 
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .burningCandle)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .gym)))
             let detailID = Array(state.path.ids)[0]
 
             await confirmation("Saves the expense") { savesExpense in
@@ -344,7 +345,7 @@ extension BaseSuite {
         func aFailedSaveNotifiesTheSession() async {
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
@@ -354,7 +355,7 @@ extension BaseSuite {
             }
 
             await store.send(
-                .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
+                .path(.element(id: detailID, action: .delegate(.didUpdate(.rent))))
             )
             await store.receive(\.delegate.didFailToSave)
         }
@@ -364,7 +365,7 @@ extension BaseSuite {
         func deletingFromTheDetailPopsBackAndDeletesTheExpense() async {
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             await confirmation("Deletes the expense") { deletesExpense in
@@ -372,7 +373,7 @@ extension BaseSuite {
                     Home()
                 } withDependencies: {
                     $0.expensesClient.delete = { id, uid in
-                        expectNoDifference(id, Expense.blueMoon.id)
+                        expectNoDifference(id, Expense.rent.id)
                         expectNoDifference(uid, User.mock.uid)
                         deletesExpense()
                     }
@@ -380,7 +381,7 @@ extension BaseSuite {
                 }
 
                 await store.send(
-                    .path(.element(id: detailID, action: .delegate(.didDelete(Expense.blueMoon.id))))
+                    .path(.element(id: detailID, action: .delegate(.didDelete(Expense.rent.id))))
                 ) {
                     $0.path.pop(from: detailID)
                 }
@@ -393,7 +394,7 @@ extension BaseSuite {
         func aFailedDeletionNotifiesTheSession() async {
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
@@ -404,7 +405,7 @@ extension BaseSuite {
             }
 
             await store.send(
-                .path(.element(id: detailID, action: .delegate(.didDelete(Expense.blueMoon.id))))
+                .path(.element(id: detailID, action: .delegate(.didDelete(Expense.rent.id))))
             ) {
                 $0.path.pop(from: detailID)
             }
@@ -414,10 +415,10 @@ extension BaseSuite {
         // A different device can delete the expense while its detail is on screen
         @Test
         func aDeletedExpensePopsItsDetail() async {
-            let remaining = [Expense.burningCandle, Expense.lowHangingFruit]
+            let remaining = [Expense.gym, Expense.phonePlan]
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
@@ -436,7 +437,7 @@ extension BaseSuite {
         func aSurvivingExpenseKeepsItsDetail() async {
             var state = Home.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {

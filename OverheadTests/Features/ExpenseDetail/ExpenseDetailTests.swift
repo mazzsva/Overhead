@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @testable import Overhead
@@ -18,13 +19,13 @@ extension BaseSuite {
         @Test
         func theEditButtonOpensTheFormOnTheExpense() async {
             let store = TestStore(
-                initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .rent))
             ) {
                 ExpenseDetail()
             }
 
             await store.send(.editButtonTapped) {
-                $0.destination = .editExpense(ExpenseForm.State(expense: .blueMoon))
+                $0.destination = .editExpense(ExpenseForm.State(expense: .rent))
             }
         }
 
@@ -34,8 +35,8 @@ extension BaseSuite {
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(
                     initialState: ExpenseDetail.State(
-                        destination: .editExpense(ExpenseForm.State(expense: .blueMoon)),
-                        expense: SharedReader(value: .blueMoon)
+                        destination: .editExpense(ExpenseForm.State(expense: .rent)),
+                        expense: SharedReader(value: .rent)
                     )
                 ) {
                     ExpenseDetail()
@@ -44,11 +45,11 @@ extension BaseSuite {
                 }
                 store.exhaustivity = .off
 
-                var edited = Expense.blueMoon
-                edited.definition = "Something that almost never happens."
+                var edited = Expense.rent
+                edited.amount = 1000
 
                 await store.send(
-                    .destination(.presented(.editExpense(.binding(.set(\.definition, edited.definition)))))
+                    .destination(.presented(.editExpense(.binding(.set(\.amountText, "1000")))))
                 )
                 await store.send(.destination(.presented(.editExpense(.saveButtonTapped))))
                 await store.receive(\.delegate.didUpdate, edited) {
@@ -61,7 +62,7 @@ extension BaseSuite {
         @Test
         func theDeleteButtonAsksForConfirmation() async {
             let store = TestStore(
-                initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .rent))
             ) {
                 ExpenseDetail()
             }
@@ -77,7 +78,7 @@ extension BaseSuite {
             let store = TestStore(
                 initialState: ExpenseDetail.State(
                     destination: .alert(.confirmDeletion),
-                    expense: SharedReader(value: .blueMoon)
+                    expense: SharedReader(value: .rent)
                 )
             ) {
                 ExpenseDetail()
@@ -86,7 +87,7 @@ extension BaseSuite {
             await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
                 $0.destination = nil
             }
-            await store.receive(\.delegate.didDelete, Expense.blueMoon.id)
+            await store.receive(\.delegate.didDelete, Expense.rent.id)
         }
 
         // A dismissed alert must not reach the parent
@@ -95,7 +96,7 @@ extension BaseSuite {
             let store = TestStore(
                 initialState: ExpenseDetail.State(
                     destination: .alert(.confirmDeletion),
-                    expense: SharedReader(value: .blueMoon)
+                    expense: SharedReader(value: .rent)
                 )
             ) {
                 ExpenseDetail()
