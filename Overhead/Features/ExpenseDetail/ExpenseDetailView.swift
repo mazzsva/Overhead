@@ -14,13 +14,14 @@ struct ExpenseDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(store.expense.term)
+                Text(store.expense.name)
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                if !store.expense.definition.isEmpty {
-                    Text(store.expense.definition)
-                }
+                Text(store.expense.amount, format: .currency(code: store.expense.currencyCode))
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .monospacedDigit()
 
                 Text("Created \(store.expense.createdAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
@@ -57,7 +58,7 @@ struct ExpenseDetailView: View {
 #Preview {
     NavigationStack {
         ExpenseDetailView(
-            store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))) {
+            store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .gym))) {
                 ExpenseDetail()
             }
         )

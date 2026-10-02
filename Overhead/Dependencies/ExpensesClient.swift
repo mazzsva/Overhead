@@ -150,7 +150,7 @@ private actor FirestoreStorage {
 
     func save(_ expense: Expense, uid: String) async throws {
         await waitForClearing()
-        try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData)
+        try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
     }
 
     private func waitForClearing() async {
@@ -159,37 +159,46 @@ private actor FirestoreStorage {
 }
 
 private func expensesCollection(uid: String) -> CollectionReference {
-    Firestore.firestore().collection("users").document(uid).collection("entries")
+    Firestore.firestore().collection("users").document(uid).collection("expenses")
 }
 
 extension Expense {
     fileprivate init?(document: QueryDocumentSnapshot) {
         let data = document.data()
         guard
+            let amountMinorUnits = data["amountMinorUnits"] as? Int,
             let createdAt = data["createdAt"] as? Timestamp,
-            let definition = data["definition"] as? String,
+            let currencyCode = data["currencyCode"] as? String,
             let id = UUID(uuidString: document.documentID),
-            let term = data["term"] as? String
+            let name = data["name"] as? String
         else {
             logger.error("Skipping expense document \(document.documentID, privacy: .public) that failed to decode.")
             reportIssue("Skipping expense document \(document.documentID) that failed to decode.")
             return nil
         }
         self.init(
+            amount: Decimal(minorUnits: amountMinorUnits, currencyCode: currencyCode),
             createdAt: createdAt.dateValue(),
-            definition: definition,
+            currencyCode: currencyCode,
             id: id,
-            term: term
+            name: name
         )
     }
 
-    fileprivate var documentData: [String: Any] {
-        [
+    fileprivate func documentData() throws -> [String: Any] {
+        guard let amountMinorUnits = amount.minorUnits(currencyCode: currencyCode) else {
+            reportIssue("Expense \(id) has an amount that \(currencyCode) cannot represent.")
+            throw InexactAmountError()
+        }
+        return [
+            "amountMinorUnits": amountMinorUnits,
             "createdAt": Timestamp(date: createdAt),
-            "definition": definition,
-            "term": term,
+            "currencyCode": currencyCode,
+            "name": name,
         ]
     }
 }
+
+private struct InexactAmountError: Error {}
 
 private let logger = Logger(category: "ExpensesClient")

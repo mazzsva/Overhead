@@ -9,33 +9,37 @@ import Dependencies
 import Foundation
 
 struct Expense: Equatable, Identifiable, Sendable {
+    var amount: Decimal
     let createdAt: Date
-    var definition: String
+    var currencyCode: String
     let id: UUID
-    var term: String
+    var name: String
 }
 
 extension Expense {
-    static let blueMoon = Expense(
+    static let rent = Expense(
+        amount: 950,
         createdAt: Date(timeIntervalSince1970: 1_750_000_000),
-        definition: "Something that happens very rarely.",
+        currencyCode: "EUR",
         id: UUID(0),
-        term: "Once in a blue moon"
+        name: "Rent"
     )
 
-    static let burningCandle = Expense(
+    static let gym = Expense(
+        amount: Decimal(minorUnits: 3990, currencyCode: "EUR"),
         createdAt: Date(timeIntervalSince1970: 1_749_000_000),
-        definition: "To work early and late until you're exhausted.",
+        currencyCode: "EUR",
         id: UUID(1),
-        term: "Burn the candle at both ends"
+        name: "Gym"
     )
 
-    static let lowHangingFruit = Expense(
+    static let phonePlan = Expense(
+        amount: Decimal(minorUnits: 1299, currencyCode: "EUR"),
         createdAt: Date(timeIntervalSince1970: 1_748_000_000),
-        definition: "The easiest wins, taken first.",
+        currencyCode: "EUR",
         id: UUID(2),
-        term: "Low-hanging fruit"
+        name: "Phone Plan"
     )
 
-    static let mocks: [Expense] = [.blueMoon, .burningCandle, .lowHangingFruit]
+    static let mocks: [Expense] = [.rent, .gym, .phonePlan]
 }

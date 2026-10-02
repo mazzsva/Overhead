@@ -59,8 +59,8 @@ private struct WelcomeHighlight {
 
     static let all = [
         WelcomeHighlight(
-            systemImage: "books.vertical.fill",
-            text: "Save any word or phrase with a definition in your own words."
+            systemImage: "creditcard.fill",
+            text: "Add every fixed expense with its name and amount."
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",
