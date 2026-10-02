@@ -16,11 +16,10 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct ExpensesTests {
-        // The expenses stream and the network monitor start with the session
+        // The expenses stream starts with the session
         @Test
-        func theTaskObservesTheExpensesAndTheConnectivity() async {
-            let expenses = AsyncThrowingStream<ExpensesSnapshot, any Error>.makeStream()
-            let connectivity = AsyncStream<Bool>.makeStream()
+        func theTaskObservesTheExpenses() async {
+            let expenses = AsyncThrowingStream<[Expense], any Error>.makeStream()
 
             let store = TestStore(initialState: Expenses.State(user: .mock)) {
                 Expenses()
@@ -29,24 +28,16 @@ extension BaseSuite {
                     expectNoDifference(uid, User.mock.uid)
                     return expenses.stream
                 }
-                $0.networkMonitorClient.connectivityChanges = { connectivity.stream }
             }
 
             await store.send(.task)
 
-            expenses.continuation.yield(.mock)
+            expenses.continuation.yield(Expense.mocks)
             await store.receive(\.expensesUpdated) {
                 $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-                $0.isSyncing = false
-            }
-
-            connectivity.continuation.yield(false)
-            await store.receive(\.connectivityChanged, false) {
-                $0.isOnline = false
             }
 
             expenses.continuation.finish()
-            connectivity.continuation.finish()
             await store.finish()
         }
 
@@ -57,28 +48,6 @@ extension BaseSuite {
 
             #expect(state.isLoadingFirstExpenses)
             expectNoDifference(state.listedExpenses.map(\.wrappedValue), [])
-        }
-
-        // A snapshot stops the syncing only when it comes from the server without a local write
-        @Test
-        func anExpensesUpdateStoresThemAndStopsTheSyncing() async {
-            let store = TestStore(initialState: Expenses.State(user: .mock)) {
-                Expenses()
-            }
-
-            await store.send(.expensesUpdated(.mock)) {
-                $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-                $0.isSyncing = false
-            }
-        }
-
-        @Test
-        func theExpenseCountFollowsTheExpenses() {
-            let state = Expenses.State(user: .mock)
-            expectNoDifference(state.expenseCount, 0)
-
-            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            expectNoDifference(state.expenseCount, 3)
         }
 
         // An empty array replaces nil, so the list shows the empty state and not the spinner
@@ -102,9 +71,6 @@ extension BaseSuite {
                             : continuation.finish()
                     }
                 }
-                $0.networkMonitorClient.connectivityChanges = {
-                    AsyncStream { continuation in continuation.finish() }
-                }
             }
 
             await store.send(.task)
@@ -123,7 +89,6 @@ extension BaseSuite {
             let clock = TestClock()
             var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.isSyncing = false
 
             let store = TestStore(initialState: state) {
                 Expenses()
@@ -134,14 +99,8 @@ extension BaseSuite {
                 }
             }
 
-            await store.send(.expensesStreamFailed) {
-                $0.isSyncing = true
-            }
-            await clock.advance(by: .seconds(4))
-            await store.send(.connectivityChanged(false)) {
-                $0.isOnline = false
-            }
-            await clock.advance(by: .seconds(1))
+            await store.send(.expensesStreamFailed)
+            await clock.advance(by: .seconds(5))
             await store.receive(\.expensesRetryTimerElapsed)
             await store.finish()
         }
@@ -158,11 +117,10 @@ extension BaseSuite {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
 
-                await store.send(.expensesUpdated(.mock)) {
+                await store.send(.expensesUpdated(Expense.mocks)) {
                     $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-                    $0.isSyncing = false
                 }
-                await store.send(.expensesUpdated(.mock))
+                await store.send(.expensesUpdated(Expense.mocks))
                 await store.finish()
             }
         }
@@ -191,35 +149,6 @@ extension BaseSuite {
                 await store.receive(\.expensesRetryTimerElapsed)
                 await store.finish()
             }
-        }
-
-        // A sync cannot finish without a network, so the offline status wins
-        @Test
-        func theConnectivityDrivesTheSyncStatus() async {
-            var state = Expenses.State(user: .mock)
-            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
-            state.isSyncing = false
-
-            let store = TestStore(initialState: state) {
-                Expenses()
-            }
-
-            expectNoDifference(store.state.syncStatus, .synced)
-
-            await store.send(.connectivityChanged(false)) {
-                $0.isOnline = false
-            }
-            expectNoDifference(store.state.syncStatus, .offline)
-
-            await store.send(.expensesUpdated(.syncing)) {
-                $0.isSyncing = true
-            }
-            expectNoDifference(store.state.syncStatus, .offline)
-
-            await store.send(.connectivityChanged(true)) {
-                $0.isOnline = true
-            }
-            expectNoDifference(store.state.syncStatus, .syncing)
         }
 
         @Test
@@ -425,9 +354,8 @@ extension BaseSuite {
                 Expenses()
             }
 
-            await store.send(.expensesUpdated(ExpensesSnapshot(expenses: remaining, isSyncing: false))) {
+            await store.send(.expensesUpdated(remaining)) {
                 $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: remaining) }
-                $0.isSyncing = false
                 $0.path.pop(from: detailID)
             }
         }
@@ -438,13 +366,12 @@ extension BaseSuite {
             var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
-            state.isSyncing = false
 
             let store = TestStore(initialState: state) {
                 Expenses()
             }
 
-            await store.send(.expensesUpdated(.mock))
+            await store.send(.expensesUpdated(Expense.mocks))
         }
 
         private struct ExpensesFailure: Error {}

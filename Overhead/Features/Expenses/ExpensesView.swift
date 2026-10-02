@@ -32,12 +32,9 @@ struct ExpensesView: View {
             .toolbarRole(.editor)
             .toolbar {
                 ToolbarItem(placement: .title) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Expenses")
-                            .font(.title)
-                            .fontWeight(.bold)
-                        SyncStatusLabel(expenseCount: store.expenseCount, status: store.syncStatus)
-                    }
+                    Text("Expenses")
+                        .font(.title)
+                        .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("New Expense", systemImage: "plus") {
@@ -80,35 +77,7 @@ struct ExpensesView: View {
     } withDependencies: {
         $0.expensesClient.expenses = { _ in
             AsyncThrowingStream { continuation in
-                continuation.yield(.empty)
-            }
-        }
-    }
-    ExpensesView(store: store)
-        .task { await store.send(.task).finish() }
-}
-
-#Preview("Syncing") {
-    let store = Store(initialState: Expenses.State(user: .mock)) {
-        Expenses()
-    } withDependencies: {
-        $0.expensesClient.expenses = { _ in
-            AsyncThrowingStream { continuation in
-                continuation.yield(.syncing)
-            }
-        }
-    }
-    ExpensesView(store: store)
-        .task { await store.send(.task).finish() }
-}
-
-#Preview("Offline") {
-    let store = Store(initialState: Expenses.State(user: .mock)) {
-        Expenses()
-    } withDependencies: {
-        $0.networkMonitorClient.connectivityChanges = {
-            AsyncStream { continuation in
-                continuation.yield(false)
+                continuation.yield([])
             }
         }
     }
