@@ -30,7 +30,7 @@ struct Tabs {
         var settings: Settings.State
         let user: User
 
-        init(user: User, sessionOrigin: Expenses.State.SessionOrigin = .restored) {
+        init(user: User, sessionOrigin: SessionOrigin = .restored) {
             expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
             settings = Settings.State(user: user)
             self.user = user
@@ -57,7 +57,7 @@ struct Tabs {
 
         var isReauthenticating: Bool { settings.isReauthenticating }
 
-        var sessionOrigin: Expenses.State.SessionOrigin { expenses.sessionOrigin }
+        var sessionOrigin: SessionOrigin { expenses.sessionOrigin }
 
         private var isPresentingAnythingElse: Bool {
             expenses.isPresenting || settings.isPresenting || isLoadingFirstExpenses || !hasDismissedWelcome
