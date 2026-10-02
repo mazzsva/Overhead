@@ -124,7 +124,7 @@ extension BaseSuite {
         @Test
         func aFailureWaitsForTheDetailPresentation() async {
             var state = makeReadyState()
-            state.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
+            state.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.home.path.ids)[0]
             state.home.path[id: detailID]?.destination = .alert(.confirmDeletion)
 

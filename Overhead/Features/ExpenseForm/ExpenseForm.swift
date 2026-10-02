@@ -7,19 +7,44 @@
 
 import ComposableArchitecture
 import Foundation
+import RegexBuilder
 
 @Reducer
 struct ExpenseForm {
     @ObservableState
     struct State: Equatable {
-        var definition: String
+        var amountText: String
+        let currencyCode: String
         let expense: Expense?
-        var term: String
+        let locale: Locale
+        var name: String
 
         init(expense: Expense? = nil) {
+            @Dependency(\.locale) var locale
+            let currencyCode = expense?.currencyCode ?? locale.currency?.identifier ?? "USD"
+            amountText =
+                expense?.amount
+                .formatted(
+                    .number
+                        .grouping(.never)
+                        .locale(locale)
+                        .precision(.fractionLength(Decimal.minorUnitDigits(currencyCode: currencyCode)))
+                ) ?? ""
+            self.currencyCode = currencyCode
             self.expense = expense
-            definition = expense?.definition ?? ""
-            term = expense?.term ?? ""
+            self.locale = locale
+            name = expense?.name ?? ""
+        }
+
+        var amount: Decimal? {
+            let text = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let number = Regex { Capture { Decimal.FormatStyle(locale: locale) } }
+            guard
+                let amount = text.wholeMatch(of: number)?.output.1,
+                amount > 0,
+                amount.minorUnits(currencyCode: currencyCode) != nil
+            else { return nil }
+            return amount
         }
 
         var isCreating: Bool {
@@ -27,7 +52,7 @@ struct ExpenseForm {
         }
 
         var isSubmittable: Bool {
-            !term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            amount != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
 
@@ -61,15 +86,14 @@ struct ExpenseForm {
                 return .run { _ in await dismiss() }
 
             case .saveButtonTapped:
-                guard state.isSubmittable else { return .none }
-                let term = state.term.trimmingCharacters(in: .whitespacesAndNewlines)
-                let definition = state.definition.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard state.isSubmittable, let amount = state.amount else { return .none }
                 let original = state.expense
                 let expense = Expense(
+                    amount: amount,
                     createdAt: original?.createdAt ?? now,
-                    definition: definition,
+                    currencyCode: state.currencyCode,
                     id: original?.id ?? uuid(),
-                    term: term
+                    name: state.name.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 return .send(.delegate(.didSubmit(expense)))
             }
