@@ -69,7 +69,6 @@ struct ExpenseForm {
                     createdAt: original?.createdAt ?? now,
                     definition: definition,
                     id: original?.id ?? uuid(),
-                    isBookmarked: original?.isBookmarked ?? false,
                     term: term
                 )
                 return .send(.delegate(.didSubmit(expense)))

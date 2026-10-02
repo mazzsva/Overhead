@@ -169,7 +169,6 @@ extension Expense {
             let createdAt = data["createdAt"] as? Timestamp,
             let definition = data["definition"] as? String,
             let id = UUID(uuidString: document.documentID),
-            let isBookmarked = data["isBookmarked"] as? Bool,
             let term = data["term"] as? String
         else {
             logger.error("Skipping expense document \(document.documentID, privacy: .public) that failed to decode.")
@@ -180,7 +179,6 @@ extension Expense {
             createdAt: createdAt.dateValue(),
             definition: definition,
             id: id,
-            isBookmarked: isBookmarked,
             term: term
         )
     }
@@ -189,7 +187,6 @@ extension Expense {
         [
             "createdAt": Timestamp(date: createdAt),
             "definition": definition,
-            "isBookmarked": isBookmarked,
             "term": term,
         ]
     }

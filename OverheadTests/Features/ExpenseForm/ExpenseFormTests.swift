@@ -37,7 +37,6 @@ extension BaseSuite {
                 createdAt: now,
                 definition: "The easiest wins, taken first.",
                 id: UUID(0),
-                isBookmarked: false,
                 term: "Low-hanging fruit"
             )
 

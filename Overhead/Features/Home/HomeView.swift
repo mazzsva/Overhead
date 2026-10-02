@@ -12,11 +12,11 @@ struct HomeView: View {
     @Bindable var store: StoreOf<Home>
 
     var body: some View {
-        let visibleExpenses = store.filteredExpenses
+        let listedExpenses = store.listedExpenses
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    ForEach(visibleExpenses) { $expense in
+                    ForEach(listedExpenses) { $expense in
                         NavigationLink(state: ExpenseDetail.State(expense: $expense)) {
                             ExpenseCardView(expense: expense)
                         }
@@ -39,19 +39,6 @@ struct HomeView: View {
                         SyncStatusLabel(expenseCount: store.expenseCount, status: store.syncStatus)
                     }
                 }
-                if store.canFilterBookmarks {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(
-                            store.isShowingBookmarkedOnly ? "Show All Expenses" : "Show Bookmarked Expenses",
-                            systemImage: store.isShowingBookmarkedOnly ? "bookmark.fill" : "bookmark"
-                        ) {
-                            store.send(.bookmarkFilterButtonTapped)
-                        }
-                        .labelStyle(.iconOnly)
-                        .tint(store.isShowingBookmarkedOnly ? .bookmark : .secondary)
-                    }
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("New Expense", systemImage: "plus") {
                         store.send(.newExpenseButtonTapped)
@@ -60,21 +47,12 @@ struct HomeView: View {
                 }
             }
             .overlay {
-                switch store.emptyState {
-                case .bookmarks:
-                    ContentUnavailableView(
-                        "No Bookmarks",
-                        systemImage: "bookmark.fill",
-                        description: Text("Bookmark an expense to find it here.")
-                    )
-                case .expenses:
+                if store.isEmpty {
                     ContentUnavailableView(
                         "No Expenses",
                         systemImage: "tray.fill",
                         description: Text("Tap the plus button to add an expense.")
                     )
-                case nil:
-                    EmptyView()
                 }
             }
         } destination: { detailStore in

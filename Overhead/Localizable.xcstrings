@@ -13,18 +13,6 @@
     "Are you sure you want to sign out?" : {
 
     },
-    "Bookmark" : {
-
-    },
-    "Bookmark an expense to find it here." : {
-
-    },
-    "Bookmark your favorite expenses to find them quickly." : {
-
-    },
-    "Bookmarked" : {
-
-    },
     "Cancel" : {
 
     },
@@ -73,9 +61,6 @@
     "New Expense" : {
 
     },
-    "No Bookmarks" : {
-
-    },
     "No Expenses" : {
 
     },
@@ -88,9 +73,6 @@
     "Overview" : {
 
     },
-    "Remove Bookmark" : {
-
-    },
     "Save" : {
 
     },
@@ -98,12 +80,6 @@
 
     },
     "Settings" : {
-
-    },
-    "Show All Expenses" : {
-
-    },
-    "Show Bookmarked Expenses" : {
 
     },
     "Sign in with Apple to keep every expense in your account." : {

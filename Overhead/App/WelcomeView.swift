@@ -63,10 +63,6 @@ private struct WelcomeHighlight {
             text: "Save any word or phrase with a definition in your own words."
         ),
         WelcomeHighlight(
-            systemImage: "bookmark.fill",
-            text: "Bookmark your favorite expenses to find them quickly."
-        ),
-        WelcomeHighlight(
             systemImage: "apple.logo",
             text: "Sign in with Apple to keep every expense in your account."
         ),

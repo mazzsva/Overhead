@@ -12,7 +12,6 @@ struct Expense: Equatable, Identifiable, Sendable {
     let createdAt: Date
     var definition: String
     let id: UUID
-    var isBookmarked: Bool
     var term: String
 }
 
@@ -21,7 +20,6 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_750_000_000),
         definition: "Something that happens very rarely.",
         id: UUID(0),
-        isBookmarked: true,
         term: "Once in a blue moon"
     )
 
@@ -29,7 +27,6 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_749_000_000),
         definition: "To work early and late until you're exhausted.",
         id: UUID(1),
-        isBookmarked: false,
         term: "Burn the candle at both ends"
     )
 
@@ -37,7 +34,6 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_748_000_000),
         definition: "The easiest wins, taken first.",
         id: UUID(2),
-        isBookmarked: false,
         term: "Low-hanging fruit"
     )
 
