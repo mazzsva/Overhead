@@ -16,7 +16,7 @@ struct TabsView: View {
             Tab("Overview", systemImage: "square.grid.2x2", value: .overview) {
                 OverviewView()
             }
-            Tab("Home", systemImage: "house", value: .home) {
+            Tab("Expenses", systemImage: "list.bullet.rectangle.fill", value: .home) {
                 HomeView(store: store.scope(state: \.home, action: \.home))
             }
             Tab("Settings", systemImage: "gear", value: .settings) {
