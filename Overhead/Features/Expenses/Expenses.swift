@@ -20,8 +20,6 @@ struct Expenses {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
-        var isOnline = true
-        var isSyncing = true
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User
@@ -31,8 +29,6 @@ struct Expenses {
             self.sessionOrigin = sessionOrigin
             self.user = user
         }
-
-        var expenseCount: Int { expenses?.count ?? 0 }
 
         var isEmpty: Bool { expenses?.isEmpty == true }
 
@@ -48,20 +44,14 @@ struct Expenses {
             guard let expenses = Shared($expenses) else { return [] }
             return Array(expenses).map { SharedReader($0) }
         }
-
-        var syncStatus: SyncStatus {
-            guard isOnline else { return .offline }
-            return isSyncing ? .syncing : .synced
-        }
     }
 
     enum Action {
-        case connectivityChanged(Bool)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case expensesRetryTimerElapsed
         case expensesStreamFailed
-        case expensesUpdated(ExpensesSnapshot)
+        case expensesUpdated([Expense])
         case newExpenseButtonTapped
         case path(StackActionOf<ExpenseDetail>)
         case task
@@ -74,22 +64,16 @@ struct Expenses {
     }
 
     enum CancelID {
-        case connectivitySubscription
         case expensesSubscription
     }
 
     @Dependency(\.continuousClock) var clock
     @Dependency(\.expensesClient) var expensesClient
     @Dependency(\.hapticsClient) var hapticsClient
-    @Dependency(\.networkMonitorClient) var networkMonitorClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .connectivityChanged(let isOnline):
-                state.isOnline = isOnline
-                return .none
-
             case .delegate:
                 return .none
 
@@ -107,7 +91,6 @@ struct Expenses {
                 return subscribeToExpenses(state)
 
             case .expensesStreamFailed:
-                state.isSyncing = true
                 let retry: Effect<Action> =
                     .run { send in
                         try await clock.sleep(for: .seconds(5))
@@ -118,10 +101,9 @@ struct Expenses {
                 state.$expenses.withLock { $0 = [] }
                 return .merge(retry, celebrateFirstLoad(state))
 
-            case .expensesUpdated(let snapshot):
+            case .expensesUpdated(let expenses):
                 let isFirstLoad = state.expenses == nil
-                state.isSyncing = snapshot.isSyncing
-                let expenses = IdentifiedArray(uniqueElements: snapshot.expenses)
+                let expenses = IdentifiedArray(uniqueElements: expenses)
                 state.$expenses.withLock { $0 = expenses }
                 for id in Array(state.path.ids) {
                     guard
@@ -151,10 +133,7 @@ struct Expenses {
                 return .none
 
             case .task:
-                return .merge(
-                    observeConnectivity(),
-                    subscribeToExpenses(state)
-                )
+                return subscribeToExpenses(state)
             }
         }
         .ifLet(\.$destination, action: \.destination)
@@ -177,15 +156,6 @@ struct Expenses {
         }
     }
 
-    private func observeConnectivity() -> Effect<Action> {
-        .run { send in
-            for await isOnline in networkMonitorClient.connectivityChanges() {
-                await send(.connectivityChanged(isOnline))
-            }
-        }
-        .cancellable(id: CancelID.connectivitySubscription, cancelInFlight: true)
-    }
-
     private func save(_ expense: Expense, uid: String) -> Effect<Action> {
         .run { _ in
             try await expensesClient.save(expense: expense, uid: uid)
@@ -201,8 +171,8 @@ struct Expenses {
             .run { send in
                 do {
                     let snapshots = await expensesClient.expenses(uid: uid)
-                    for try await snapshot in snapshots {
-                        await send(.expensesUpdated(snapshot))
+                    for try await expenses in snapshots {
+                        await send(.expensesUpdated(expenses))
                     }
                 } catch {
                     logger.error("Expenses stream failed: \(error, privacy: .public)")

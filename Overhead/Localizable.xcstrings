@@ -4,9 +4,6 @@
     "" : {
       "shouldTranslate" : false
     },
-    "^[%lld Expense](inflect: true)" : {
-
-    },
     "Add every fixed expense with its name and amount." : {
 
     },
@@ -70,9 +67,6 @@
     "No Expenses" : {
 
     },
-    "No Internet" : {
-
-    },
     "Overhead" : {
       "shouldTranslate" : false
     },
@@ -98,9 +92,6 @@
 
     },
     "Something Went Wrong" : {
-
-    },
-    "Syncing, %@" : {
 
     },
     "Tap the plus button to add an expense." : {

@@ -18,22 +18,11 @@ struct ExpensesClient: Sendable {
     var delete: @Sendable (_ id: Expense.ID, _ uid: String) async throws -> Void
     var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
-    var expenses: @Sendable (_ uid: String) async -> AsyncThrowingStream<ExpensesSnapshot, any Error> = { _ in
+    var expenses: @Sendable (_ uid: String) async -> AsyncThrowingStream<[Expense], any Error> = { _ in
         AsyncThrowingStream { _ in }
     }
 
     var save: @Sendable (_ expense: Expense, _ uid: String) async throws -> Void
-}
-
-struct ExpensesSnapshot: Equatable, Sendable {
-    let expenses: [Expense]
-    let isSyncing: Bool
-}
-
-extension ExpensesSnapshot {
-    static let empty = ExpensesSnapshot(expenses: [], isSyncing: false)
-    static let mock = ExpensesSnapshot(expenses: Expense.mocks, isSyncing: false)
-    static let syncing = ExpensesSnapshot(expenses: Expense.mocks, isSyncing: true)
 }
 
 extension ExpensesClient: DependencyKey {
@@ -64,7 +53,7 @@ extension ExpensesClient: DependencyKey {
             deleteAll: { _ in },
             expenses: { _ in
                 AsyncThrowingStream { continuation in
-                    continuation.yield(.mock)
+                    continuation.yield(Expense.mocks)
                 }
             },
             save: { _, _ in }
@@ -121,12 +110,12 @@ private actor FirestoreStorage {
         }
     }
 
-    func expenses(uid: String) async -> AsyncThrowingStream<ExpensesSnapshot, any Error> {
+    func expenses(uid: String) async -> AsyncThrowingStream<[Expense], any Error> {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
             nonisolated(unsafe) let listener = expensesCollection(uid: uid)
                 .order(by: "createdAt", descending: true)
-                .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
+                .addSnapshotListener { snapshot, error in
                     if let error {
                         continuation.finish(throwing: error)
                         return
@@ -135,12 +124,7 @@ private actor FirestoreStorage {
                         reportIssue("Expenses listener reported neither a snapshot nor an error.")
                         return
                     }
-                    continuation.yield(
-                        ExpensesSnapshot(
-                            expenses: snapshot.documents.compactMap(Expense.init(document:)),
-                            isSyncing: snapshot.metadata.isFromCache || snapshot.metadata.hasPendingWrites
-                        )
-                    )
+                    continuation.yield(snapshot.documents.compactMap(Expense.init(document:)))
                 }
             continuation.onTermination = { _ in
                 listener.remove()
