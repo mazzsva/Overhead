@@ -16,8 +16,8 @@ struct TabsView: View {
             Tab("Overview", systemImage: "square.grid.2x2", value: .overview) {
                 OverviewView()
             }
-            Tab("Expenses", systemImage: "list.bullet.rectangle.fill", value: .home) {
-                HomeView(store: store.scope(state: \.home, action: \.home))
+            Tab("Expenses", systemImage: "list.bullet.rectangle.fill", value: .expenses) {
+                ExpensesView(store: store.scope(state: \.expenses, action: \.expenses))
             }
             Tab("Settings", systemImage: "gear", value: .settings) {
                 SettingsView(store: store.scope(state: \.settings, action: \.settings))
@@ -30,7 +30,7 @@ struct TabsView: View {
         } message: {
             Text(store.expenseFailureMessage)
         }
-        .task { await store.send(.home(.task)).finish() }
+        .task { await store.send(.expenses(.task)).finish() }
     }
 }
 

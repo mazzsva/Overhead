@@ -16,22 +16,22 @@ struct Tabs {
     }
 
     enum Tab: Hashable {
-        case home
+        case expenses
         case overview
         case settings
     }
 
     @ObservableState
     struct State: Equatable {
+        var expenses: Expenses.State
         var failedExpenseOperations: Set<ExpenseOperation> = []
         @SharedReader(.hasDismissedWelcome) var hasDismissedWelcome
-        var home: Home.State
         var selectedTab = Tab.overview
         var settings: Settings.State
         let user: User
 
-        init(user: User, sessionOrigin: Home.State.SessionOrigin = .restored) {
-            home = Home.State(user: user, sessionOrigin: sessionOrigin)
+        init(user: User, sessionOrigin: Expenses.State.SessionOrigin = .restored) {
+            expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
             settings = Settings.State(user: user)
             self.user = user
         }
@@ -49,7 +49,7 @@ struct Tabs {
 
         var isDeletingAccount: Bool { settings.isDeletingAccount }
 
-        var isLoadingFirstExpenses: Bool { home.isLoadingFirstExpenses }
+        var isLoadingFirstExpenses: Bool { expenses.isLoadingFirstExpenses }
 
         var isPresentingExpenseFailure: Bool {
             !failedExpenseOperations.isEmpty && !isPresentingAnythingElse
@@ -57,23 +57,23 @@ struct Tabs {
 
         var isReauthenticating: Bool { settings.isReauthenticating }
 
-        var sessionOrigin: Home.State.SessionOrigin { home.sessionOrigin }
+        var sessionOrigin: Expenses.State.SessionOrigin { expenses.sessionOrigin }
 
         private var isPresentingAnythingElse: Bool {
-            home.isPresenting || settings.isPresenting || isLoadingFirstExpenses || !hasDismissedWelcome
+            expenses.isPresenting || settings.isPresenting || isLoadingFirstExpenses || !hasDismissedWelcome
         }
     }
 
     enum Action {
         case expenseFailurePresentationChanged(Bool)
-        case home(Home.Action)
+        case expenses(Expenses.Action)
         case selectedTabChanged(Tab)
         case settings(Settings.Action)
     }
 
     var body: some Reducer<State, Action> {
-        Scope(state: \.home, action: \.home) {
-            Home()
+        Scope(state: \.expenses, action: \.expenses) {
+            Expenses()
         }
         Scope(state: \.settings, action: \.settings) {
             Settings()
@@ -88,15 +88,15 @@ struct Tabs {
             case .expenseFailurePresentationChanged(true):
                 return .none
 
-            case .home(.delegate(.didFailToDelete)):
+            case .expenses(.delegate(.didFailToDelete)):
                 state.failedExpenseOperations.insert(.delete)
                 return .none
 
-            case .home(.delegate(.didFailToSave)):
+            case .expenses(.delegate(.didFailToSave)):
                 state.failedExpenseOperations.insert(.save)
                 return .none
 
-            case .home, .settings:
+            case .expenses, .settings:
                 return .none
 
             case .selectedTabChanged(let tab):
