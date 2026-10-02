@@ -377,8 +377,8 @@ extension BaseSuite {
         @Test
         func signingOutCancelsTheExpenseWritesInFlight() async {
             var tabs = Tabs.State(user: .mock)
-            tabs.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
-            let detailID = Array(tabs.home.path.ids)[0]
+            tabs.expenses.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
+            let detailID = Array(tabs.expenses.path.ids)[0]
             var state = AppFeature.State()
             state.scene = .tabs(tabs)
 
@@ -395,7 +395,7 @@ extension BaseSuite {
             }
 
             await store.send(
-                .scene(.tabs(.home(.path(.element(id: detailID, action: .delegate(.didUpdate(.rent)))))))
+                .scene(.tabs(.expenses(.path(.element(id: detailID, action: .delegate(.didUpdate(.rent)))))))
             )
             while pendingSave.value == nil {
                 await Task.yield()

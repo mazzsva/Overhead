@@ -23,7 +23,7 @@ extension BaseSuite {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToSave))) {
+            await store.send(.expenses(.delegate(.didFailToSave))) {
                 $0.failedExpenseOperations = [.save]
             }
             #expect(store.state.isPresentingExpenseFailure)
@@ -38,11 +38,11 @@ extension BaseSuite {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToSave))) {
+            await store.send(.expenses(.delegate(.didFailToSave))) {
                 $0.failedExpenseOperations = [.save]
             }
-            await store.send(.home(.delegate(.didFailToSave)))
-            await store.send(.home(.delegate(.didFailToDelete))) {
+            await store.send(.expenses(.delegate(.didFailToSave)))
+            await store.send(.expenses(.delegate(.didFailToDelete))) {
                 $0.failedExpenseOperations = [.delete, .save]
             }
             expectNoDifference(
@@ -82,19 +82,19 @@ extension BaseSuite {
         @Test
         func aFailedSaveWaitsForThePresentedForm() async {
             var state = makeReadyState()
-            state.home.destination = .createExpense(ExpenseForm.State())
+            state.expenses.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToSave))) {
+            await store.send(.expenses(.delegate(.didFailToSave))) {
                 $0.failedExpenseOperations = [.save]
             }
             #expect(!store.state.isPresentingExpenseFailure)
 
-            await store.send(.home(.destination(.dismiss))) {
-                $0.home.destination = nil
+            await store.send(.expenses(.destination(.dismiss))) {
+                $0.expenses.destination = nil
             }
             #expect(store.state.isPresentingExpenseFailure)
         }
@@ -103,19 +103,19 @@ extension BaseSuite {
         @Test
         func aFailedDeletionWaitsForThePresentedForm() async {
             var state = makeReadyState()
-            state.home.destination = .createExpense(ExpenseForm.State())
+            state.expenses.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToDelete))) {
+            await store.send(.expenses(.delegate(.didFailToDelete))) {
                 $0.failedExpenseOperations = [.delete]
             }
             #expect(!store.state.isPresentingExpenseFailure)
 
-            await store.send(.home(.destination(.dismiss))) {
-                $0.home.destination = nil
+            await store.send(.expenses(.destination(.dismiss))) {
+                $0.expenses.destination = nil
             }
             #expect(store.state.isPresentingExpenseFailure)
             expectNoDifference(store.state.expenseFailureMessage, "Your expense couldn't be deleted.")
@@ -124,21 +124,21 @@ extension BaseSuite {
         @Test
         func aFailureWaitsForTheDetailPresentation() async {
             var state = makeReadyState()
-            state.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
-            let detailID = Array(state.home.path.ids)[0]
-            state.home.path[id: detailID]?.destination = .alert(.confirmDeletion)
+            state.expenses.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
+            let detailID = Array(state.expenses.path.ids)[0]
+            state.expenses.path[id: detailID]?.destination = .alert(.confirmDeletion)
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToSave))) {
+            await store.send(.expenses(.delegate(.didFailToSave))) {
                 $0.failedExpenseOperations = [.save]
             }
             #expect(!store.state.isPresentingExpenseFailure)
 
-            await store.send(.home(.path(.element(id: detailID, action: .destination(.dismiss))))) {
-                $0.home.path[id: detailID]?.destination = nil
+            await store.send(.expenses(.path(.element(id: detailID, action: .destination(.dismiss))))) {
+                $0.expenses.path[id: detailID]?.destination = nil
             }
             #expect(store.state.isPresentingExpenseFailure)
         }
@@ -152,7 +152,7 @@ extension BaseSuite {
                 Tabs()
             }
 
-            await store.send(.home(.delegate(.didFailToSave))) {
+            await store.send(.expenses(.delegate(.didFailToSave))) {
                 $0.failedExpenseOperations = [.save]
             }
             #expect(!store.state.isPresentingExpenseFailure)
@@ -180,10 +180,10 @@ extension BaseSuite {
             var state = makeReadyState()
             state.failedExpenseOperations = [.save]
 
-            state.home.$expenses.withLock { $0 = nil }
+            state.expenses.$expenses.withLock { $0 = nil }
             #expect(!state.isPresentingExpenseFailure)
 
-            state.home.$expenses.withLock { $0 = [] }
+            state.expenses.$expenses.withLock { $0 = [] }
             #expect(state.isPresentingExpenseFailure)
         }
 
@@ -204,7 +204,7 @@ extension BaseSuite {
             @Shared(.hasDismissedWelcome) var hasDismissedWelcome
             $hasDismissedWelcome.withLock { $0 = true }
             let state = Tabs.State(user: .mock)
-            state.home.$expenses.withLock { $0 = [] }
+            state.expenses.$expenses.withLock { $0 = [] }
             return state
         }
     }

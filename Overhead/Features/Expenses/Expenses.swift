@@ -1,5 +1,5 @@
 //
-//  Home.swift
+//  Expenses.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -10,7 +10,7 @@ import Foundation
 import os
 
 @Reducer
-struct Home {
+struct Expenses {
     @Reducer
     enum Destination {
         case createExpense(ExpenseForm)
@@ -25,13 +25,6 @@ struct Home {
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User
-
-        @CasePathable
-        @dynamicMemberLookup
-        enum SessionOrigin: Equatable {
-            case freshSignIn(isNewAccount: Bool)
-            case restored
-        }
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
             _expenses = Shared(value: nil)
@@ -220,6 +213,6 @@ struct Home {
     }
 }
 
-extension Home.Destination.State: Equatable {}
+extension Expenses.Destination.State: Equatable {}
 
-private let logger = Logger(category: "Home")
+private let logger = Logger(category: "Expenses")
