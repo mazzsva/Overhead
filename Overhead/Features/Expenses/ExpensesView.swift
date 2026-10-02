@@ -1,5 +1,5 @@
 //
-//  HomeView.swift
+//  ExpensesView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -8,8 +8,8 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct HomeView: View {
-    @Bindable var store: StoreOf<Home>
+struct ExpensesView: View {
+    @Bindable var store: StoreOf<Expenses>
 
     var body: some View {
         let listedExpenses = store.listedExpenses
@@ -67,16 +67,16 @@ struct HomeView: View {
 }
 
 #Preview("Populated") {
-    let store = Store(initialState: Home.State(user: .mock)) {
-        Home()
+    let store = Store(initialState: Expenses.State(user: .mock)) {
+        Expenses()
     }
-    HomeView(store: store)
+    ExpensesView(store: store)
         .task { await store.send(.task).finish() }
 }
 
 #Preview("Empty") {
-    let store = Store(initialState: Home.State(user: .mock)) {
-        Home()
+    let store = Store(initialState: Expenses.State(user: .mock)) {
+        Expenses()
     } withDependencies: {
         $0.expensesClient.expenses = { _ in
             AsyncThrowingStream { continuation in
@@ -84,13 +84,13 @@ struct HomeView: View {
             }
         }
     }
-    HomeView(store: store)
+    ExpensesView(store: store)
         .task { await store.send(.task).finish() }
 }
 
 #Preview("Syncing") {
-    let store = Store(initialState: Home.State(user: .mock)) {
-        Home()
+    let store = Store(initialState: Expenses.State(user: .mock)) {
+        Expenses()
     } withDependencies: {
         $0.expensesClient.expenses = { _ in
             AsyncThrowingStream { continuation in
@@ -98,13 +98,13 @@ struct HomeView: View {
             }
         }
     }
-    HomeView(store: store)
+    ExpensesView(store: store)
         .task { await store.send(.task).finish() }
 }
 
 #Preview("Offline") {
-    let store = Store(initialState: Home.State(user: .mock)) {
-        Home()
+    let store = Store(initialState: Expenses.State(user: .mock)) {
+        Expenses()
     } withDependencies: {
         $0.networkMonitorClient.connectivityChanges = {
             AsyncStream { continuation in
@@ -112,6 +112,6 @@ struct HomeView: View {
             }
         }
     }
-    HomeView(store: store)
+    ExpensesView(store: store)
         .task { await store.send(.task).finish() }
 }

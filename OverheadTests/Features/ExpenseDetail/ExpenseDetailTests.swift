@@ -29,7 +29,7 @@ extension BaseSuite {
             }
         }
 
-        // The detail closes the form itself, and home receives the expense to save
+        // The detail closes the form itself, and Expenses receives the expense to save
         @Test
         func savingTheEditedExpenseClosesTheFormAndTellsTheParent() async {
             await confirmation("Plays the success haptic") { playsHaptic in
@@ -72,7 +72,7 @@ extension BaseSuite {
             }
         }
 
-        // The detail cannot delete because home holds the expenses
+        // The detail cannot delete because Expenses holds the expenses
         @Test
         func confirmingTheDeletionTellsTheParent() async {
             let store = TestStore(

@@ -1,5 +1,5 @@
 //
-//  HomeTests.swift
+//  ExpensesTests.swift
 //  OverheadTests
 //
 //  Created by Lorenzo Mazzarotto on 31/08/26.
@@ -15,15 +15,15 @@ import Testing
 extension BaseSuite {
     @Suite
     @MainActor
-    struct HomeTests {
+    struct ExpensesTests {
         // The expenses stream and the network monitor start with the session
         @Test
         func theTaskObservesTheExpensesAndTheConnectivity() async {
             let expenses = AsyncThrowingStream<ExpensesSnapshot, any Error>.makeStream()
             let connectivity = AsyncStream<Bool>.makeStream()
 
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
             } withDependencies: {
                 $0.expensesClient.expenses = { uid in
                     expectNoDifference(uid, User.mock.uid)
@@ -53,7 +53,7 @@ extension BaseSuite {
         // Nil expenses mean the first load, and an empty array means an empty list
         @Test
         func theExpensesAreEmptyWhileTheFirstLoadRuns() {
-            let state = Home.State(user: .mock)
+            let state = Expenses.State(user: .mock)
 
             #expect(state.isLoadingFirstExpenses)
             expectNoDifference(state.listedExpenses.map(\.wrappedValue), [])
@@ -62,8 +62,8 @@ extension BaseSuite {
         // A snapshot stops the syncing only when it comes from the server without a local write
         @Test
         func anExpensesUpdateStoresThemAndStopsTheSyncing() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
             }
 
             await store.send(.expensesUpdated(.mock)) {
@@ -74,7 +74,7 @@ extension BaseSuite {
 
         @Test
         func theExpenseCountFollowsTheExpenses() {
-            let state = Home.State(user: .mock)
+            let state = Expenses.State(user: .mock)
             expectNoDifference(state.expenseCount, 0)
 
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
@@ -87,8 +87,8 @@ extension BaseSuite {
             let clock = TestClock()
             let hasFailed = LockIsolated(false)
 
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
             } withDependencies: {
                 $0.continuousClock = clock
                 $0.expensesClient.expenses = { _ in
@@ -121,12 +121,12 @@ extension BaseSuite {
         @Test
         func aFailedStreamKeepsTheExpensesAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             } withDependencies: {
                 $0.continuousClock = clock
                 $0.expensesClient.expenses = { _ in
@@ -149,11 +149,11 @@ extension BaseSuite {
         // Only the first load welcomes the user, and the later ones stay quiet
         @Test
         func aFreshSignInPlaysItsHapticOnlyOnTheFirstLoad() async {
-            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
-                    Home()
+                    Expenses()
                 } withDependencies: {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
@@ -171,11 +171,11 @@ extension BaseSuite {
         @Test
         func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
             let clock = TestClock()
-            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
-                    Home()
+                    Expenses()
                 } withDependencies: {
                     $0.continuousClock = clock
                     $0.expensesClient.expenses = { _ in
@@ -196,12 +196,12 @@ extension BaseSuite {
         // A sync cannot finish without a network, so the offline status wins
         @Test
         func theConnectivityDrivesTheSyncStatus() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             }
 
             expectNoDifference(store.state.syncStatus, .synced)
@@ -224,7 +224,7 @@ extension BaseSuite {
 
         @Test
         func theEmptyStateFollowsTheExpenses() {
-            let state = Home.State(user: .mock)
+            let state = Expenses.State(user: .mock)
             #expect(!state.isEmpty)
 
             state.$expenses.withLock { $0 = [] }
@@ -237,8 +237,8 @@ extension BaseSuite {
         // A form without an expense creates one, and a form with an expense edits it
         @Test
         func theNewExpenseButtonOpensAnEmptyForm() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
             }
 
             await store.send(.newExpenseButtonTapped) {
@@ -246,7 +246,7 @@ extension BaseSuite {
             }
         }
 
-        // The form only reports the expense, and home writes it to the server
+        // The form only reports the expense, and Expenses writes it to the server
         @Test
         func creatingAnExpenseSavesItAndClosesTheForm() async {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
@@ -258,14 +258,14 @@ extension BaseSuite {
                 name: "Phone Plan"
             )
 
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.destination = .createExpense(ExpenseForm.State())
 
             await confirmation("Saves the expense") { savesExpense in
                 await confirmation("Plays the success haptic") { playsHaptic in
                     let store = TestStore(initialState: state) {
-                        Home()
+                        Expenses()
                     } withDependencies: {
                         $0.date.now = now
                         $0.expensesClient.save = { expense, uid in
@@ -294,16 +294,16 @@ extension BaseSuite {
             }
         }
 
-        // Home reads the delegate actions only, and the detail keeps the rest
+        // Expenses reads the delegate actions only, and the detail keeps the rest
         @Test
         func aNonDelegateDetailActionIsHandledByTheDetail() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             }
 
             await store.send(.path(.element(id: detailID, action: .deleteButtonTapped))) {
@@ -317,14 +317,14 @@ extension BaseSuite {
             var updated = Expense.gym
             updated.amount = 45
 
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .gym)))
             let detailID = Array(state.path.ids)[0]
 
             await confirmation("Saves the expense") { savesExpense in
                 let store = TestStore(initialState: state) {
-                    Home()
+                    Expenses()
                 } withDependencies: {
                     $0.expensesClient.save = { [updated] expense, uid in
                         expectNoDifference(expense, updated)
@@ -343,13 +343,13 @@ extension BaseSuite {
         // The save leaves no trace on screen, so an alert must report the failure
         @Test
         func aFailedSaveNotifiesTheSession() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             } withDependencies: {
                 $0.expensesClient.save = { _, _ in throw ExpensesFailure() }
             }
@@ -363,14 +363,14 @@ extension BaseSuite {
         // The detail leaves the stack first because its expense is about to disappear
         @Test
         func deletingFromTheDetailPopsBackAndDeletesTheExpense() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             await confirmation("Deletes the expense") { deletesExpense in
                 let store = TestStore(initialState: state) {
-                    Home()
+                    Expenses()
                 } withDependencies: {
                     $0.expensesClient.delete = { id, uid in
                         expectNoDifference(id, Expense.rent.id)
@@ -392,13 +392,13 @@ extension BaseSuite {
         // The detail pops before the delete reaches the server, so an alert must report the failure
         @Test
         func aFailedDeletionNotifiesTheSession() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             } withDependencies: {
                 $0.expensesClient.delete = { _, _ in throw ExpensesFailure() }
                 $0.hapticsClient.warning = {}
@@ -416,13 +416,13 @@ extension BaseSuite {
         @Test
         func aDeletedExpensePopsItsDetail() async {
             let remaining = [Expense.gym, Expense.phonePlan]
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             let detailID = Array(state.path.ids)[0]
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             }
 
             await store.send(.expensesUpdated(ExpensesSnapshot(expenses: remaining, isSyncing: false))) {
@@ -435,13 +435,13 @@ extension BaseSuite {
         // A snapshot that still holds the expense must not disturb the stack
         @Test
         func aSurvivingExpenseKeepsItsDetail() async {
-            var state = Home.State(user: .mock)
+            var state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             state.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {
-                Home()
+                Expenses()
             }
 
             await store.send(.expensesUpdated(.mock))

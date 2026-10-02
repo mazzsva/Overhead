@@ -1,5 +1,5 @@
 //
-//  Home.swift
+//  Expenses.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -10,7 +10,7 @@ import Foundation
 import os
 
 @Reducer
-struct Home {
+struct Expenses {
     @Reducer
     enum Destination {
         case createExpense(ExpenseForm)
@@ -220,6 +220,6 @@ struct Home {
     }
 }
 
-extension Home.Destination.State: Equatable {}
+extension Expenses.Destination.State: Equatable {}
 
-private let logger = Logger(category: "Home")
+private let logger = Logger(category: "Expenses")
