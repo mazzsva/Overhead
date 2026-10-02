@@ -64,11 +64,11 @@ private struct WelcomeHighlight {
         ),
         WelcomeHighlight(
             systemImage: "bookmark.fill",
-            text: "Bookmark your favorite entries to find them quickly."
+            text: "Bookmark your favorite expenses to find them quickly."
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",
-            text: "Sign in with Apple to keep every entry in your account."
+            text: "Sign in with Apple to keep every expense in your account."
         ),
     ]
 }

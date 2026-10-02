@@ -69,14 +69,14 @@ extension BaseSuite {
             }
         }
 
-        // Firestore keeps its cache on disk, so the app removes the entries of the last user
+        // Firestore keeps its cache on disk, so the app removes the expenses of the last user
         @Test
         func aSignedOutUserAtLaunchRoutesToSignInAndClearsTheLocalData() async {
             await confirmation("Clears the local data") { clearsLocalData in
                 let store = TestStore(initialState: AppFeature.State()) {
                     AppFeature()
                 } withDependencies: {
-                    $0.entriesClient.clearLocalData = { clearsLocalData() }
+                    $0.expensesClient.clearLocalData = { clearsLocalData() }
                 }
 
                 await store.send(.authUserChanged(nil)) {
@@ -330,7 +330,7 @@ extension BaseSuite {
                 AppFeature()
             } withDependencies: {
                 $0.authClient.appleUserID = { nil }
-                $0.entriesClient.clearLocalData = {}
+                $0.expensesClient.clearLocalData = {}
             }
 
             await withExpectedIssue {
@@ -356,7 +356,7 @@ extension BaseSuite {
                     AppFeature()
                 } withDependencies: {
                     $0.continuousClock = clock
-                    $0.entriesClient.clearLocalData = { clearsLocalData() }
+                    $0.expensesClient.clearLocalData = { clearsLocalData() }
                 }
 
                 await store.send(.authUserChanged(nil)) {
@@ -375,9 +375,9 @@ extension BaseSuite {
         }
 
         @Test
-        func signingOutCancelsTheEntryWritesInFlight() async {
+        func signingOutCancelsTheExpenseWritesInFlight() async {
             var tabs = Tabs.State(user: .mock)
-            tabs.home.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            tabs.home.path.append(ExpenseDetail.State(expense: SharedReader(value: .blueMoon)))
             let detailID = Array(tabs.home.path.ids)[0]
             var state = AppFeature.State()
             state.scene = .tabs(tabs)
@@ -387,10 +387,10 @@ extension BaseSuite {
                 AppFeature()
             } withDependencies: {
                 $0.continuousClock = ImmediateClock()
-                $0.entriesClient.clearLocalData = {}
-                $0.entriesClient.save = { _, _ in
+                $0.expensesClient.clearLocalData = {}
+                $0.expensesClient.save = { _, _ in
                     await withCheckedContinuation { pendingSave.setValue($0) }
-                    throw EntriesFailure()
+                    throw ExpensesFailure()
                 }
             }
 
@@ -413,6 +413,6 @@ extension BaseSuite {
             await store.finish()
         }
 
-        private struct EntriesFailure: Error {}
+        private struct ExpensesFailure: Error {}
     }
 }

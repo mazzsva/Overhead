@@ -25,10 +25,10 @@ struct TabsView: View {
         }
         .alert(
             "Something Went Wrong",
-            isPresented: $store.isPresentingEntryFailure.sending(\.entryFailurePresentationChanged)
+            isPresented: $store.isPresentingExpenseFailure.sending(\.expenseFailurePresentationChanged)
         ) {
         } message: {
-            Text(store.entryFailureMessage)
+            Text(store.expenseFailureMessage)
         }
         .task { await store.send(.home(.task)).finish() }
     }

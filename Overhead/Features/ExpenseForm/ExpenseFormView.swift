@@ -1,5 +1,5 @@
 //
-//  EntryFormView.swift
+//  ExpenseFormView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 20/07/26.
@@ -8,8 +8,8 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct EntryFormView: View {
-    @Bindable var store: StoreOf<EntryForm>
+struct ExpenseFormView: View {
+    @Bindable var store: StoreOf<ExpenseForm>
 
     @FocusState private var isTermFocused: Bool
 
@@ -29,7 +29,7 @@ struct EntryFormView: View {
             }
             .scrollContentBackground(.hidden)
             .groupedBackground()
-            .navigationTitle(store.isCreating ? "New Entry" : "Edit Entry")
+            .navigationTitle(store.isCreating ? "New Expense" : "Edit Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -58,17 +58,17 @@ struct EntryFormView: View {
 }
 
 #Preview("Create") {
-    EntryFormView(
-        store: Store(initialState: EntryForm.State()) {
-            EntryForm()
+    ExpenseFormView(
+        store: Store(initialState: ExpenseForm.State()) {
+            ExpenseForm()
         }
     )
 }
 
 #Preview("Edit") {
-    EntryFormView(
-        store: Store(initialState: EntryForm.State(entry: .blueMoon)) {
-            EntryForm()
+    ExpenseFormView(
+        store: Store(initialState: ExpenseForm.State(expense: .blueMoon)) {
+            ExpenseForm()
         }
     )
 }

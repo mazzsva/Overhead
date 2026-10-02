@@ -1,5 +1,5 @@
 //
-//  EntryDetailTests.swift
+//  ExpenseDetailTests.swift
 //  OverheadTests
 //
 //  Created by Lorenzo Mazzarotto on 30/08/26.
@@ -13,20 +13,20 @@ import Testing
 extension BaseSuite {
     @Suite
     @MainActor
-    struct EntryDetailTests {
-        // The detail reads the entry, and only home can write it
+    struct ExpenseDetailTests {
+        // The detail reads the expense, and only home can write it
         @Test
-        func theBookmarkButtonBookmarksTheEntryAndTellsTheParent() async {
+        func theBookmarkButtonBookmarksTheExpenseAndTellsTheParent() async {
             await confirmation("Plays the selection haptic") { playsHaptic in
                 let store = TestStore(
-                    initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
+                    initialState: ExpenseDetail.State(expense: SharedReader(value: .burningCandle))
                 ) {
-                    EntryDetail()
+                    ExpenseDetail()
                 } withDependencies: {
                     $0.hapticsClient.selection = { playsHaptic() }
                 }
 
-                var bookmarked = Entry.burningCandle
+                var bookmarked = Expense.burningCandle
                 bookmarked.isBookmarked = true
 
                 await store.send(.bookmarkButtonTapped)
@@ -39,14 +39,14 @@ extension BaseSuite {
         func theBookmarkButtonRemovesTheBookmarkAndTellsTheParent() async {
             await confirmation("Plays the selection haptic") { playsHaptic in
                 let store = TestStore(
-                    initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+                    initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
                 ) {
-                    EntryDetail()
+                    ExpenseDetail()
                 } withDependencies: {
                     $0.hapticsClient.selection = { playsHaptic() }
                 }
 
-                var unbookmarked = Entry.blueMoon
+                var unbookmarked = Expense.blueMoon
                 unbookmarked.isBookmarked = false
 
                 await store.send(.bookmarkButtonTapped)
@@ -54,56 +54,56 @@ extension BaseSuite {
             }
         }
 
-        // The form starts from the entry, so it edits and does not create
+        // The form starts from the expense, so it edits and does not create
         @Test
-        func theEditButtonOpensTheFormOnTheEntry() async {
+        func theEditButtonOpensTheFormOnTheExpense() async {
             let store = TestStore(
-                initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
             ) {
-                EntryDetail()
+                ExpenseDetail()
             }
 
             await store.send(.editButtonTapped) {
-                $0.destination = .editEntry(EntryForm.State(entry: .blueMoon))
+                $0.destination = .editExpense(ExpenseForm.State(expense: .blueMoon))
             }
         }
 
-        // The detail closes the form itself, and home receives the entry to save
+        // The detail closes the form itself, and home receives the expense to save
         @Test
-        func savingTheEditedEntryClosesTheFormAndTellsTheParent() async {
+        func savingTheEditedExpenseClosesTheFormAndTellsTheParent() async {
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(
-                    initialState: EntryDetail.State(
-                        destination: .editEntry(EntryForm.State(entry: .blueMoon)),
-                        entry: SharedReader(value: .blueMoon)
+                    initialState: ExpenseDetail.State(
+                        destination: .editExpense(ExpenseForm.State(expense: .blueMoon)),
+                        expense: SharedReader(value: .blueMoon)
                     )
                 ) {
-                    EntryDetail()
+                    ExpenseDetail()
                 } withDependencies: {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
                 store.exhaustivity = .off
 
-                var edited = Entry.blueMoon
+                var edited = Expense.blueMoon
                 edited.definition = "Something that almost never happens."
 
                 await store.send(
-                    .destination(.presented(.editEntry(.binding(.set(\.definition, edited.definition)))))
+                    .destination(.presented(.editExpense(.binding(.set(\.definition, edited.definition)))))
                 )
-                await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
+                await store.send(.destination(.presented(.editExpense(.saveButtonTapped))))
                 await store.receive(\.delegate.didUpdate, edited) {
                     $0.destination = nil
                 }
             }
         }
 
-        // The entry disappears from every device
+        // The expense disappears from every device
         @Test
         func theDeleteButtonAsksForConfirmation() async {
             let store = TestStore(
-                initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))
             ) {
-                EntryDetail()
+                ExpenseDetail()
             }
 
             await store.send(.deleteButtonTapped) {
@@ -111,34 +111,34 @@ extension BaseSuite {
             }
         }
 
-        // The detail cannot delete because home holds the entries
+        // The detail cannot delete because home holds the expenses
         @Test
         func confirmingTheDeletionTellsTheParent() async {
             let store = TestStore(
-                initialState: EntryDetail.State(
+                initialState: ExpenseDetail.State(
                     destination: .alert(.confirmDeletion),
-                    entry: SharedReader(value: .blueMoon)
+                    expense: SharedReader(value: .blueMoon)
                 )
             ) {
-                EntryDetail()
+                ExpenseDetail()
             }
 
             await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
                 $0.destination = nil
             }
-            await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
+            await store.receive(\.delegate.didDelete, Expense.blueMoon.id)
         }
 
         // A dismissed alert must not reach the parent
         @Test
-        func cancelingTheDeletionKeepsTheEntry() async {
+        func cancelingTheDeletionKeepsTheExpense() async {
             let store = TestStore(
-                initialState: EntryDetail.State(
+                initialState: ExpenseDetail.State(
                     destination: .alert(.confirmDeletion),
-                    entry: SharedReader(value: .blueMoon)
+                    expense: SharedReader(value: .blueMoon)
                 )
             ) {
-                EntryDetail()
+                ExpenseDetail()
             }
 
             await store.send(.destination(.dismiss)) {

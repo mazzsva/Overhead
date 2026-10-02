@@ -1,5 +1,5 @@
 //
-//  EntryDetailView.swift
+//  ExpenseDetailView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -8,21 +8,21 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct EntryDetailView: View {
-    @Bindable var store: StoreOf<EntryDetail>
+struct ExpenseDetailView: View {
+    @Bindable var store: StoreOf<ExpenseDetail>
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(store.entry.term)
+                Text(store.expense.term)
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                if !store.entry.definition.isEmpty {
-                    Text(store.entry.definition)
+                if !store.expense.definition.isEmpty {
+                    Text(store.expense.definition)
                 }
 
-                Text("Created \(store.entry.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                Text("Created \(store.expense.createdAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
@@ -35,13 +35,13 @@ struct EntryDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(
-                    store.entry.isBookmarked ? "Remove Bookmark" : "Bookmark",
-                    systemImage: store.entry.isBookmarked ? "bookmark.fill" : "bookmark"
+                    store.expense.isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    systemImage: store.expense.isBookmarked ? "bookmark.fill" : "bookmark"
                 ) {
                     store.send(.bookmarkButtonTapped)
                 }
                 .labelStyle(.iconOnly)
-                .tint(store.entry.isBookmarked ? .bookmark : .secondary)
+                .tint(store.expense.isBookmarked ? .bookmark : .secondary)
             }
             ToolbarSpacer(.fixed, placement: .topBarTrailing)
             ToolbarItem(placement: .topBarTrailing) {
@@ -50,7 +50,7 @@ struct EntryDetailView: View {
                 }
             }
             ToolbarItem(placement: .bottomBar) {
-                Button("Delete Entry", role: .destructive) {
+                Button("Delete Expense", role: .destructive) {
                     store.send(.deleteButtonTapped)
                 }
                 .tint(.red)
@@ -58,18 +58,18 @@ struct EntryDetailView: View {
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .sheet(
-            item: $store.scope(state: \.destination?.editEntry, action: \.destination.editEntry)
+            item: $store.scope(state: \.destination?.editExpense, action: \.destination.editExpense)
         ) { formStore in
-            EntryFormView(store: formStore)
+            ExpenseFormView(store: formStore)
         }
     }
 }
 
 #Preview("Bookmarked") {
     NavigationStack {
-        EntryDetailView(
-            store: Store(initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))) {
-                EntryDetail()
+        ExpenseDetailView(
+            store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .blueMoon))) {
+                ExpenseDetail()
             }
         )
     }
@@ -77,9 +77,9 @@ struct EntryDetailView: View {
 
 #Preview("Not Bookmarked") {
     NavigationStack {
-        EntryDetailView(
-            store: Store(initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))) {
-                EntryDetail()
+        ExpenseDetailView(
+            store: Store(initialState: ExpenseDetail.State(expense: SharedReader(value: .burningCandle))) {
+                ExpenseDetail()
             }
         )
     }

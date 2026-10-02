@@ -1,5 +1,5 @@
 //
-//  EntryCardView.swift
+//  ExpenseCardView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -7,18 +7,18 @@
 
 import SwiftUI
 
-struct EntryCardView: View {
-    let entry: Entry
+struct ExpenseCardView: View {
+    let expense: Expense
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(entry.term)
+                Text(expense.term)
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                if !entry.definition.isEmpty {
-                    Text(entry.definition)
+                if !expense.definition.isEmpty {
+                    Text(expense.definition)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -30,12 +30,12 @@ struct EntryCardView: View {
             Divider()
 
             HStack {
-                Text(entry.createdAt.formatted(date: .abbreviated, time: .omitted))
+                Text(expense.createdAt.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
                 Spacer()
-                if entry.isBookmarked {
+                if expense.isBookmarked {
                     Image(systemName: "bookmark.fill")
                         .font(.caption)
                         .foregroundStyle(.bookmark)
@@ -56,8 +56,8 @@ struct EntryCardView: View {
 
 #Preview {
     VStack(spacing: 16) {
-        ForEach(Entry.mocks) { entry in
-            EntryCardView(entry: entry)
+        ForEach(Expense.mocks) { expense in
+            ExpenseCardView(expense: expense)
         }
     }
     .padding()

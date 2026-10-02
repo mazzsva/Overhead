@@ -4,10 +4,10 @@
     "" : {
       "shouldTranslate" : false
     },
-    "^[%lld Entry](inflect: true)" : {
+    "^[%lld Expense](inflect: true)" : {
 
     },
-    "Are you sure you want to delete this entry?" : {
+    "Are you sure you want to delete this expense?" : {
 
     },
     "Are you sure you want to sign out?" : {
@@ -16,10 +16,10 @@
     "Bookmark" : {
 
     },
-    "Bookmark an entry to find it here." : {
+    "Bookmark an expense to find it here." : {
 
     },
-    "Bookmark your favorite entries to find them quickly." : {
+    "Bookmark your favorite expenses to find them quickly." : {
 
     },
     "Bookmarked" : {
@@ -49,7 +49,7 @@
     "Delete Account" : {
 
     },
-    "Delete Entry" : {
+    "Delete Expense" : {
 
     },
     "Deleting your account…" : {
@@ -61,7 +61,7 @@
     "Edit" : {
 
     },
-    "Edit Entry" : {
+    "Edit Expense" : {
 
     },
     "Email" : {
@@ -70,13 +70,13 @@
     "Home" : {
 
     },
-    "New Entry" : {
+    "New Expense" : {
 
     },
     "No Bookmarks" : {
 
     },
-    "No Entries" : {
+    "No Expenses" : {
 
     },
     "No Internet" : {
@@ -100,13 +100,13 @@
     "Settings" : {
 
     },
-    "Show All Entries" : {
+    "Show All Expenses" : {
 
     },
-    "Show Bookmarked Entries" : {
+    "Show Bookmarked Expenses" : {
 
     },
-    "Sign in with Apple to keep every entry in your account." : {
+    "Sign in with Apple to keep every expense in your account." : {
 
     },
     "Sign Out" : {
@@ -124,7 +124,7 @@
     "Syncing, %@" : {
 
     },
-    "Tap the plus button to add an entry." : {
+    "Tap the plus button to add an expense." : {
 
     },
     "Term" : {
@@ -145,7 +145,7 @@
     "You couldn't be signed out." : {
 
     },
-    "Your account and all your entries will be permanently deleted. Are you sure?" : {
+    "Your account and all your expenses will be permanently deleted. Are you sure?" : {
 
     },
     "Your account couldn't be deleted." : {
@@ -154,10 +154,10 @@
     "Your account couldn't be fully deleted." : {
 
     },
-    "Your entry couldn't be deleted." : {
+    "Your expense couldn't be deleted." : {
 
     },
-    "Your entry couldn't be saved." : {
+    "Your expense couldn't be saved." : {
 
     }
   },
