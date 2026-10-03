@@ -12,18 +12,10 @@ struct ExpenseCardView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(expense.name)
-                    .font(.headline)
-                    .foregroundStyle(expense.isActive ? .primary : .secondary)
-                    .lineLimit(1)
-                if !expense.isActive {
-                    Text("Inactive")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            Text(expense.name)
+                .font(.headline)
+                .foregroundStyle(expense.isActive ? .primary : .secondary)
+                .lineLimit(1)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(expense.amount, format: .dollars)
@@ -44,6 +36,7 @@ struct ExpenseCardView: View {
         )
         .contentShape(ConcentricRectangle(corners: .concentric(minimum: 16)))
         .accessibilityElement(children: .combine)
+        .accessibilityValue(expense.isActive ? Text(verbatim: "") : Text("Inactive"))
     }
 }
 

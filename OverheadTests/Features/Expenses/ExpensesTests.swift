@@ -17,7 +17,7 @@ extension BaseSuite {
     @MainActor
     struct ExpensesTests {
         @Test
-        func activeExpensesComeFirstFromTheHighestMonthlyAmount() async {
+        func expensesAreSortedFromTheHighestMonthlyAmount() async {
             var weekly = Expense.gym
             weekly.billingCycle = .weekly
             weekly.amount = 15
@@ -41,12 +41,44 @@ extension BaseSuite {
 
             await store.send(.expensesUpdated([inactive, yearly, weekly, sameAmount])) {
                 $0.$expenses.withLock {
-                    $0 = IdentifiedArray(uniqueElements: [sameAmount, yearly, weekly, inactive])
+                    $0 = IdentifiedArray(uniqueElements: [inactive, sameAmount, yearly, weekly])
                 }
             }
+            expectNoDifference(store.state.listedExpenses, [sameAmount, yearly, weekly, inactive])
+            expectNoDifference(store.state.firstInactiveExpenseID, inactive.id)
         }
 
         // The expenses stream starts with the session
+        @Test
+        func equalExpensesAreSortedByDateAndThenByIdentity() {
+            let older = Expense(
+                amount: 10,
+                billingCycle: .monthly,
+                createdAt: Date(timeIntervalSince1970: 0),
+                id: UUID(1),
+                isActive: true,
+                name: "Gym"
+            )
+            let twin = Expense(
+                amount: 10,
+                billingCycle: .monthly,
+                createdAt: Date(timeIntervalSince1970: 0),
+                id: UUID(0),
+                isActive: true,
+                name: "Gym"
+            )
+            let newer = Expense(
+                amount: 10,
+                billingCycle: .monthly,
+                createdAt: Date(timeIntervalSince1970: 100),
+                id: UUID(2),
+                isActive: true,
+                name: "Gym"
+            )
+
+            expectNoDifference([older, twin, newer].sorted(by: Expense.listOrder), [newer, twin, older])
+        }
+
         @Test
         func theTaskObservesTheExpenses() async {
             let expenses = AsyncThrowingStream<[Expense], any Error>.makeStream()
@@ -77,7 +109,126 @@ extension BaseSuite {
             let state = Expenses.State(user: .mock)
 
             #expect(state.isLoadingFirstExpenses)
-            expectNoDifference(state.listedExpenses.map(\.wrappedValue), [])
+            expectNoDifference(state.listedExpenses, [])
+            expectNoDifference(state.firstInactiveExpenseID, nil)
+        }
+
+        @Test
+        func theInactiveHeaderFollowsTheStatusOfTheExpenses() async {
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.expensesUpdated(Expense.mocks)) {
+                $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+            }
+            expectNoDifference(store.state.listedExpenses, [.rent, .gym, .phonePlan])
+            expectNoDifference(store.state.firstInactiveExpenseID, Expense.phonePlan.id)
+
+            var pausedRent = Expense.rent
+            pausedRent.isActive = false
+            await store.send(.expensesUpdated([pausedRent, .gym, .phonePlan])) {
+                $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: [pausedRent, .gym, .phonePlan]) }
+            }
+            expectNoDifference(store.state.listedExpenses, [.gym, pausedRent, .phonePlan])
+            expectNoDifference(store.state.firstInactiveExpenseID, Expense.rent.id)
+        }
+
+        @Test
+        func theInactiveHeaderIsHiddenWithoutInactiveExpenses() async {
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.expensesUpdated([.rent, .gym])) {
+                $0.$expenses.withLock { $0 = [.rent, .gym] }
+            }
+            expectNoDifference(store.state.listedExpenses, [.rent, .gym])
+            expectNoDifference(store.state.firstInactiveExpenseID, nil)
+
+            await store.send(.expensesUpdated([])) {
+                $0.$expenses.withLock { $0 = [] }
+            }
+            expectNoDifference(store.state.listedExpenses, [])
+            expectNoDifference(store.state.firstInactiveExpenseID, nil)
+        }
+
+        @Test
+        func theInactiveHeaderLeadsWhenEveryExpenseIsInactive() async {
+            var pausedRent = Expense.rent
+            pausedRent.isActive = false
+            var pausedGym = Expense.gym
+            pausedGym.isActive = false
+
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.expensesUpdated([pausedGym, pausedRent])) {
+                $0.$expenses.withLock { $0 = [pausedRent, pausedGym] }
+            }
+            expectNoDifference(store.state.listedExpenses, [pausedRent, pausedGym])
+            expectNoDifference(store.state.firstInactiveExpenseID, Expense.rent.id)
+        }
+
+        @Test
+        func tappingAnExpenseOpensItsDetail() async {
+            let state = Expenses.State(user: .mock)
+            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+
+            let store = TestStore(initialState: state) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id)) {
+                $0.path[id: 0] = ExpenseDetail.State(expense: SharedReader(value: .gym))
+            }
+
+            var edited = Expense.gym
+            edited.isActive = false
+            await store.send(.expensesUpdated([.rent, edited, .phonePlan])) {
+                $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: [.rent, edited, .phonePlan]) }
+            }
+            expectNoDifference(store.state.path[id: 0]?.expense, edited)
+        }
+
+        @Test
+        func removingATappedExpenseClosesItsDetail() async {
+            let state = Expenses.State(user: .mock)
+            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+
+            let store = TestStore(initialState: state) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id)) {
+                $0.path[id: 0] = ExpenseDetail.State(expense: SharedReader(value: .gym))
+            }
+            await store.send(.expensesUpdated([.rent, .phonePlan])) {
+                $0.$expenses.withLock { $0 = [.rent, .phonePlan] }
+                $0.path.pop(from: 0)
+            }
+        }
+
+        @Test
+        func tappingARemovedExpenseDoesNothing() async {
+            let state = Expenses.State(user: .mock)
+            state.$expenses.withLock { $0 = [.rent, .phonePlan] }
+
+            let store = TestStore(initialState: state) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id))
+        }
+
+        @Test
+        func tappingAMissingExpenseDoesNothing() async {
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id))
         }
 
         // An empty array replaces nil, so the list shows the empty state and not the spinner
