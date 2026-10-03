@@ -64,6 +64,7 @@ extension BaseSuite {
                     createdAt: .distantPast,
                     currencyCode: "JPY",
                     id: UUID(0),
+                    isActive: true,
                     name: "Rent"
                 )
             )
@@ -112,6 +113,7 @@ extension BaseSuite {
                 createdAt: now,
                 currencyCode: "USD",
                 id: UUID(0),
+                isActive: true,
                 name: "Phone Plan"
             )
 
@@ -170,6 +172,7 @@ extension BaseSuite {
             let automatic = ExpenseForm.State()
             expectNoDifference(automatic.billingCycle, .monthly)
             expectNoDifference(automatic.currencyCode, "USD")
+            #expect(automatic.isActive)
 
             expectNoDifference(ExpenseForm.State(defaultCurrencyCode: "BRL").currencyCode, "BRL")
             expectNoDifference(ExpenseForm.State(expense: .rent, defaultCurrencyCode: "BRL").currencyCode, "EUR")
@@ -200,6 +203,7 @@ extension BaseSuite {
             var edited = Expense.rent
             edited.billingCycle = .yearly
             edited.currencyCode = "BRL"
+            edited.isActive = false
 
             let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
                 ExpenseForm()
@@ -210,6 +214,9 @@ extension BaseSuite {
             }
             await store.send(.binding(.set(\.currencyCode, "BRL"))) {
                 $0.currencyCode = "BRL"
+            }
+            await store.send(.binding(.set(\.isActive, false))) {
+                $0.isActive = false
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, edited)

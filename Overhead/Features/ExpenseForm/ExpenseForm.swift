@@ -17,6 +17,7 @@ struct ExpenseForm {
         var billingCycle: BillingCycle
         var currencyCode: String
         let expense: Expense?
+        var isActive: Bool
         let locale: Locale
         var name: String
 
@@ -34,6 +35,7 @@ struct ExpenseForm {
             billingCycle = expense?.billingCycle ?? .monthly
             self.currencyCode = currencyCode
             self.expense = expense
+            isActive = expense?.isActive ?? true
             self.locale = locale
             name = expense?.name ?? ""
         }
@@ -96,6 +98,7 @@ struct ExpenseForm {
                     createdAt: original?.createdAt ?? now,
                     currencyCode: state.currencyCode,
                     id: original?.id ?? uuid(),
+                    isActive: state.isActive,
                     name: state.name.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 return .send(.delegate(.didSubmit(expense)))

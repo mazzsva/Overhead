@@ -12,13 +12,23 @@ struct ExpenseCardView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(expense.name)
-                .font(.headline)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(expense.name)
+                    .font(.headline)
+                    .foregroundStyle(expense.isActive ? .primary : .secondary)
+                    .lineLimit(1)
+                if !expense.isActive {
+                    Text("Inactive")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(expense.amount, format: .currency(code: expense.currencyCode))
                     .font(.headline)
+                    .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
                 Text(expense.billingCycle.title)
                     .font(.caption)

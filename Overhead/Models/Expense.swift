@@ -14,6 +14,7 @@ struct Expense: Equatable, Identifiable, Sendable {
     let createdAt: Date
     var currencyCode: String
     let id: UUID
+    var isActive: Bool
     var name: String
 }
 
@@ -24,6 +25,7 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_750_000_000),
         currencyCode: "EUR",
         id: UUID(0),
+        isActive: true,
         name: "Rent"
     )
 
@@ -33,6 +35,7 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_749_000_000),
         currencyCode: "EUR",
         id: UUID(1),
+        isActive: true,
         name: "Gym"
     )
 
@@ -42,6 +45,7 @@ extension Expense {
         createdAt: Date(timeIntervalSince1970: 1_748_000_000),
         currencyCode: "EUR",
         id: UUID(2),
+        isActive: false,
         name: "Phone Plan"
     )
 
