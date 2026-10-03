@@ -193,6 +193,22 @@ extension BaseSuite {
         }
 
         @Test
+        func aSecondTapDoesNotOpenASecondDetail() async {
+            let state = Expenses.State(user: .mock)
+            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+
+            let store = TestStore(initialState: state) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id)) {
+                $0.path[id: 0] = ExpenseDetail.State(expense: SharedReader(value: .gym))
+            }
+            await store.send(.expenseCardTapped(Expense.rent.id))
+            await store.send(.expenseCardTapped(Expense.gym.id))
+        }
+
+        @Test
         func removingATappedExpenseClosesItsDetail() async {
             let state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
@@ -388,14 +404,16 @@ extension BaseSuite {
                         $0.uuid = .incrementing
                     }
 
-                    store.exhaustivity = .off
-
                     await store.send(
                         .destination(.presented(.createExpense(.binding(.set(\.name, "  Phone Plan  ")))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createExpense) { $0.name = "  Phone Plan  " }
+                    }
                     await store.send(
                         .destination(.presented(.createExpense(.binding(.set(\.amountText, "12.99")))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createExpense) { $0.amountText = "12.99" }
+                    }
                     await store.send(.destination(.presented(.createExpense(.saveButtonTapped))))
                     await store.receive(\.destination.presented.createExpense.delegate.didSubmit) {
                         $0.destination = nil
