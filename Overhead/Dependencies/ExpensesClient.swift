@@ -114,7 +114,6 @@ private actor FirestoreStorage {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
             nonisolated(unsafe) let listener = expensesCollection(uid: uid)
-                .order(by: "createdAt", descending: true)
                 .addSnapshotListener { snapshot, error in
                     if let error {
                         continuation.finish(throwing: error)
