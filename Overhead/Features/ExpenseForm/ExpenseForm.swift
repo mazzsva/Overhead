@@ -14,6 +14,7 @@ struct ExpenseForm {
     @ObservableState
     struct State: Equatable {
         var amountText: String
+        var billingCycle: BillingCycle
         let currencyCode: String
         let expense: Expense?
         let locale: Locale
@@ -30,6 +31,7 @@ struct ExpenseForm {
                         .locale(locale)
                         .precision(.fractionLength(Decimal.minorUnitDigits(currencyCode: currencyCode)))
                 ) ?? ""
+            billingCycle = expense?.billingCycle ?? .monthly
             self.currencyCode = currencyCode
             self.expense = expense
             self.locale = locale
@@ -90,6 +92,7 @@ struct ExpenseForm {
                 let original = state.expense
                 let expense = Expense(
                     amount: amount,
+                    billingCycle: state.billingCycle,
                     createdAt: original?.createdAt ?? now,
                     currencyCode: state.currencyCode,
                     id: original?.id ?? uuid(),

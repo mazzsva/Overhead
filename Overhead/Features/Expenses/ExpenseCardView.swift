@@ -16,9 +16,15 @@ struct ExpenseCardView: View {
                 .font(.headline)
                 .lineLimit(1)
             Spacer()
-            Text(expense.amount, format: .currency(code: expense.currencyCode))
-                .font(.headline)
-                .monospacedDigit()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(expense.amount, format: .currency(code: expense.currencyCode))
+                    .font(.headline)
+                    .monospacedDigit()
+                Text(expense.billingCycle.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

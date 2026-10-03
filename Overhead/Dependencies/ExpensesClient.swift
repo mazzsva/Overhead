@@ -151,6 +151,7 @@ extension Expense {
         let data = document.data()
         guard
             let amountMinorUnits = data["amountMinorUnits"] as? Int,
+            let billingCycle = (data["billingCycle"] as? String).flatMap(BillingCycle.init(rawValue:)),
             let createdAt = data["createdAt"] as? Timestamp,
             let currencyCode = data["currencyCode"] as? String,
             let id = UUID(uuidString: document.documentID),
@@ -162,6 +163,7 @@ extension Expense {
         }
         self.init(
             amount: Decimal(minorUnits: amountMinorUnits, currencyCode: currencyCode),
+            billingCycle: billingCycle,
             createdAt: createdAt.dateValue(),
             currencyCode: currencyCode,
             id: id,
@@ -176,6 +178,7 @@ extension Expense {
         }
         return [
             "amountMinorUnits": amountMinorUnits,
+            "billingCycle": billingCycle.rawValue,
             "createdAt": Timestamp(date: createdAt),
             "currencyCode": currencyCode,
             "name": name,

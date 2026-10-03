@@ -19,6 +19,9 @@ struct ExpenseDetailView: View {
                     value: store.expense.amount,
                     format: .currency(code: store.expense.currencyCode)
                 )
+                LabeledContent("Billing Cycle") {
+                    Text(store.expense.billingCycle.title)
+                }
             }
             Section {
                 Button("Delete Expense", role: .destructive) {

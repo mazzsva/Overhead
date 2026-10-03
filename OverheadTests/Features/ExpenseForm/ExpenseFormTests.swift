@@ -60,6 +60,7 @@ extension BaseSuite {
             var yen = ExpenseForm.State(
                 expense: Expense(
                     amount: 1200,
+                    billingCycle: .monthly,
                     createdAt: .distantPast,
                     currencyCode: "JPY",
                     id: UUID(0),
@@ -107,6 +108,7 @@ extension BaseSuite {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
                 amount: Decimal(minorUnits: 1299, currencyCode: "USD"),
+                billingCycle: .monthly,
                 createdAt: now,
                 currencyCode: "USD",
                 id: UUID(0),
@@ -161,6 +163,27 @@ extension BaseSuite {
                 $0.name = "   "
             }
             await store.send(.saveButtonTapped)
+        }
+
+        @Test
+        func aNewExpenseStartsMonthly() {
+            expectNoDifference(ExpenseForm.State().billingCycle, .monthly)
+        }
+
+        @Test
+        func editingAnExpenseChangesItsDetails() async {
+            var edited = Expense.rent
+            edited.billingCycle = .yearly
+
+            let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
+                ExpenseForm()
+            }
+
+            await store.send(.binding(.set(\.billingCycle, .yearly))) {
+                $0.billingCycle = .yearly
+            }
+            await store.send(.saveButtonTapped)
+            await store.receive(\.delegate.didSubmit, edited)
         }
 
         // The parent presents the form, so only the dismiss effect can close it

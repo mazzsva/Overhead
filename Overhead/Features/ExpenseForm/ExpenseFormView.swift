@@ -28,6 +28,18 @@ struct ExpenseFormView: View {
                     )
                     .keyboardType(.decimalPad)
                 }
+                Section("Billing Cycle") {
+                    Picker("Billing Cycle", selection: $store.billingCycle) {
+                        ForEach(BillingCycle.allCases, id: \.self) { billingCycle in
+                            Text(billingCycle.title)
+                                .tag(billingCycle)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
             }
             .scrollContentBackground(.hidden)
             .groupedBackground()
