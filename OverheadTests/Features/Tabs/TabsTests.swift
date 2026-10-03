@@ -16,6 +16,28 @@ extension BaseSuite {
     @MainActor
     struct TabsTests {
         @Test
+        func theProfileSharesTheDefaultCurrency() async {
+            let store = TestStore(initialState: Tabs.State(user: .mock)) {
+                Tabs()
+            } withDependencies: {
+                $0.profileClient.defaultCurrencyCode = { uid in
+                    expectNoDifference(uid, User.mock.uid)
+                    return AsyncThrowingStream { continuation in
+                        continuation.yield("BRL")
+                        continuation.finish()
+                    }
+                }
+            }
+
+            await store.send(.task)
+            await store.receive(\.defaultCurrencyCodeUpdated, "BRL") {
+                $0.$defaultCurrencyCode.withLock { $0 = "BRL" }
+            }
+            expectNoDifference(store.state.expenses.defaultCurrencyCode, "BRL")
+            expectNoDifference(store.state.settings.currencyCode, "BRL")
+        }
+
+        @Test
         func aFailedSaveShowsAnAlert() async {
             let state = makeReadyState()
 

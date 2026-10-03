@@ -8,12 +8,13 @@
 import SwiftUI
 
 struct CurrencyPicker: View {
+    var title: LocalizedStringKey = "Currency"
     @Binding var selection: String
 
     @Environment(\.locale) private var locale
 
     var body: some View {
-        Picker("Currency", selection: $selection) {
+        Picker(title, selection: $selection) {
             ForEach(locale.sortedCurrencyCodes(including: selection), id: \.self) { currencyCode in
                 Text(locale.currencyName(for: currencyCode))
                     .tag(currencyCode)
