@@ -25,9 +25,6 @@
     "Cancel" : {
 
     },
-    "Coming Soon" : {
-
-    },
     "Continue" : {
 
     },
@@ -62,6 +59,9 @@
 
     },
     "Monthly" : {
+
+    },
+    "Monthly Total" : {
 
     },
     "Name" : {
@@ -104,6 +104,9 @@
 
     },
     "Tap the plus button to add an expense." : {
+
+    },
+    "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
 
     },
     "Unknown" : {

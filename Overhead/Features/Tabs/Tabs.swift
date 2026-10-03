@@ -26,12 +26,15 @@ struct Tabs {
         var expenses: Expenses.State
         var failedExpenseOperations: Set<ExpenseOperation> = []
         @SharedReader(.hasDismissedWelcome) var hasDismissedWelcome
+        var overview: Overview.State
         var selectedTab = Tab.overview
         var settings: Settings.State
         let user: User
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
-            expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
+            let expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
+            self.expenses = expenses
+            overview = Overview.State(expenses: SharedReader(expenses.$expenses))
             settings = Settings.State(user: user)
             self.user = user
         }
@@ -67,6 +70,7 @@ struct Tabs {
     enum Action {
         case expenseFailurePresentationChanged(Bool)
         case expenses(Expenses.Action)
+        case overview(Overview.Action)
         case selectedTabChanged(Tab)
         case settings(Settings.Action)
     }
@@ -74,6 +78,9 @@ struct Tabs {
     var body: some Reducer<State, Action> {
         Scope(state: \.expenses, action: \.expenses) {
             Expenses()
+        }
+        Scope(state: \.overview, action: \.overview) {
+            Overview()
         }
         Scope(state: \.settings, action: \.settings) {
             Settings()
@@ -96,7 +103,7 @@ struct Tabs {
                 state.failedExpenseOperations.insert(.save)
                 return .none
 
-            case .expenses, .settings:
+            case .expenses, .overview, .settings:
                 return .none
 
             case .selectedTabChanged(let tab):
