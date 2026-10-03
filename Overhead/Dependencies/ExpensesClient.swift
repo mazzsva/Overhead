@@ -72,7 +72,7 @@ extension DependencyValues {
     }
 }
 
-private actor FirestoreStorage {
+actor FirestoreStorage {
     static let shared = FirestoreStorage()
 
     private var clearing: Task<Void, any Error>?
@@ -137,7 +137,7 @@ private actor FirestoreStorage {
         try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
     }
 
-    private func waitForClearing() async {
+    func waitForClearing() async {
         _ = try? await clearing?.value
     }
 }

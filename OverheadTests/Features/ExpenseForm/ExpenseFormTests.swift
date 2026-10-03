@@ -170,6 +170,9 @@ extension BaseSuite {
             let automatic = ExpenseForm.State()
             expectNoDifference(automatic.billingCycle, .monthly)
             expectNoDifference(automatic.currencyCode, "USD")
+
+            expectNoDifference(ExpenseForm.State(defaultCurrencyCode: "BRL").currencyCode, "BRL")
+            expectNoDifference(ExpenseForm.State(expense: .rent, defaultCurrencyCode: "BRL").currencyCode, "EUR")
         }
 
         @Test

@@ -175,6 +175,20 @@ extension BaseSuite {
             }
         }
 
+        @Test
+        func theNewExpenseFormStartsInTheDefaultCurrency() async {
+            @Shared(.defaultCurrencyCode(uid: User.mock.uid)) var defaultCurrencyCode
+            $defaultCurrencyCode.withLock { $0 = "BRL" }
+
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.newExpenseButtonTapped) {
+                $0.destination = .createExpense(ExpenseForm.State(defaultCurrencyCode: "BRL"))
+            }
+        }
+
         // The form only reports the expense, and Expenses writes it to the server
         @Test
         func creatingAnExpenseSavesItAndClosesTheForm() async {

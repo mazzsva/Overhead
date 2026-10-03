@@ -32,10 +32,21 @@ struct Settings {
     struct State: Equatable {
         @Presents var alert: AlertState<Settings.Alert>?
         var deletionStep: DeletionStep?
+        @Shared var defaultCurrencyCode: String?
+        let locale: Locale
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
         let user: User
+
+        init(user: User) {
+            @Dependency(\.locale) var locale
+            _defaultCurrencyCode = Shared(wrappedValue: nil, .defaultCurrencyCode(uid: user.uid))
+            self.locale = locale
+            self.user = user
+        }
+
+        var currencyCode: String { defaultCurrencyCode ?? locale.defaultCurrencyCode }
 
         var isDeletingAccount: Bool { deletionStep != nil }
 
@@ -49,6 +60,7 @@ struct Settings {
         case alert(PresentationAction<Alert>)
         case appleCredentialReceived
         case appleCredentialRevoked
+        case currencyPickerChanged(String)
         #if DEBUG
         case debugAddMockExpensesButtonTapped
         case debugDeleteAllExpensesButtonTapped
@@ -63,6 +75,7 @@ struct Settings {
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.expensesClient) var expensesClient
+    @Dependency(\.profileClient) var profileClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
@@ -99,6 +112,10 @@ struct Settings {
             case .appleCredentialRevoked:
                 state.deletionStep = .credentialRevoked
                 return .none
+
+            case .currencyPickerChanged(let currencyCode):
+                state.$defaultCurrencyCode.withLock { $0 = currencyCode }
+                return saveDefaultCurrencyCode(currencyCode, uid: state.user.uid)
 
             #if DEBUG
             case .debugAddMockExpensesButtonTapped:
@@ -172,6 +189,7 @@ struct Settings {
                     try await authClient.reauthenticate(credential: credential)
                     try Task.checkCancellation()
                     try await expensesClient.deleteAll(uid: uid)
+                    try await profileClient.delete(uid: uid)
                     await send(.expensesDeleted)
                     try Task.checkCancellation()
                     try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
@@ -184,6 +202,14 @@ struct Settings {
             }
         } catch: { error, send in
             await send(.accountDeletionFailed(error))
+        }
+    }
+
+    private func saveDefaultCurrencyCode(_ currencyCode: String, uid: String) -> Effect<Action> {
+        .run { _ in
+            try await profileClient.saveDefaultCurrencyCode(currencyCode: currencyCode, uid: uid)
+        } catch: { error, _ in
+            logger.error("Saving the default currency failed: \(error, privacy: .public)")
         }
     }
 

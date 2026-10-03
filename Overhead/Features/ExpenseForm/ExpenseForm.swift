@@ -20,9 +20,9 @@ struct ExpenseForm {
         let locale: Locale
         var name: String
 
-        init(expense: Expense? = nil) {
+        init(expense: Expense? = nil, defaultCurrencyCode: String? = nil) {
             @Dependency(\.locale) var locale
-            let currencyCode = expense?.currencyCode ?? locale.defaultCurrencyCode
+            let currencyCode = expense?.currencyCode ?? defaultCurrencyCode ?? locale.defaultCurrencyCode
             amountText =
                 expense?.amount
                 .formatted(

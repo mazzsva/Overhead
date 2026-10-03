@@ -16,6 +16,28 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
+        @Test
+        func theCurrencyPickerSavesTheDefaultCurrencyToTheProfile() async {
+            await confirmation("Saves the default currency") { savesCurrency in
+                let store = TestStore(initialState: Settings.State(user: .mock)) {
+                    Settings()
+                } withDependencies: {
+                    $0.profileClient.saveDefaultCurrencyCode = { currencyCode, uid in
+                        expectNoDifference(currencyCode, "EUR")
+                        expectNoDifference(uid, User.mock.uid)
+                        savesCurrency()
+                    }
+                }
+                expectNoDifference(store.state.currencyCode, "USD")
+
+                await store.send(.currencyPickerChanged("EUR")) {
+                    $0.$defaultCurrencyCode.withLock { $0 = "EUR" }
+                }
+                expectNoDifference(store.state.currencyCode, "EUR")
+                await store.finish()
+            }
+        }
+
         // A sign out clears the local expenses
         @Test
         func theSignOutButtonAsksForConfirmation() async {
@@ -114,6 +136,9 @@ extension BaseSuite {
                 }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { uid in
+                    expectNoDifference(uid, User.mock.uid)
+                }
+                $0.profileClient.delete = { uid in
                     expectNoDifference(uid, User.mock.uid)
                 }
                 $0.signInWithAppleClient.requestCredential = { .mock }
@@ -272,6 +297,7 @@ extension BaseSuite {
                 $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { _ in }
+                $0.profileClient.delete = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
@@ -309,6 +335,7 @@ extension BaseSuite {
                     $0.authClient.signOut = { signsOut() }
                     $0.continuousClock = clock
                     $0.expensesClient.deleteAll = { _ in }
+                    $0.profileClient.delete = { _ in }
                     $0.signInWithAppleClient.requestCredential = { .mock }
                 }
 
@@ -346,6 +373,7 @@ extension BaseSuite {
                 $0.authClient.signOut = { throw SignOutFailure() }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { _ in }
+                $0.profileClient.delete = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
