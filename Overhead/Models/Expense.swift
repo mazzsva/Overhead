@@ -19,6 +19,26 @@ struct Expense: Equatable, Identifiable, Sendable {
 }
 
 extension Expense {
+    var monthlyAmount: Decimal {
+        switch billingCycle {
+        case .weekly: amount * 52 / 12
+        case .monthly: amount
+        case .yearly: amount / 12
+        }
+    }
+
+    static func listOrder(_ lhs: Expense, _ rhs: Expense) -> Bool {
+        if lhs.isActive != rhs.isActive {
+            return lhs.isActive
+        }
+        if lhs.monthlyAmount != rhs.monthlyAmount {
+            return lhs.monthlyAmount > rhs.monthlyAmount
+        }
+        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+}
+
+extension Expense {
     static let rent = Expense(
         amount: 950,
         billingCycle: .monthly,

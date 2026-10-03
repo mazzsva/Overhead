@@ -105,7 +105,7 @@ struct Expenses {
 
             case .expensesUpdated(let expenses):
                 let isFirstLoad = state.expenses == nil
-                let expenses = IdentifiedArray(uniqueElements: expenses)
+                let expenses = IdentifiedArray(uniqueElements: expenses.sorted(by: Expense.listOrder))
                 state.$expenses.withLock { $0 = expenses }
                 for id in Array(state.path.ids) {
                     guard
