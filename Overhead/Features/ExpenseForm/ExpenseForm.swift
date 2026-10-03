@@ -53,7 +53,8 @@ struct ExpenseForm {
         }
 
         var isSubmittable: Bool {
-            amount != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return amount != nil && !name.isEmpty && name.unicodeScalars.count <= Expense.maximumNameLength
         }
     }
 

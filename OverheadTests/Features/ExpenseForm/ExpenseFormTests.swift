@@ -38,6 +38,27 @@ extension BaseSuite {
         }
 
         @Test
+        func theNameCannotBeLongerThanTheLimit() {
+            var state = ExpenseForm.State()
+            state.amountText = "12"
+
+            state.name = String(repeating: "a", count: Expense.maximumNameLength)
+            #expect(state.isSubmittable)
+
+            state.name = String(repeating: "a", count: Expense.maximumNameLength + 1)
+            #expect(!state.isSubmittable)
+
+            state.name = "  " + String(repeating: "a", count: Expense.maximumNameLength) + "  "
+            #expect(state.isSubmittable)
+
+            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 2)
+            #expect(state.isSubmittable)
+
+            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 2 + 1)
+            #expect(!state.isSubmittable)
+        }
+
+        @Test
         func theWholeAmountMustBeANumber() {
             var state = ExpenseForm.State()
 
