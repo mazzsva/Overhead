@@ -404,14 +404,16 @@ extension BaseSuite {
                         $0.uuid = .incrementing
                     }
 
-                    store.exhaustivity = .off
-
                     await store.send(
                         .destination(.presented(.createExpense(.binding(.set(\.name, "  Phone Plan  ")))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createExpense) { $0.name = "  Phone Plan  " }
+                    }
                     await store.send(
                         .destination(.presented(.createExpense(.binding(.set(\.amountText, "12.99")))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createExpense) { $0.amountText = "12.99" }
+                    }
                     await store.send(.destination(.presented(.createExpense(.saveButtonTapped))))
                     await store.receive(\.destination.presented.createExpense.delegate.didSubmit) {
                         $0.destination = nil

@@ -43,18 +43,19 @@ extension BaseSuite {
                 } withDependencies: {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
-                store.exhaustivity = .off
-
                 var edited = Expense.rent
                 edited.amount = 1000
 
                 await store.send(
                     .destination(.presented(.editExpense(.binding(.set(\.amountText, "1000")))))
-                )
+                ) {
+                    $0.destination?.modify(\.editExpense) { $0.amountText = "1000" }
+                }
                 await store.send(.destination(.presented(.editExpense(.saveButtonTapped))))
-                await store.receive(\.delegate.didUpdate, edited) {
+                await store.receive(\.destination.presented.editExpense.delegate.didSubmit, edited) {
                     $0.destination = nil
                 }
+                await store.receive(\.delegate.didUpdate, edited)
             }
         }
 

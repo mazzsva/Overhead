@@ -299,21 +299,34 @@ extension BaseSuite {
             var state = AppFeature.State()
             state.scene = .tabs(Tabs.State(user: .mock))
 
+            let clock = TestClock()
             let store = TestStore(initialState: state) {
                 AppFeature()
             } withDependencies: {
                 $0.authClient.reauthenticate = { _ in try await Task.never() }
-                $0.continuousClock = TestClock()
+                $0.continuousClock = clock
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
-            store.exhaustivity = .off
 
-            await store.send(\.scene.tabs.settings.deleteAccountButtonTapped)
-            await store.send(.scene(.tabs(.settings(.alert(.presented(.confirmAccountDeletion))))))
+            await store.send(\.scene.tabs.settings.deleteAccountButtonTapped) {
+                $0.scene?.modify(\.tabs) { $0.settings.alert = .confirmAccountDeletion }
+            }
+            await store.send(.scene(.tabs(.settings(.alert(.presented(.confirmAccountDeletion)))))) {
+                $0.scene?.modify(\.tabs) { $0.settings.alert = nil }
+                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = .reauthenticating }
+            }
             expectNoDifference(store.state.loadingMessage, nil)
 
-            await store.receive(\.scene.tabs.settings.appleCredentialReceived)
+            await store.receive(\.scene.tabs.settings.appleCredentialReceived) {
+                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = .deleting }
+            }
             expectNoDifference(store.state.loadingMessage, "Deleting your account…")
+
+            await clock.advance(by: .seconds(60))
+            await store.receive(\.scene.tabs.settings.accountDeletionFailed) {
+                $0.scene?.modify(\.tabs) { $0.settings.alert = .accountDeletionFailed }
+                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = nil }
+            }
         }
 
         // Auth must not change accounts without a sign out, so the app also reports an issue
