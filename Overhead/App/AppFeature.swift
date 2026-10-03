@@ -49,22 +49,16 @@ struct AppFeature {
         var loadingMessage: String? {
             switch scene {
             case .signIn(let signIn):
-                guard case .signingIn(let isNewAccount) = signIn.step else { return nil }
-                return Self.signInMessage(isCreatingAccount: isNewAccount)
+                guard signIn.step == .signingIn else { return nil }
+                return String(localized: "Signing in…")
             case .tabs where isDeletingAccount && !isReauthenticating:
                 return String(localized: "Deleting your account…")
             case .tabs(let tabs) where tabs.isLoadingFirstExpenses:
-                guard let isNewAccount = tabs.sessionOrigin.freshSignIn else { return nil }
-                return Self.signInMessage(isCreatingAccount: isNewAccount)
+                guard tabs.sessionOrigin == .freshSignIn else { return nil }
+                return String(localized: "Signing in…")
             case nil, .tabs:
                 return nil
             }
-        }
-
-        private static func signInMessage(isCreatingAccount: Bool) -> String {
-            isCreatingAccount
-                ? String(localized: "Creating your account…")
-                : String(localized: "Signing in…")
         }
     }
 
@@ -185,9 +179,7 @@ struct AppFeature {
             state.scene = .tabs(
                 Tabs.State(
                     user: user,
-                    sessionOrigin: isFreshSignIn
-                        ? .freshSignIn(isNewAccount: signIn.isCreatingAccount)
-                        : .restored
+                    sessionOrigin: isFreshSignIn ? .freshSignIn : .restored
                 )
             )
             return isFreshSignIn ? .none : verifyAppleCredential()

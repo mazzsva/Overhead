@@ -289,7 +289,7 @@ extension BaseSuite {
         // Only the first load welcomes the user, and the later ones stay quiet
         @Test
         func aFreshSignInPlaysItsHapticOnlyOnTheFirstLoad() async {
-            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn)
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
@@ -310,7 +310,7 @@ extension BaseSuite {
         @Test
         func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
             let clock = TestClock()
-            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn)
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {

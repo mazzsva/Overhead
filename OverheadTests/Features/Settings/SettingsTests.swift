@@ -183,7 +183,6 @@ extension BaseSuite {
                     AppleCredential(
                         authorizationCode: nil,
                         idToken: "mock-id-token",
-                        isFirstAuthorization: false,
                         rawNonce: "mock-raw-nonce"
                     )
                 }

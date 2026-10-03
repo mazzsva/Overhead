@@ -193,7 +193,7 @@ extension BaseSuite {
         @Test
         func finishingTheSignInRoutesToTabsAsAFreshSignIn() async {
             var signIn = SignIn.State()
-            signIn.step = .signingIn(isNewAccount: true)
+            signIn.step = .signingIn
             var state = AppFeature.State()
             state.scene = .signIn(signIn)
 
@@ -203,7 +203,7 @@ extension BaseSuite {
 
             await store.send(.authUserChanged(.mock)) {
                 $0.scene = .tabs(
-                    Tabs.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
+                    Tabs.State(user: .mock, sessionOrigin: .freshSignIn)
                 )
             }
             await store.finish()
@@ -267,13 +267,10 @@ extension BaseSuite {
             expectNoDifference(state.loadingMessage, nil)
 
             var signIn = SignIn.State()
-            signIn.step = .signingIn(isNewAccount: false)
+            signIn.step = .signingIn
             state.scene = .signIn(signIn)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
-
-            state.scene?.modify(\.signIn) { $0.step = .signingIn(isNewAccount: true) }
-            expectNoDifference(state.loadingMessage, "Creating your account…")
 
             var tabs = Tabs.State(user: .mock)
             tabs.settings.deletionStep = .reauthenticating
@@ -285,7 +282,7 @@ extension BaseSuite {
             expectNoDifference(state.loadingMessage, "Deleting your account…")
 
             state.scene = .tabs(
-                Tabs.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+                Tabs.State(user: .mock, sessionOrigin: .freshSignIn)
             )
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
