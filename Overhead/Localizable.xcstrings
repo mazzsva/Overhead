@@ -1,9 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {
-      "shouldTranslate" : false
-    },
     "Add every fixed expense with its name and amount." : {
 
     },
@@ -23,9 +20,6 @@
 
     },
     "Continue" : {
-
-    },
-    "Created %@" : {
 
     },
     "Creating your account…" : {

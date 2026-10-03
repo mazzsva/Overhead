@@ -16,19 +16,17 @@ struct ExpenseFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Name") {
-                    TextField("", text: $store.name)
+                Section {
+                    TextField("Name", text: $store.name)
                         .focused($isNameFocused)
-                        .accessibilityLabel("Name")
                 }
-                Section("Amount") {
+                Section {
                     TextField(
-                        "",
+                        "Amount",
                         text: $store.amountText,
                         prompt: Text(Decimal.zero, format: .currency(code: store.currencyCode).locale(store.locale))
                     )
                     .keyboardType(.decimalPad)
-                    .accessibilityLabel("Amount")
                 }
             }
             .scrollContentBackground(.hidden)
