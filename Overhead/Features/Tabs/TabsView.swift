@@ -31,7 +31,6 @@ struct TabsView: View {
             Text(store.expenseFailureMessage)
         }
         .task { await store.send(.expenses(.task)).finish() }
-        .task { await store.send(.task).finish() }
     }
 }
 

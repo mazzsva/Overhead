@@ -15,25 +15,22 @@ struct ExpenseForm {
     struct State: Equatable {
         var amountText: String
         var billingCycle: BillingCycle
-        var currencyCode: String
         let expense: Expense?
         var isActive: Bool
         let locale: Locale
         var name: String
 
-        init(expense: Expense? = nil, defaultCurrencyCode: String? = nil) {
+        init(expense: Expense? = nil) {
             @Dependency(\.locale) var locale
-            let currencyCode = expense?.currencyCode ?? defaultCurrencyCode ?? locale.defaultCurrencyCode
             amountText =
                 expense?.amount
                 .formatted(
                     .number
                         .grouping(.never)
                         .locale(locale)
-                        .precision(.fractionLength(Decimal.minorUnitDigits(currencyCode: currencyCode)))
+                        .precision(.fractionLength(2))
                 ) ?? ""
             billingCycle = expense?.billingCycle ?? .monthly
-            self.currencyCode = currencyCode
             self.expense = expense
             isActive = expense?.isActive ?? true
             self.locale = locale
@@ -46,7 +43,7 @@ struct ExpenseForm {
             guard
                 let amount = text.wholeMatch(of: number)?.output.1,
                 amount > 0,
-                amount.minorUnits(currencyCode: currencyCode) != nil
+                amount.cents != nil
             else { return nil }
             return amount
         }
@@ -96,7 +93,6 @@ struct ExpenseForm {
                     amount: amount,
                     billingCycle: state.billingCycle,
                     createdAt: original?.createdAt ?? now,
-                    currencyCode: state.currencyCode,
                     id: original?.id ?? uuid(),
                     isActive: state.isActive,
                     name: state.name.trimmingCharacters(in: .whitespacesAndNewlines)

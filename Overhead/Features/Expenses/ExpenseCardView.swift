@@ -26,7 +26,7 @@ struct ExpenseCardView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(expense.amount, format: .currency(code: expense.currencyCode))
+                Text(expense.amount, format: .dollars)
                     .font(.headline)
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()

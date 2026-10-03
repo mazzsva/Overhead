@@ -72,7 +72,7 @@ extension DependencyValues {
     }
 }
 
-actor FirestoreStorage {
+private actor FirestoreStorage {
     static let shared = FirestoreStorage()
 
     private var clearing: Task<Void, any Error>?
@@ -124,7 +124,9 @@ actor FirestoreStorage {
                         reportIssue("Expenses listener reported neither a snapshot nor an error.")
                         return
                     }
-                    continuation.yield(snapshot.documents.compactMap(Expense.init(document:)))
+                    continuation.yield(
+                        snapshot.documents.compactMap { Expense(documentID: $0.documentID, data: $0.data()) }
+                    )
                 }
             continuation.onTermination = { _ in
                 listener.remove()
@@ -137,7 +139,7 @@ actor FirestoreStorage {
         try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
     }
 
-    func waitForClearing() async {
+    private func waitForClearing() async {
         _ = try? await clearing?.value
     }
 }
@@ -147,42 +149,38 @@ private func expensesCollection(uid: String) -> CollectionReference {
 }
 
 extension Expense {
-    fileprivate init?(document: QueryDocumentSnapshot) {
-        let data = document.data()
+    init?(documentID: String, data: [String: Any]) {
         guard
-            let amountMinorUnits = data["amountMinorUnits"] as? Int,
+            let amountInCents = data["amountInCents"] as? Int,
             let billingCycle = (data["billingCycle"] as? String).flatMap(BillingCycle.init(rawValue:)),
             let createdAt = data["createdAt"] as? Timestamp,
-            let currencyCode = data["currencyCode"] as? String,
-            let id = UUID(uuidString: document.documentID),
+            let id = UUID(uuidString: documentID),
             let isActive = data["isActive"] as? Bool,
             let name = data["name"] as? String
         else {
-            logger.error("Skipping expense document \(document.documentID, privacy: .public) that failed to decode.")
-            reportIssue("Skipping expense document \(document.documentID) that failed to decode.")
+            logger.error("Skipping expense document \(documentID, privacy: .public) that failed to decode.")
+            reportIssue("Skipping expense document \(documentID) that failed to decode.")
             return nil
         }
         self.init(
-            amount: Decimal(minorUnits: amountMinorUnits, currencyCode: currencyCode),
+            amount: Decimal(cents: amountInCents),
             billingCycle: billingCycle,
             createdAt: createdAt.dateValue(),
-            currencyCode: currencyCode,
             id: id,
             isActive: isActive,
             name: name
         )
     }
 
-    fileprivate func documentData() throws -> [String: Any] {
-        guard let amountMinorUnits = amount.minorUnits(currencyCode: currencyCode) else {
-            reportIssue("Expense \(id) has an amount that \(currencyCode) cannot represent.")
+    func documentData() throws -> [String: Any] {
+        guard let amountInCents = amount.cents else {
+            reportIssue("Expense \(id) has an amount that cents cannot represent.")
             throw InexactAmountError()
         }
         return [
-            "amountMinorUnits": amountMinorUnits,
+            "amountInCents": amountInCents,
             "billingCycle": billingCycle.rawValue,
             "createdAt": Timestamp(date: createdAt),
-            "currencyCode": currencyCode,
             "isActive": isActive,
             "name": name,
         ]
