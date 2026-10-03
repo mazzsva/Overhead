@@ -193,6 +193,22 @@ extension BaseSuite {
         }
 
         @Test
+        func aSecondTapDoesNotOpenASecondDetail() async {
+            let state = Expenses.State(user: .mock)
+            state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+
+            let store = TestStore(initialState: state) {
+                Expenses()
+            }
+
+            await store.send(.expenseCardTapped(Expense.gym.id)) {
+                $0.path[id: 0] = ExpenseDetail.State(expense: SharedReader(value: .gym))
+            }
+            await store.send(.expenseCardTapped(Expense.rent.id))
+            await store.send(.expenseCardTapped(Expense.gym.id))
+        }
+
+        @Test
         func removingATappedExpenseClosesItsDetail() async {
             let state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }

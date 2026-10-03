@@ -101,6 +101,7 @@ struct Expenses {
 
             case .expenseCardTapped(let id):
                 guard
+                    state.path.isEmpty,
                     let expenses = Shared(state.$expenses),
                     let expense = Shared(expenses[id: id])
                 else { return .none }
