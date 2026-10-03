@@ -15,14 +15,14 @@ struct ExpenseForm {
     struct State: Equatable {
         var amountText: String
         var billingCycle: BillingCycle
-        let currencyCode: String
+        var currencyCode: String
         let expense: Expense?
         let locale: Locale
         var name: String
 
         init(expense: Expense? = nil) {
             @Dependency(\.locale) var locale
-            let currencyCode = expense?.currencyCode ?? locale.currency?.identifier ?? "USD"
+            let currencyCode = expense?.currencyCode ?? locale.defaultCurrencyCode
             amountText =
                 expense?.amount
                 .formatted(

@@ -166,14 +166,37 @@ extension BaseSuite {
         }
 
         @Test
-        func aNewExpenseStartsMonthly() {
-            expectNoDifference(ExpenseForm.State().billingCycle, .monthly)
+        func aNewExpenseStartsFromTheDefaultCurrency() {
+            let automatic = ExpenseForm.State()
+            expectNoDifference(automatic.billingCycle, .monthly)
+            expectNoDifference(automatic.currencyCode, "USD")
+        }
+
+        @Test
+        func anUnsupportedLocaleCurrencyFallsBackToDollars() {
+            let state = withDependencies {
+                $0.locale = Locale(identifier: "en_GB")
+            } operation: {
+                ExpenseForm.State()
+            }
+            expectNoDifference(state.currencyCode, "USD")
+        }
+
+        @Test
+        func theCurrencyDecidesTheDigitsOfTheAmount() {
+            var state = ExpenseForm.State()
+            state.amountText = "1200.50"
+            expectNoDifference(state.amount, Decimal(minorUnits: 120_050, currencyCode: "USD"))
+
+            state.currencyCode = "JPY"
+            expectNoDifference(state.amount, nil)
         }
 
         @Test
         func editingAnExpenseChangesItsDetails() async {
             var edited = Expense.rent
             edited.billingCycle = .yearly
+            edited.currencyCode = "BRL"
 
             let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
                 ExpenseForm()
@@ -181,6 +204,9 @@ extension BaseSuite {
 
             await store.send(.binding(.set(\.billingCycle, .yearly))) {
                 $0.billingCycle = .yearly
+            }
+            await store.send(.binding(.set(\.currencyCode, "BRL"))) {
+                $0.currencyCode = "BRL"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, edited)
