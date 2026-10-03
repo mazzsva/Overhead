@@ -12,38 +12,29 @@ struct ExpenseDetailView: View {
     @Bindable var store: StoreOf<ExpenseDetail>
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(store.expense.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                Text(store.expense.amount, format: .currency(code: store.expense.currencyCode))
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .monospacedDigit()
-
-                Text("Created \(store.expense.createdAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
+        List {
+            Section {
+                LabeledContent(
+                    "Amount",
+                    value: store.expense.amount,
+                    format: .currency(code: store.expense.currencyCode)
+                )
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Section {
+                Button("Delete Expense", role: .destructive) {
+                    store.send(.deleteButtonTapped)
+                }
+            }
         }
+        .scrollContentBackground(.hidden)
         .groupedBackground()
+        .navigationTitle(store.expense.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Edit") {
                     store.send(.editButtonTapped)
                 }
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Button("Delete Expense", role: .destructive) {
-                    store.send(.deleteButtonTapped)
-                }
-                .tint(.red)
             }
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))

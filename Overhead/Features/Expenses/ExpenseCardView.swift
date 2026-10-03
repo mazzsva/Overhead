@@ -11,31 +11,17 @@ struct ExpenseCardView: View {
     let expense: Expense
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(expense.name)
-                    .lineLimit(1)
-                Spacer()
-                Text(expense.amount, format: .currency(code: expense.currencyCode))
-                    .monospacedDigit()
-            }
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            HStack {
-                Text(expense.createdAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+        HStack(spacing: 12) {
+            Text(expense.name)
+                .font(.headline)
+                .lineLimit(1)
+            Spacer()
+            Text(expense.amount, format: .currency(code: expense.currencyCode))
+                .font(.headline)
+                .monospacedDigit()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(
             Color(.secondarySystemGroupedBackground),
             in: ConcentricRectangle(corners: .concentric(minimum: 16))
