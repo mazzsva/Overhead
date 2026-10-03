@@ -8,8 +8,7 @@
 import CasePaths
 
 @CasePathable
-@dynamicMemberLookup
 enum SessionOrigin: Equatable {
-    case freshSignIn(isNewAccount: Bool)
+    case freshSignIn
     case restored
 }
