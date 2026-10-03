@@ -16,6 +16,37 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct ExpensesTests {
+        @Test
+        func activeExpensesComeFirstFromTheHighestMonthlyAmount() async {
+            var weekly = Expense.gym
+            weekly.billingCycle = .weekly
+            weekly.amount = 15
+            var yearly = Expense.rent
+            yearly.billingCycle = .yearly
+            yearly.amount = 1200
+            var inactive = Expense.phonePlan
+            inactive.amount = 5000
+            let sameAmount = Expense(
+                amount: 100,
+                billingCycle: .monthly,
+                createdAt: .distantPast,
+                currencyCode: "EUR",
+                id: UUID(3),
+                isActive: true,
+                name: "Cloud Storage"
+            )
+
+            let store = TestStore(initialState: Expenses.State(user: .mock)) {
+                Expenses()
+            }
+
+            await store.send(.expensesUpdated([inactive, yearly, weekly, sameAmount])) {
+                $0.$expenses.withLock {
+                    $0 = IdentifiedArray(uniqueElements: [sameAmount, yearly, weekly, inactive])
+                }
+            }
+        }
+
         // The expenses stream starts with the session
         @Test
         func theTaskObservesTheExpenses() async {
