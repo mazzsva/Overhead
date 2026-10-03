@@ -34,10 +34,6 @@ struct Expenses {
             (expenses ?? []).filter(\.isActive)
         }
 
-        var firstInactiveExpenseID: Expense.ID? {
-            inactiveExpenses.first?.id
-        }
-
         var inactiveExpenses: [Expense] {
             (expenses ?? []).filter { !$0.isActive }
         }
@@ -50,10 +46,6 @@ struct Expenses {
 
         var isPresenting: Bool {
             destination != nil || path.contains { $0.isPresenting }
-        }
-
-        var listedExpenses: [Expense] {
-            activeExpenses + inactiveExpenses
         }
     }
 

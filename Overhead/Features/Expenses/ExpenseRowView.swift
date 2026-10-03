@@ -1,5 +1,5 @@
 //
-//  ExpenseCardView.swift
+//  ExpenseRowView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 24/07/26.
@@ -7,46 +7,31 @@
 
 import SwiftUI
 
-struct ExpenseCardView: View {
+struct ExpenseRowView: View {
     let expense: Expense
 
     var body: some View {
         HStack(spacing: 12) {
             Text(expense.name)
-                .font(.headline)
                 .foregroundStyle(expense.isActive ? .primary : .secondary)
                 .lineLimit(1)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(expense.amount, format: .dollars)
-                    .font(.headline)
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
                 Text(expense.billingCycle.title)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            Color(.secondarySystemGroupedBackground),
-            in: ConcentricRectangle(corners: .concentric(minimum: 16))
-        )
-        .contentShape(ConcentricRectangle(corners: .concentric(minimum: 16)))
         .accessibilityElement(children: .combine)
         .accessibilityValue(expense.isActive ? Text(verbatim: "") : Text("Inactive"))
     }
 }
 
 #Preview {
-    VStack(spacing: 16) {
-        ForEach(Expense.mocks) { expense in
-            ExpenseCardView(expense: expense)
-        }
+    List(Expense.mocks) { expense in
+        ExpenseRowView(expense: expense)
     }
-    .padding()
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .groupedBackground()
 }

@@ -44,8 +44,8 @@ extension BaseSuite {
                     $0 = IdentifiedArray(uniqueElements: [inactive, sameAmount, yearly, weekly])
                 }
             }
-            expectNoDifference(store.state.listedExpenses, [sameAmount, yearly, weekly, inactive])
-            expectNoDifference(store.state.firstInactiveExpenseID, inactive.id)
+            expectNoDifference(store.state.activeExpenses, [sameAmount, yearly, weekly])
+            expectNoDifference(store.state.inactiveExpenses, [inactive])
         }
 
         // The expenses stream starts with the session
@@ -109,12 +109,12 @@ extension BaseSuite {
             let state = Expenses.State(user: .mock)
 
             #expect(state.isLoadingFirstExpenses)
-            expectNoDifference(state.listedExpenses, [])
-            expectNoDifference(state.firstInactiveExpenseID, nil)
+            expectNoDifference(state.activeExpenses, [])
+            expectNoDifference(state.inactiveExpenses, [])
         }
 
         @Test
-        func theInactiveHeaderFollowsTheStatusOfTheExpenses() async {
+        func theSectionsFollowTheStatusOfTheExpenses() async {
             let store = TestStore(initialState: Expenses.State(user: .mock)) {
                 Expenses()
             }
@@ -122,20 +122,20 @@ extension BaseSuite {
             await store.send(.expensesUpdated(Expense.mocks)) {
                 $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             }
-            expectNoDifference(store.state.listedExpenses, [.rent, .gym, .phonePlan])
-            expectNoDifference(store.state.firstInactiveExpenseID, Expense.phonePlan.id)
+            expectNoDifference(store.state.activeExpenses, [.rent, .gym])
+            expectNoDifference(store.state.inactiveExpenses, [.phonePlan])
 
             var pausedRent = Expense.rent
             pausedRent.isActive = false
             await store.send(.expensesUpdated([pausedRent, .gym, .phonePlan])) {
                 $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: [pausedRent, .gym, .phonePlan]) }
             }
-            expectNoDifference(store.state.listedExpenses, [.gym, pausedRent, .phonePlan])
-            expectNoDifference(store.state.firstInactiveExpenseID, Expense.rent.id)
+            expectNoDifference(store.state.activeExpenses, [.gym])
+            expectNoDifference(store.state.inactiveExpenses, [pausedRent, .phonePlan])
         }
 
         @Test
-        func theInactiveHeaderIsHiddenWithoutInactiveExpenses() async {
+        func theInactiveSectionIsEmptyWithoutInactiveExpenses() async {
             let store = TestStore(initialState: Expenses.State(user: .mock)) {
                 Expenses()
             }
@@ -143,18 +143,18 @@ extension BaseSuite {
             await store.send(.expensesUpdated([.rent, .gym])) {
                 $0.$expenses.withLock { $0 = [.rent, .gym] }
             }
-            expectNoDifference(store.state.listedExpenses, [.rent, .gym])
-            expectNoDifference(store.state.firstInactiveExpenseID, nil)
+            expectNoDifference(store.state.activeExpenses, [.rent, .gym])
+            expectNoDifference(store.state.inactiveExpenses, [])
 
             await store.send(.expensesUpdated([])) {
                 $0.$expenses.withLock { $0 = [] }
             }
-            expectNoDifference(store.state.listedExpenses, [])
-            expectNoDifference(store.state.firstInactiveExpenseID, nil)
+            expectNoDifference(store.state.activeExpenses, [])
+            expectNoDifference(store.state.inactiveExpenses, [])
         }
 
         @Test
-        func theInactiveHeaderLeadsWhenEveryExpenseIsInactive() async {
+        func theActiveSectionIsEmptyWhenEveryExpenseIsInactive() async {
             var pausedRent = Expense.rent
             pausedRent.isActive = false
             var pausedGym = Expense.gym
@@ -167,8 +167,8 @@ extension BaseSuite {
             await store.send(.expensesUpdated([pausedGym, pausedRent])) {
                 $0.$expenses.withLock { $0 = [pausedRent, pausedGym] }
             }
-            expectNoDifference(store.state.listedExpenses, [pausedRent, pausedGym])
-            expectNoDifference(store.state.firstInactiveExpenseID, Expense.rent.id)
+            expectNoDifference(store.state.activeExpenses, [])
+            expectNoDifference(store.state.inactiveExpenses, [pausedRent, pausedGym])
         }
 
         @Test

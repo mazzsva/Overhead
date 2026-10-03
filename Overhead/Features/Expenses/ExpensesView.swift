@@ -12,29 +12,28 @@ struct ExpensesView: View {
     @Bindable var store: StoreOf<Expenses>
 
     var body: some View {
-        let firstInactiveExpenseID = store.firstInactiveExpenseID
-        let listedExpenses = store.listedExpenses
+        let activeExpenses = store.activeExpenses
+        let inactiveExpenses = store.inactiveExpenses
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(listedExpenses) { expense in
-                        if expense.id == firstInactiveExpenseID {
-                            Text("Inactive")
-                                .font(.headline)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                                .accessibilityAddTraits(.isHeader)
+            List {
+                if !activeExpenses.isEmpty {
+                    Section {
+                        ForEach(activeExpenses) { expense in
+                            row(expense)
                         }
-                        row(expense)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                if !inactiveExpenses.isEmpty {
+                    Section("Inactive") {
+                        ForEach(inactiveExpenses) { expense in
+                            row(expense)
+                        }
+                    }
+                }
             }
-            .scrollIndicators(.hidden)
+            .scrollContentBackground(.hidden)
             .groupedBackground()
+            .contentMargins(.top, 8, for: .scrollContent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarRole(.editor)
             .toolbar {
@@ -73,9 +72,9 @@ struct ExpensesView: View {
         Button {
             store.send(.expenseCardTapped(expense.id))
         } label: {
-            ExpenseCardView(expense: expense)
+            ExpenseRowView(expense: expense)
         }
-        .buttonStyle(.plain)
+        .tint(.primary)
     }
 }
 
