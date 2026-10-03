@@ -119,7 +119,7 @@ extension BaseSuite {
             await store.receive(\.delegate.didSubmit, created)
         }
 
-        // The identity, the date, and the currency come from the original, so the save replaces it
+        // The identity and the date come from the original, so the save replaces it
         @Test
         func editingAnExpenseKeepsItsIdentity() async {
             var edited = Expense.rent
