@@ -27,13 +27,21 @@ extension Expense {
     }
 
     static func listOrder(_ lhs: Expense, _ rhs: Expense) -> Bool {
-        if lhs.isActive != rhs.isActive {
-            return lhs.isActive
-        }
         if lhs.monthlyAmount != rhs.monthlyAmount {
             return lhs.monthlyAmount > rhs.monthlyAmount
         }
-        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        switch lhs.name.localizedStandardCompare(rhs.name) {
+        case .orderedAscending:
+            return true
+        case .orderedDescending:
+            return false
+        case .orderedSame:
+            break
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt > rhs.createdAt
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 

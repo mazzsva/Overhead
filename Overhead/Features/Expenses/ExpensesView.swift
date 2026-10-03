@@ -12,15 +12,22 @@ struct ExpensesView: View {
     @Bindable var store: StoreOf<Expenses>
 
     var body: some View {
+        let firstInactiveExpenseID = store.firstInactiveExpenseID
         let listedExpenses = store.listedExpenses
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    ForEach(listedExpenses) { $expense in
-                        NavigationLink(state: ExpenseDetail.State(expense: $expense)) {
-                            ExpenseCardView(expense: expense)
+                    ForEach(listedExpenses) { expense in
+                        if expense.id == firstInactiveExpenseID {
+                            Text("Inactive")
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 8)
+                                .accessibilityAddTraits(.isHeader)
                         }
-                        .buttonStyle(.plain)
+                        row(expense)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -60,6 +67,15 @@ struct ExpensesView: View {
         ) { formStore in
             ExpenseFormView(store: formStore)
         }
+    }
+
+    private func row(_ expense: Expense) -> some View {
+        Button {
+            store.send(.expenseCardTapped(expense.id))
+        } label: {
+            ExpenseCardView(expense: expense)
+        }
+        .buttonStyle(.plain)
     }
 }
 

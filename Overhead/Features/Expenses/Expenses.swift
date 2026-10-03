@@ -30,6 +30,18 @@ struct Expenses {
             self.user = user
         }
 
+        var activeExpenses: [Expense] {
+            (expenses ?? []).filter(\.isActive)
+        }
+
+        var firstInactiveExpenseID: Expense.ID? {
+            inactiveExpenses.first?.id
+        }
+
+        var inactiveExpenses: [Expense] {
+            (expenses ?? []).filter { !$0.isActive }
+        }
+
         var isEmpty: Bool { expenses?.isEmpty == true }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
@@ -40,15 +52,15 @@ struct Expenses {
             destination != nil || path.contains { $0.isPresenting }
         }
 
-        var listedExpenses: [SharedReader<Expense>] {
-            guard let expenses = Shared($expenses) else { return [] }
-            return Array(expenses).map { SharedReader($0) }
+        var listedExpenses: [Expense] {
+            activeExpenses + inactiveExpenses
         }
     }
 
     enum Action {
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
+        case expenseCardTapped(Expense.ID)
         case expensesRetryTimerElapsed
         case expensesStreamFailed
         case expensesUpdated([Expense])
@@ -85,6 +97,14 @@ struct Expenses {
                 )
 
             case .destination:
+                return .none
+
+            case .expenseCardTapped(let id):
+                guard
+                    let expenses = Shared(state.$expenses),
+                    let expense = Shared(expenses[id: id])
+                else { return .none }
+                state.path.append(ExpenseDetail.State(expense: SharedReader(expense)))
                 return .none
 
             case .expensesRetryTimerElapsed:
