@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import CustomDump
+import Foundation
 import Testing
 
 @testable import Overhead
@@ -15,6 +16,28 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct TabsTests {
+        @Test
+        func theOverviewFollowsTheExpenses() async {
+            let store = TestStore(initialState: Tabs.State(user: .mock)) {
+                Tabs()
+            }
+            expectNoDifference(store.state.overview.monthlyTotal, 0)
+
+            await store.send(.expenses(.expensesUpdated(Expense.mocks))) {
+                $0.expenses.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+            }
+            expectNoDifference(store.state.overview.monthlyTotal, Decimal(cents: 98_990))
+
+            var pausedRent = Expense.rent
+            pausedRent.isActive = false
+            await store.send(.expenses(.expensesUpdated([pausedRent, .gym, .phonePlan]))) {
+                $0.expenses.$expenses.withLock {
+                    $0 = IdentifiedArray(uniqueElements: [pausedRent, .gym, .phonePlan])
+                }
+            }
+            expectNoDifference(store.state.overview.monthlyTotal, Decimal(cents: 3990))
+        }
+
         @Test
         func aFailedSaveShowsAnAlert() async {
             let state = makeReadyState()

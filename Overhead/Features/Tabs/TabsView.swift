@@ -14,7 +14,7 @@ struct TabsView: View {
     var body: some View {
         TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
             Tab("Overview", systemImage: "square.grid.2x2", value: .overview) {
-                OverviewView()
+                OverviewView(store: store.scope(state: \.overview, action: \.overview))
             }
             Tab("Expenses", systemImage: "list.bullet.rectangle", value: .expenses) {
                 ExpensesView(store: store.scope(state: \.expenses, action: \.expenses))
