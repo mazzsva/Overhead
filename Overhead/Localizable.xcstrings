@@ -13,6 +13,9 @@
     "Are you sure you want to sign out?" : {
 
     },
+    "Billing Cycle" : {
+
+    },
     "Cancel" : {
 
     },
@@ -50,6 +53,9 @@
 
     },
     "Expenses" : {
+
+    },
+    "Monthly" : {
 
     },
     "Name" : {
@@ -97,7 +103,13 @@
     "Version %@" : {
 
     },
+    "Weekly" : {
+
+    },
     "Welcome to" : {
+
+    },
+    "Yearly" : {
 
     },
     "You couldn't be signed in." : {

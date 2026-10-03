@@ -181,6 +181,7 @@ extension BaseSuite {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
                 amount: Decimal(minorUnits: 1299, currencyCode: "USD"),
+                billingCycle: .monthly,
                 createdAt: now,
                 currencyCode: "USD",
                 id: UUID(0),
