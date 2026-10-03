@@ -25,12 +25,6 @@ struct SettingsView: View {
                     .accessibilityElement(children: .combine)
                 }
                 Section {
-                    CurrencyPicker(
-                        title: "Default Currency",
-                        selection: $store.currencyCode.sending(\.currencyPickerChanged)
-                    )
-                }
-                Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
                     }

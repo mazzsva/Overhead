@@ -18,7 +18,6 @@ struct Expenses {
 
     @ObservableState
     struct State: Equatable {
-        @SharedReader var defaultCurrencyCode: String?
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
         var path = StackState<ExpenseDetail.State>()
@@ -26,7 +25,6 @@ struct Expenses {
         let user: User
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
-            _defaultCurrencyCode = SharedReader(wrappedValue: nil, .defaultCurrencyCode(uid: user.uid))
             _expenses = Shared(value: nil)
             self.sessionOrigin = sessionOrigin
             self.user = user
@@ -118,9 +116,7 @@ struct Expenses {
                 return celebrateFirstLoad(state)
 
             case .newExpenseButtonTapped:
-                state.destination = .createExpense(
-                    ExpenseForm.State(defaultCurrencyCode: state.defaultCurrencyCode)
-                )
+                state.destination = .createExpense(ExpenseForm.State())
                 return .none
 
             case .path(.element(id: let id, action: .delegate(.didDelete(let expenseID)))):

@@ -47,44 +47,30 @@ extension BaseSuite {
             }
 
             state.amountText = " 1,200.50 "
-            expectNoDifference(state.amount, Decimal(minorUnits: 120_050, currencyCode: "USD"))
+            expectNoDifference(state.amount, Decimal(cents: 120_050))
         }
 
         @Test
-        func theAmountCannotHaveMoreDigitsThanTheCurrency() {
+        func theAmountCannotHaveMoreThanTwoDecimalPlaces() {
             var state = ExpenseForm.State()
 
             state.amountText = "12.345"
             expectNoDifference(state.amount, nil)
 
-            var yen = ExpenseForm.State(
-                expense: Expense(
-                    amount: 1200,
-                    billingCycle: .monthly,
-                    createdAt: .distantPast,
-                    currencyCode: "JPY",
-                    id: UUID(0),
-                    isActive: true,
-                    name: "Rent"
-                )
-            )
-            expectNoDifference(yen.amountText, "1200")
-
-            yen.amountText = "1200.5"
-            expectNoDifference(yen.amount, nil)
+            state.amountText = "12.34"
+            expectNoDifference(state.amount, Decimal(cents: 1234))
         }
 
         @Test
-        func theLocaleDecidesTheCurrencyAndTheSeparators() {
+        func theLocaleDecidesTheSeparators() {
             var state = withDependencies {
                 $0.locale = Locale(identifier: "it_IT")
             } operation: {
                 ExpenseForm.State()
             }
-            expectNoDifference(state.currencyCode, "EUR")
 
             state.amountText = "1.200,50"
-            expectNoDifference(state.amount, Decimal(minorUnits: 120_050, currencyCode: "EUR"))
+            expectNoDifference(state.amount, Decimal(cents: 120_050))
 
             state.amountText = "1,200.50"
             expectNoDifference(state.amount, nil)
@@ -108,10 +94,9 @@ extension BaseSuite {
         func creatingAnExpenseGeneratesItsIdentityAndDate() async {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
-                amount: Decimal(minorUnits: 1299, currencyCode: "USD"),
+                amount: Decimal(cents: 1299),
                 billingCycle: .monthly,
                 createdAt: now,
-                currencyCode: "USD",
                 id: UUID(0),
                 isActive: true,
                 name: "Phone Plan"
@@ -134,7 +119,7 @@ extension BaseSuite {
             await store.receive(\.delegate.didSubmit, created)
         }
 
-        // The identity, the date, and the currency come from the original, so the save replaces it
+        // The identity and the date come from the original, so the save replaces it
         @Test
         func editingAnExpenseKeepsItsIdentity() async {
             var edited = Expense.rent
@@ -168,41 +153,16 @@ extension BaseSuite {
         }
 
         @Test
-        func aNewExpenseStartsFromTheDefaultCurrency() {
-            let automatic = ExpenseForm.State()
-            expectNoDifference(automatic.billingCycle, .monthly)
-            expectNoDifference(automatic.currencyCode, "USD")
-            #expect(automatic.isActive)
-
-            expectNoDifference(ExpenseForm.State(defaultCurrencyCode: "BRL").currencyCode, "BRL")
-            expectNoDifference(ExpenseForm.State(expense: .rent, defaultCurrencyCode: "BRL").currencyCode, "EUR")
-        }
-
-        @Test
-        func anUnsupportedLocaleCurrencyFallsBackToDollars() {
-            let state = withDependencies {
-                $0.locale = Locale(identifier: "en_GB")
-            } operation: {
-                ExpenseForm.State()
-            }
-            expectNoDifference(state.currencyCode, "USD")
-        }
-
-        @Test
-        func theCurrencyDecidesTheDigitsOfTheAmount() {
-            var state = ExpenseForm.State()
-            state.amountText = "1200.50"
-            expectNoDifference(state.amount, Decimal(minorUnits: 120_050, currencyCode: "USD"))
-
-            state.currencyCode = "JPY"
-            expectNoDifference(state.amount, nil)
+        func aNewExpenseStartsMonthlyAndActive() {
+            let state = ExpenseForm.State()
+            expectNoDifference(state.billingCycle, .monthly)
+            #expect(state.isActive)
         }
 
         @Test
         func editingAnExpenseChangesItsDetails() async {
             var edited = Expense.rent
             edited.billingCycle = .yearly
-            edited.currencyCode = "BRL"
             edited.isActive = false
 
             let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
@@ -211,9 +171,6 @@ extension BaseSuite {
 
             await store.send(.binding(.set(\.billingCycle, .yearly))) {
                 $0.billingCycle = .yearly
-            }
-            await store.send(.binding(.set(\.currencyCode, "BRL"))) {
-                $0.currencyCode = "BRL"
             }
             await store.send(.binding(.set(\.isActive, false))) {
                 $0.isActive = false
