@@ -18,6 +18,8 @@ struct Expense: Equatable, Identifiable, Sendable {
 }
 
 extension Expense {
+    static let maximumNameLength = 100
+
     var monthlyAmount: Decimal {
         switch billingCycle {
         case .weekly: amount * 52 / 12
