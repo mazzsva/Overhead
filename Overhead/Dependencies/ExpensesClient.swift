@@ -155,6 +155,7 @@ extension Expense {
             let createdAt = data["createdAt"] as? Timestamp,
             let currencyCode = data["currencyCode"] as? String,
             let id = UUID(uuidString: document.documentID),
+            let isActive = data["isActive"] as? Bool,
             let name = data["name"] as? String
         else {
             logger.error("Skipping expense document \(document.documentID, privacy: .public) that failed to decode.")
@@ -167,6 +168,7 @@ extension Expense {
             createdAt: createdAt.dateValue(),
             currencyCode: currencyCode,
             id: id,
+            isActive: isActive,
             name: name
         )
     }
@@ -181,6 +183,7 @@ extension Expense {
             "billingCycle": billingCycle.rawValue,
             "createdAt": Timestamp(date: createdAt),
             "currencyCode": currencyCode,
+            "isActive": isActive,
             "name": name,
         ]
     }

@@ -1,10 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Active" : {
+
+    },
     "Add every fixed expense with its name and amount." : {
 
     },
     "Amount" : {
+
+    },
+    "An inactive expense stays in your list, so you can resume it later." : {
 
     },
     "Are you sure you want to delete this expense?" : {
@@ -61,6 +67,9 @@
     "Expenses" : {
 
     },
+    "Inactive" : {
+
+    },
     "Monthly" : {
 
     },
@@ -98,6 +107,9 @@
 
     },
     "Something Went Wrong" : {
+
+    },
+    "Status" : {
 
     },
     "Tap the plus button to add an expense." : {

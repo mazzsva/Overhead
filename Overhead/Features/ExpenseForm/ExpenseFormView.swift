@@ -41,6 +41,13 @@ struct ExpenseFormView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                 }
+                if !store.isCreating {
+                    Section {
+                        Toggle("Active", isOn: $store.isActive)
+                    } footer: {
+                        Text("An inactive expense stays in your list, so you can resume it later.")
+                    }
+                }
             }
             .scrollContentBackground(.hidden)
             .groupedBackground()

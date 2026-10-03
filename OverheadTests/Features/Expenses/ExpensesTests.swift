@@ -199,6 +199,7 @@ extension BaseSuite {
                 createdAt: now,
                 currencyCode: "USD",
                 id: UUID(0),
+                isActive: true,
                 name: "Phone Plan"
             )
 

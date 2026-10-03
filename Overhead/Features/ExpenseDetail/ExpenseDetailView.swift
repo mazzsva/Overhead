@@ -22,6 +22,13 @@ struct ExpenseDetailView: View {
                 LabeledContent("Billing Cycle") {
                     Text(store.expense.billingCycle.title)
                 }
+                LabeledContent("Status") {
+                    if store.expense.isActive {
+                        Text("Active")
+                    } else {
+                        Text("Inactive")
+                    }
+                }
             }
             Section {
                 Button("Delete Expense", role: .destructive) {
