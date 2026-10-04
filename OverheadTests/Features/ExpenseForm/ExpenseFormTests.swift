@@ -62,7 +62,7 @@ extension BaseSuite {
         func theWholeAmountMustBeANumber() {
             var state = ExpenseForm.State()
 
-            for text in ["12abc", "12,50", "1e3x", ""] {
+            for text in ["12abc", "12,50", "1e3x", "1e3", ""] {
                 state.amountText = text
                 expectNoDifference(state.amount, nil)
             }
@@ -171,6 +171,12 @@ extension BaseSuite {
                 $0.name = "   "
             }
             await store.send(.saveButtonTapped)
+        }
+
+        @Test
+        func onlyANewExpenseFocusesTheName() {
+            expectNoDifference(ExpenseForm.State().focus, .name)
+            expectNoDifference(ExpenseForm.State(expense: .rent).focus, nil)
         }
 
         @Test
