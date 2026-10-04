@@ -112,7 +112,7 @@ extension Expense {
 }
 
 extension Timestamp {
-    convenience init(roundingToMicroseconds date: Date) {
+    fileprivate convenience init(roundingToMicroseconds date: Date) {
         let microseconds = (date.timeIntervalSince1970 * 1_000_000).rounded()
         let seconds = (microseconds / 1_000_000).rounded(.down)
         self.init(
