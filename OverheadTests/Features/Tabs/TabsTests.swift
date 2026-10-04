@@ -21,7 +21,7 @@ extension BaseSuite {
             let store = TestStore(initialState: Tabs.State(user: .mock)) {
                 Tabs()
             }
-            expectNoDifference(store.state.overview.monthlyTotal, 0)
+            expectNoDifference(store.state.overview.monthlyTotal, nil)
 
             await store.send(.expenses(.expensesUpdated(Expense.mocks))) {
                 $0.expenses.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
@@ -36,6 +36,40 @@ extension BaseSuite {
                 }
             }
             expectNoDifference(store.state.overview.monthlyTotal, Decimal(cents: 3990))
+        }
+
+        @Test
+        func theOverviewTaskObservesTheBudget() async {
+            let budget = AsyncThrowingStream<Budget?, any Error>.makeStream()
+
+            let store = TestStore(initialState: Tabs.State(user: .mock)) {
+                Tabs()
+            } withDependencies: {
+                $0.budgetClient.budget = { uid in
+                    expectNoDifference(uid, User.mock.uid)
+                    return budget.stream
+                }
+            }
+
+            await store.send(.overview(.task))
+            budget.continuation.yield(.mock)
+            await store.receive(\.overview.budgetUpdated) {
+                $0.overview.budgetStatus = .loaded(.mock)
+            }
+            budget.continuation.finish()
+            await store.finish()
+        }
+
+        @Test
+        func theOverviewExpensesRowSelectsTheExpensesTab() async {
+            let store = TestStore(initialState: Tabs.State(user: .mock)) {
+                Tabs()
+            }
+
+            await store.send(.overview(.expensesRowTapped))
+            await store.receive(\.overview.delegate.didSelectExpenses) {
+                $0.selectedTab = .expenses
+            }
         }
 
         @Test

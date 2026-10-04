@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 01/10/26.
 //
 
+import Charts
 import ComposableArchitecture
 import SwiftUI
 
@@ -15,19 +16,71 @@ struct OverviewView: View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Monthly Total")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(store.monthlyTotal, format: .dollars)
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .monospacedDigit()
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Expenses")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            if let monthlyTotal = store.monthlyTotal {
+                                Text(monthlyTotal, format: .dollars)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                Text("per month")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Your expenses couldn't be loaded.")
+                                    .font(.title3)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+
+                        if let breakdown = store.breakdown {
+                            BudgetChart(breakdown: breakdown)
+                        }
                     }
                     .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
                 } footer: {
                     Text("The total of your active expenses, with weekly and yearly amounts converted to a month.")
+                }
+
+                Section("Where Your Money Goes") {
+                    switch store.budgetStatus {
+                    case .failed:
+                        Text("Your income couldn't be loaded.")
+                            .foregroundStyle(.secondary)
+                    case .loaded(let budget?):
+                        LabeledContent("Income") {
+                            Text(budget.income, format: .dollars)
+                                .foregroundStyle(.primary)
+                                .monospacedDigit()
+                        }
+                        if let breakdown = store.breakdown {
+                            Button {
+                                store.send(.expensesRowTapped)
+                            } label: {
+                                BudgetRow(
+                                    part: .expenses,
+                                    subtitle: Text("^[\(store.activeExpenseCount) expense](inflect: true)"),
+                                    line: breakdown.expenses
+                                )
+                            }
+                            .tint(.primary)
+                            BudgetRow(part: .investments, line: breakdown.investments)
+                            BudgetRow(
+                                part: .leftToSpend,
+                                line: breakdown.leftToSpend,
+                                isOverBudget: breakdown.isOverBudget
+                            )
+                        }
+                    case .loaded(nil):
+                        Text("Add your income to see where your money goes.")
+                            .foregroundStyle(.secondary)
+                    case .loading:
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -46,10 +99,107 @@ struct OverviewView: View {
     }
 }
 
+extension Overview.BudgetPart {
+    fileprivate var color: Color {
+        switch self {
+        case .expenses: .orange
+        case .investments: .teal
+        case .leftToSpend: .green
+        }
+    }
+
+    fileprivate var title: LocalizedStringResource {
+        switch self {
+        case .expenses: "Expenses"
+        case .investments: "Investments"
+        case .leftToSpend: "Left to Spend"
+        }
+    }
+}
+
+private struct BudgetChart: View {
+    let breakdown: Overview.Breakdown
+
+    @ScaledMetric private var height = 12
+
+    var body: some View {
+        Chart(breakdown.chartSegments) { segment in
+            BarMark(x: .value("Amount", segment.amount))
+                .foregroundStyle(segment.part.color)
+        }
+        .chartXScale(domain: 0 ... breakdown.chartUpperBound)
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartPlotStyle { $0.clipShape(.capsule) }
+        .frame(height: height)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct BudgetRow: View {
+    let part: Overview.BudgetPart
+    var subtitle: Text?
+    let line: Overview.Breakdown.Line?
+    var isOverBudget = false
+
+    @ScaledMetric private var dotSize = 10
+
+    var body: some View {
+        LabeledContent {
+            HStack(spacing: 12) {
+                if let line {
+                    Text(line.share, format: .percent.precision(.fractionLength(0)))
+                        .foregroundStyle(.secondary)
+                    Text(line.amount, format: .dollars)
+                        .foregroundStyle(isOverBudget ? .red : .primary)
+                } else {
+                    Text("None")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .monospacedDigit()
+        } label: {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(part.color)
+                    .frame(width: dotSize, height: dotSize)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(part.title)
+                    if let subtitle {
+                        subtitle
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .fontWeight(part == .leftToSpend ? .semibold : nil)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 #Preview {
     OverviewView(
         store: Store(
-            initialState: Overview.State(expenses: SharedReader(value: IdentifiedArray(uniqueElements: Expense.mocks)))
+            initialState: Overview.State(
+                budgetStatus: .loaded(.mock),
+                expenses: SharedReader(value: IdentifiedArray(uniqueElements: Expense.mocks)),
+                user: .mock
+            )
+        ) {
+            Overview()
+        }
+    )
+}
+
+#Preview("Without Income") {
+    OverviewView(
+        store: Store(
+            initialState: Overview.State(
+                budgetStatus: .loaded(nil),
+                expenses: SharedReader(value: IdentifiedArray(uniqueElements: Expense.mocks)),
+                user: .mock
+            )
         ) {
             Overview()
         }

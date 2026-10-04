@@ -24,6 +24,13 @@ extension Decimal {
         else { return nil }
         return NSDecimalNumber(decimal: whole).intValue
     }
+
+    func rounded(scale: Int) -> Decimal {
+        var source = self
+        var result = Decimal()
+        NSDecimalRound(&result, &source, scale, .plain)
+        return result
+    }
 }
 
 extension FormatStyle where Self == Decimal.FormatStyle.Currency {

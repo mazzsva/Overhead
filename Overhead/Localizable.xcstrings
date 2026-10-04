@@ -1,10 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "^[%lld expense](inflect: true)" : {
+
+    },
     "Active" : {
 
     },
     "Add every fixed expense with its name and amount." : {
+
+    },
+    "Add your income to see where your money goes." : {
 
     },
     "Amount" : {
@@ -58,10 +64,16 @@
     "Inactive" : {
 
     },
-    "Monthly" : {
+    "Income" : {
 
     },
-    "Monthly Total" : {
+    "Investments" : {
+
+    },
+    "Left to Spend" : {
+
+    },
+    "Monthly" : {
 
     },
     "Name" : {
@@ -73,10 +85,19 @@
     "No Expenses" : {
 
     },
+    "None" : {
+
+    },
     "Overhead" : {
       "shouldTranslate" : false
     },
+    "Overhead will try again automatically." : {
+
+    },
     "Overview" : {
+
+    },
+    "per month" : {
 
     },
     "Save" : {
@@ -109,6 +130,9 @@
     "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
 
     },
+    "Unable to Load Expenses" : {
+
+    },
     "Unknown" : {
 
     },
@@ -119,6 +143,9 @@
 
     },
     "Welcome to" : {
+
+    },
+    "Where Your Money Goes" : {
 
     },
     "Yearly" : {
@@ -143,6 +170,12 @@
 
     },
     "Your expense couldn't be saved." : {
+
+    },
+    "Your expenses couldn't be loaded." : {
+
+    },
+    "Your income couldn't be loaded." : {
 
     }
   },

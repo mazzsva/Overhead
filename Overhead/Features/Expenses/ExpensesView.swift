@@ -50,7 +50,13 @@ struct ExpensesView: View {
                 }
             }
             .overlay {
-                if store.isEmpty {
+                if store.hasFailedFirstLoad {
+                    ContentUnavailableView(
+                        "Unable to Load Expenses",
+                        systemImage: "exclamationmark.triangle.fill",
+                        description: Text("Overhead will try again automatically.")
+                    )
+                } else if store.isEmpty {
                     ContentUnavailableView(
                         "No Expenses",
                         systemImage: "tray.fill",
