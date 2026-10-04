@@ -247,7 +247,7 @@ extension BaseSuite {
             await store.send(.expenseCardTapped(Expense.gym.id))
         }
 
-        // An empty array replaces nil, so the list shows the empty state and not the spinner
+        // The failure ends the loading window, so the list shows the failure and not the spinner
         @Test
         func aFailedFirstLoadShowsTheFailureAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
