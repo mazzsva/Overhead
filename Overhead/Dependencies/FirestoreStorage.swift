@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 04/10/26.
 //
 
+import ConcurrencyExtras
 import FirebaseFirestore
 import Foundation
 import IssueReporting
@@ -17,8 +18,9 @@ actor FirestoreStorage {
     func budget(uid: String) async -> AsyncThrowingStream<Budget?, any Error> {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
+            let lastBudget = LockIsolated<Budget??>(nil)
             nonisolated(unsafe) let listener = budgetDocument(uid: uid)
-                .addSnapshotListener { snapshot, error in
+                .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
                     if let error {
                         continuation.finish(throwing: error)
                         return
@@ -28,7 +30,10 @@ actor FirestoreStorage {
                         return
                     }
                     guard snapshot.exists || !snapshot.metadata.isFromCache else { return }
-                    continuation.yield(snapshot.data().flatMap(Budget.init(data:)))
+                    let budget = snapshot.data().flatMap(Budget.init(data:))
+                    guard lastBudget.value != .some(budget) else { return }
+                    lastBudget.setValue(budget)
+                    continuation.yield(budget)
                 }
             continuation.onTermination = { _ in
                 listener.remove()
