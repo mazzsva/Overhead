@@ -11,14 +11,14 @@ import SwiftUI
 struct ExpenseFormView: View {
     @Bindable var store: StoreOf<ExpenseForm>
 
-    @FocusState private var isNameFocused: Bool
+    @FocusState private var focus: ExpenseForm.Field?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Name", text: $store.name)
-                        .focused($isNameFocused)
+                        .focused($focus, equals: .name)
                 }
                 Section {
                     TextField(
@@ -68,13 +68,8 @@ struct ExpenseFormView: View {
                     .labelStyle(.iconOnly)
                 }
             }
-            .onAppear { appeared() }
+            .bind($store.focus, to: $focus)
         }
-    }
-
-    private func appeared() {
-        guard store.isCreating else { return }
-        isNameFocused = true
     }
 }
 

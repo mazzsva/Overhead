@@ -15,6 +15,8 @@ struct BudgetForm {
         case investment
     }
 
+    static let investmentShares = [10, 15, 20]
+
     @ObservableState
     struct State: Equatable {
         var focus: Field?
@@ -31,22 +33,22 @@ struct BudgetForm {
         }
 
         var budget: Budget? {
-            guard let income = Decimal(amountText: incomeText, locale: locale) else { return nil }
-            guard !investmentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return Budget(income: income, investment: nil)
-            }
-            guard
-                let investment = Decimal(amountText: investmentText, locale: locale),
-                investment <= income
-            else { return nil }
+            guard let income else { return nil }
+            guard !isInvestmentBlank else { return Budget(income: income, investment: nil) }
+            guard let investment, investment <= income else { return nil }
             return Budget(income: income, investment: investment)
         }
 
+        var income: Decimal? {
+            Decimal(amountText: incomeText, locale: locale)
+        }
+
+        var investment: Decimal? {
+            Decimal(amountText: investmentText, locale: locale)
+        }
+
         var investmentExceedsIncome: Bool {
-            guard
-                let income = Decimal(amountText: incomeText, locale: locale),
-                let investment = Decimal(amountText: investmentText, locale: locale)
-            else { return false }
+            guard let income, let investment else { return false }
             return investment > income
         }
 
@@ -55,8 +57,12 @@ struct BudgetForm {
             return investment / budget.income
         }
 
-        var isIncomeValid: Bool {
-            Decimal(amountText: incomeText, locale: locale) != nil
+        var isInvestmentInvalid: Bool {
+            !isInvestmentBlank && investment == nil
+        }
+
+        private var isInvestmentBlank: Bool {
+            investmentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
 
@@ -89,11 +95,10 @@ struct BudgetForm {
                 return .run { _ in await dismiss() }
 
             case .investmentShareButtonTapped(let percent):
-                guard let income = Decimal(amountText: state.incomeText, locale: state.locale) else { return .none }
-                var investment = income * Decimal(percent) / 100
-                var rounded = Decimal()
-                NSDecimalRound(&rounded, &investment, 2, .plain)
-                state.investmentText = rounded.amountText(locale: state.locale)
+                guard let income = state.income else { return .none }
+                let investment = (income * Decimal(percent) / 100).rounded(scale: 2)
+                guard investment > 0 else { return .none }
+                state.investmentText = investment.amountText(locale: state.locale)
                 return .none
 
             case .saveButtonTapped:

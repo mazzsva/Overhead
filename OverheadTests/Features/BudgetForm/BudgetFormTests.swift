@@ -47,14 +47,14 @@ extension BaseSuite {
         func onlyAPositiveIncomeMakesABudget() {
             var state = BudgetForm.State(budget: nil, focus: .income)
 
-            for text in ["", "0", "-10", "12abc", "12.345"] {
+            for text in ["", "0", "-10", "12abc", "1e3", "12.345"] {
                 state.incomeText = text
+                expectNoDifference(state.income, nil)
                 expectNoDifference(state.budget, nil)
-                #expect(!state.isIncomeValid)
             }
 
             state.incomeText = " 3,000.50 "
-            #expect(state.isIncomeValid)
+            expectNoDifference(state.income, Decimal(cents: 300_050))
             expectNoDifference(state.budget, Budget(income: Decimal(cents: 300_050), investment: nil))
         }
 
@@ -66,6 +66,7 @@ extension BaseSuite {
             state.investmentText = "  "
             expectNoDifference(state.budget, Budget(income: 3000, investment: nil))
             expectNoDifference(state.investmentShare, nil)
+            #expect(!state.isInvestmentInvalid)
 
             state.investmentText = "450"
             expectNoDifference(state.budget, .mock)
@@ -81,10 +82,11 @@ extension BaseSuite {
             expectNoDifference(state.investmentShare, nil)
             #expect(state.investmentExceedsIncome)
 
-            for text in ["0", "-10", "12abc", "12.345"] {
+            for text in ["0", "-10", "12abc", "1e3", "12.345"] {
                 state.investmentText = text
                 expectNoDifference(state.budget, nil)
                 #expect(!state.investmentExceedsIncome)
+                #expect(state.isInvestmentInvalid)
             }
         }
 
@@ -104,6 +106,40 @@ extension BaseSuite {
             }
             await store.send(.investmentShareButtonTapped(20)) {
                 $0.investmentText = "246.91"
+            }
+            await store.send(.binding(.set(\.incomeText, "10.30"))) {
+                $0.incomeText = "10.30"
+            }
+            await store.send(.investmentShareButtonTapped(15)) {
+                $0.investmentText = "1.55"
+            }
+        }
+
+        @Test
+        func aShareButtonDoesNothingWhenTheShareRoundsToZero() async {
+            let store = TestStore(initialState: BudgetForm.State(budget: nil, focus: .income)) {
+                BudgetForm()
+            }
+
+            await store.send(.binding(.set(\.incomeText, "0.01"))) {
+                $0.incomeText = "0.01"
+            }
+            await store.send(.investmentShareButtonTapped(10))
+        }
+
+        @Test
+        func aShareButtonWritesTheInvestmentInTheLocaleFormat() async {
+            let state = withDependencies {
+                $0.locale = Locale(identifier: "it_IT")
+            } operation: {
+                BudgetForm.State(budget: Budget(income: 3000, investment: nil), focus: .investment)
+            }
+            let store = TestStore(initialState: state) {
+                BudgetForm()
+            }
+
+            await store.send(.investmentShareButtonTapped(15)) {
+                $0.investmentText = "450,00"
             }
         }
 

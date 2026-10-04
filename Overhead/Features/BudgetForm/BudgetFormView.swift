@@ -38,23 +38,27 @@ struct BudgetFormView: View {
                     .keyboardType(.decimalPad)
                     .focused($focus, equals: .investment)
                     HStack {
-                        ForEach([10, 15, 20], id: \.self) { percent in
+                        ForEach(BudgetForm.investmentShares, id: \.self) { percent in
+                            let share = Decimal(percent) / 100
                             Button {
                                 store.send(.investmentShareButtonTapped(percent))
                             } label: {
-                                Text(Decimal(percent) / 100, format: .percent)
+                                Text(share, format: .percent)
                                     .frame(maxWidth: .infinity)
                             }
+                            .accessibilityLabel(Text("Invest \(Text(share, format: .percent)) of Income"))
                         }
                     }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
-                    .disabled(!store.isIncomeValid)
+                    .disabled(store.income == nil)
                 } header: {
                     Text("Investments")
                 } footer: {
                     if store.investmentExceedsIncome {
                         Text("Your investments can't be more than your income.")
+                    } else if store.isInvestmentInvalid {
+                        Text("Enter a valid amount.")
                     } else if let share = store.investmentShare {
                         Text("\(Text(share, format: .percent.precision(.fractionLength(0)))) of your income.")
                     } else {

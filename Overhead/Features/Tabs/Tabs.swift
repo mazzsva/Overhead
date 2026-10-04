@@ -72,8 +72,8 @@ struct Tabs {
     }
 
     enum Action {
-        case failurePresentationChanged(Bool)
         case expenses(Expenses.Action)
+        case failurePresentationChanged(Bool)
         case overview(Overview.Action)
         case selectedTabChanged(Tab)
         case settings(Settings.Action)
@@ -91,20 +91,20 @@ struct Tabs {
         }
         Reduce { state, action in
             switch action {
-            case .failurePresentationChanged(false):
-                guard state.isPresentingFailure else { return .none }
-                state.failedOperations.removeAll()
-                return .none
-
-            case .failurePresentationChanged(true):
-                return .none
-
             case .expenses(.delegate(.didFailToDelete)):
                 state.failedOperations.insert(.deleteExpense)
                 return .none
 
             case .expenses(.delegate(.didFailToSave)):
                 state.failedOperations.insert(.saveExpense)
+                return .none
+
+            case .failurePresentationChanged(false):
+                guard state.isPresentingFailure else { return .none }
+                state.failedOperations.removeAll()
+                return .none
+
+            case .failurePresentationChanged(true):
                 return .none
 
             case .overview(.delegate(.didFailToSaveBudget)):

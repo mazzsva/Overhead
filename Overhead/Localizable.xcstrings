@@ -64,6 +64,9 @@
     "Email" : {
 
     },
+    "Enter a valid amount." : {
+
+    },
     "Expenses" : {
 
     },
@@ -71,6 +74,9 @@
 
     },
     "Income" : {
+
+    },
+    "Invest %@ of Income" : {
 
     },
     "Investments" : {

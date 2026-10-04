@@ -11,6 +11,7 @@ import RegexBuilder
 extension Decimal {
     init?(amountText: String, locale: Locale) {
         let text = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.contains(where: \.isLetter) else { return nil }
         let number = Regex { Capture { Decimal.FormatStyle(locale: locale) } }
         guard
             let amount = text.wholeMatch(of: number)?.output.1,

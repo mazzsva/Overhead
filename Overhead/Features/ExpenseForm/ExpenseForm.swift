@@ -10,11 +10,16 @@ import Foundation
 
 @Reducer
 struct ExpenseForm {
+    enum Field: Hashable {
+        case name
+    }
+
     @ObservableState
     struct State: Equatable {
         var amountText: String
         var billingCycle: BillingCycle
         let expense: Expense?
+        var focus: Field?
         var isActive: Bool
         let locale: Locale
         var name: String
@@ -24,6 +29,7 @@ struct ExpenseForm {
             amountText = expense?.amount.amountText(locale: locale) ?? ""
             billingCycle = expense?.billingCycle ?? .monthly
             self.expense = expense
+            focus = expense == nil ? .name : nil
             isActive = expense?.isActive ?? true
             self.locale = locale
             name = expense?.name ?? ""
