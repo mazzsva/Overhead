@@ -73,6 +73,7 @@ struct Overview {
         case failed
         case loaded(Budget?)
         case loading
+        case offline
     }
 
     @ObservableState
@@ -108,7 +109,7 @@ struct Overview {
         case addIncomeButtonTapped
         case budgetForm(PresentationAction<BudgetForm.Action>)
         case budgetStreamFailed
-        case budgetUpdated(Budget?)
+        case budgetUpdated(BudgetSnapshot)
         case delegate(Delegate)
         case expensesRowTapped
         case incomeRowTapped
@@ -152,8 +153,14 @@ struct Overview {
                 state.budgetStatus = .failed
                 return .none
 
-            case .budgetUpdated(let budget):
-                state.budgetStatus = .loaded(budget)
+            case .budgetUpdated(let snapshot):
+                guard
+                    snapshot.budget != nil || !snapshot.isFromCache || state.budgetStatus.is(\.loaded)
+                else {
+                    state.budgetStatus = .offline
+                    return .none
+                }
+                state.budgetStatus = .loaded(snapshot.budget)
                 return .none
 
             case .delegate:
@@ -189,8 +196,8 @@ struct Overview {
             while true {
                 do {
                     let snapshots = await budgetClient.budget(uid: uid)
-                    for try await budget in snapshots {
-                        await send(.budgetUpdated(budget))
+                    for try await snapshot in snapshots {
+                        await send(.budgetUpdated(snapshot))
                     }
                     return
                 } catch {

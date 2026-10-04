@@ -13,7 +13,7 @@ import os
 
 @DependencyClient
 struct BudgetClient: Sendable {
-    var budget: @Sendable (_ uid: String) async -> AsyncThrowingStream<Budget?, any Error> = { _ in
+    var budget: @Sendable (_ uid: String) async -> AsyncThrowingStream<BudgetSnapshot, any Error> = { _ in
         AsyncThrowingStream { _ in }
     }
 
@@ -40,7 +40,7 @@ extension BudgetClient: DependencyKey {
         BudgetClient(
             budget: { _ in
                 AsyncThrowingStream { continuation in
-                    continuation.yield(.mock)
+                    continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
                 }
             },
             delete: { _ in },
@@ -51,6 +51,11 @@ extension BudgetClient: DependencyKey {
     static var testValue: BudgetClient {
         BudgetClient()
     }
+}
+
+struct BudgetSnapshot: Equatable, Sendable {
+    var budget: Budget?
+    var isFromCache: Bool
 }
 
 extension DependencyValues {
