@@ -43,6 +43,41 @@ extension BaseSuite.IntegrationSuite {
             }
         }
 
+        @Test(
+            arguments: [
+                [:],
+                ["monthlyIncomeInCents": 0],
+                ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001],
+                ["monthlyIncomeInCents": 300_000, "defaultCurrency": "USD"],
+            ] as [[String: any Sendable]])
+        func theRulesRefuseReplacingABudgetWithAnInvalidOne(data: [String: any Sendable]) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            try await profile(uid).setData(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 45000])
+
+            await expectRefused {
+                try await profile(uid).setData(data)
+            }
+        }
+
+        @Test
+        func theRulesRefuseAnUpdateThatLeavesAnInvalidBudget() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            try await profile(uid).setData(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 45000])
+
+            await expectRefused {
+                try await profile(uid).updateData(["monthlyInvestmentInCents": 999_999_999])
+            }
+            await expectRefused {
+                try await profile(uid).updateData(["monthlyIncomeInCents": FieldValue.delete()])
+            }
+            await expectRefused {
+                try await profile(uid).updateData(["monthlyIncomeInCents": 40000])
+            }
+            await expectRefused {
+                try await profile(uid).setData(["defaultCurrency": "USD"], merge: true)
+            }
+        }
+
         @Test
         func theOwnerCanWriteAValidExpense() async throws {
             let uid = try await FirebaseEmulators.signIn()
@@ -72,6 +107,57 @@ extension BaseSuite.IntegrationSuite {
             let uid = try await FirebaseEmulators.signIn()
             var data = try Expense.gym.documentData()
             data[field] = value
+
+            await expectRefused {
+                try await expense(uid, Expense.gym.id).setData(data)
+            }
+        }
+
+        @Test(
+            arguments: [
+                ("amountInCents", 0),
+                ("billingCycle", "daily"),
+                ("isActive", "yes"),
+                ("name", ""),
+                ("currency", "USD"),
+            ] as [(String, any Sendable)])
+        func theRulesRefuseAnInvalidExpenseUpdate(field: String, value: any Sendable) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let document = expense(uid, Expense.gym.id)
+            try await document.setData(Expense.gym.documentData())
+            var data = try Expense.gym.documentData()
+            data[field] = value
+
+            await expectRefused {
+                try await document.setData(data)
+            }
+            await expectRefused {
+                try await document.updateData([field: value])
+            }
+        }
+
+        @Test(arguments: [
+            String(repeating: "a", count: Expense.maximumNameLength),
+            String(repeating: "é", count: Expense.maximumNameLength),
+            String(repeating: "👍🏽", count: Expense.maximumNameLength / 4),
+            String(repeating: "家", count: Expense.maximumNameLength),
+        ])
+        func theRulesAcceptEveryNameTheAppAccepts(name: String) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            var data = try Expense.gym.documentData()
+            data["name"] = name
+
+            try await expense(uid, Expense.gym.id).setData(data)
+        }
+
+        @Test(arguments: [
+            String(repeating: "é", count: Expense.maximumNameLength + 1),
+            String(repeating: "👍🏽", count: Expense.maximumNameLength / 4 + 1),
+        ])
+        func theRulesRefuseEveryNameTheAppRefuses(name: String) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            var data = try Expense.gym.documentData()
+            data["name"] = name
 
             await expectRefused {
                 try await expense(uid, Expense.gym.id).setData(data)
@@ -121,6 +207,36 @@ extension BaseSuite.IntegrationSuite {
             await expectRefused {
                 try await profile(owner).delete()
             }
+            await expectRefused {
+                try await profile(owner).setData(["monthlyIncomeInCents": 1])
+            }
+            await expectRefused {
+                try await expense(owner, Expense.gym.id).setData(Expense.gym.documentData())
+            }
+            await expectRefused {
+                try await expense(owner, Expense.rent.id).setData(Expense.rent.documentData())
+            }
+            await expectRefused {
+                _ = try await profile(owner).collection("expenses").getDocuments(source: .server)
+            }
+        }
+
+        @Test
+        func theRulesRefuseASignedOutUser() async throws {
+            let owner = try await FirebaseEmulators.signIn()
+            try await profile(owner).setData(["monthlyIncomeInCents": 300_000])
+            try await expense(owner, Expense.gym.id).setData(Expense.gym.documentData())
+            try FirebaseEmulators.signOut()
+
+            await expectRefused {
+                _ = try await profile(owner).getDocument(source: .server)
+            }
+            await expectRefused {
+                _ = try await profile(owner).collection("expenses").getDocuments(source: .server)
+            }
+            await expectRefused {
+                try await profile(owner).setData(["monthlyIncomeInCents": 1])
+            }
         }
 
         private func expectRefused(
@@ -131,9 +247,9 @@ extension BaseSuite.IntegrationSuite {
                 try await operation()
                 Issue.record("The rules accepted the operation.", sourceLocation: sourceLocation)
             } catch {
-                let code = (error as NSError).code
+                let error = error as NSError
                 #expect(
-                    code == FirestoreErrorCode.permissionDenied.rawValue,
+                    error.domain == FirestoreErrorDomain && error.code == FirestoreErrorCode.permissionDenied.rawValue,
                     "Expected a permission error, got \(error).",
                     sourceLocation: sourceLocation
                 )

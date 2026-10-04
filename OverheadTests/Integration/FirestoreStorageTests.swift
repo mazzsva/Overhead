@@ -57,8 +57,10 @@ extension BaseSuite.IntegrationSuite {
             try await FirestoreStorage.shared.deleteBudget(uid: uid)
             try await budgets.wait { $0.map(\.budget) == [nil, .mock, raise, nil] }
 
-            try await Task.sleep(for: .milliseconds(500))
-            expectNoDifference(budgets.values.map(\.budget), [nil, .mock, raise, nil])
+            let marker = Budget(income: 1, investment: nil)
+            try await FirestoreStorage.shared.save(marker, uid: uid)
+            try await budgets.wait { $0.last?.budget == marker }
+            expectNoDifference(budgets.values.map(\.budget), [nil, .mock, raise, nil, marker])
         }
 
         @Test
@@ -67,12 +69,12 @@ extension BaseSuite.IntegrationSuite {
             try await FirestoreStorage.shared.save(Budget.mock, uid: uid)
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
-            try await budgets.wait { $0.map(\.budget) == [.mock] }
+            try await budgets.wait { $0.last == BudgetSnapshot(budget: .mock, isFromCache: false) }
 
             try await Firestore.firestore().disableNetwork()
             let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
 
-            try await budgets.wait { $0.first?.budget == .mock && $0.last.map { $0.budget == nil } == true }
+            try await budgets.wait { $0.last == BudgetSnapshot(budget: nil, isFromCache: true) }
             try await Firestore.firestore().enableNetwork()
             try await deletion.value
         }
@@ -213,6 +215,10 @@ enum FirebaseEmulators {
         Auth.auth().useEmulator(withHost: "127.0.0.1", port: 9099)
         useFirestoreEmulator()
     }()
+
+    static func signOut() throws {
+        try Auth.auth().signOut()
+    }
 
     static func signIn() async throws -> String {
         configuration
