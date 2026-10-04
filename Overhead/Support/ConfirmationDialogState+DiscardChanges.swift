@@ -1,16 +1,16 @@
 //
-//  AlertState+DiscardChanges.swift
+//  ConfirmationDialogState+DiscardChanges.swift
 //  Overhead
 //
-//  Created by Lorenzo Mazzarotto on 04/10/26.
+//  Created by Lorenzo Mazzarotto on 05/10/26.
 //
 
 import ComposableArchitecture
 import Foundation
 
-extension AlertState {
+extension ConfirmationDialogState {
     static func discardChanges(_ action: Action) -> Self {
-        AlertState {
+        ConfirmationDialogState(titleVisibility: .hidden) {
             TextState("Discard Changes?")
         } actions: {
             ButtonState(role: .destructive, action: action) {

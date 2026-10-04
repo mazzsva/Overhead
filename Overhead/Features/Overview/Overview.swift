@@ -192,10 +192,12 @@ struct Overview {
                 )
 
             case .destination(.presented(.incomeForm(.delegate(.didSubmit(let income))))):
-                return saveIncome(income, removingInvestment: false, state: &state)
+                state.destination = nil
+                return save(income: income, removingInvestment: false, uid: state.user.uid)
 
             case .destination(.presented(.incomeForm(.delegate(.didSubmitRemovingInvestment(let income))))):
-                return saveIncome(income, removingInvestment: true, state: &state)
+                state.destination = nil
+                return save(income: income, removingInvestment: true, uid: state.user.uid)
 
             case .destination(.presented(.investmentForm(.delegate(.didRemove)))):
                 state.destination = nil
@@ -249,10 +251,8 @@ struct Overview {
         }
     }
 
-    private func saveIncome(_ income: Decimal, removingInvestment: Bool, state: inout State) -> Effect<Action> {
-        state.destination = nil
-        let uid = state.user.uid
-        return .merge(
+    private func save(income: Decimal, removingInvestment: Bool, uid: String) -> Effect<Action> {
+        .merge(
             .run { _ in await hapticsClient.success() },
             changeBudget(.saveIncome) {
                 try await budgetClient.saveIncome(income: income, removingInvestment: removingInvestment, uid: uid)

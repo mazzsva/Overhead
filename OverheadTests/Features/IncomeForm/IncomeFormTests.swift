@@ -65,6 +65,32 @@ extension BaseSuite {
         }
 
         @Test
+        func onlyADifferentAmountCountsAsAChange() {
+            var state = IncomeForm.State(budget: .mock)
+
+            state.incomeText = "3000"
+            #expect(!state.hasChanges)
+
+            state.incomeText = "3,000.00 "
+            #expect(!state.hasChanges)
+
+            state.incomeText = "3000.01"
+            #expect(state.hasChanges)
+
+            state.incomeText = "abc"
+            #expect(state.hasChanges)
+
+            state.incomeText = ""
+            #expect(state.hasChanges)
+
+            var new = IncomeForm.State(budget: nil)
+            new.incomeText = "  "
+            #expect(!new.hasChanges)
+            new.incomeText = "abc"
+            #expect(new.hasChanges)
+        }
+
+        @Test
         func savingSubmitsTheIncome() async {
             let store = TestStore(initialState: IncomeForm.State(budget: .mock)) {
                 IncomeForm()
@@ -88,21 +114,22 @@ extension BaseSuite {
             }
             #expect(store.state.isBelowInvestment)
             await store.send(.saveButtonTapped) {
-                $0.alert = AlertState {
-                    TextState("Remove Investments?")
-                } actions: {
-                    ButtonState(role: .destructive, action: .confirmRemovingInvestment) {
-                        TextState("Remove Investments and Save")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("Cancel")
-                    }
-                } message: {
-                    TextState("Your investments of $450.00 are more than this income.")
-                }
+                $0.destination = .alert(
+                    AlertState {
+                        TextState("Remove Investments")
+                    } actions: {
+                        ButtonState(role: .destructive, action: .confirmRemovingInvestment) {
+                            TextState("Remove and Save")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("Cancel")
+                        }
+                    } message: {
+                        TextState("Your investments of $450.00 are more than this income.")
+                    })
             }
-            await store.send(.alert(.presented(.confirmRemovingInvestment))) {
-                $0.alert = nil
+            await store.send(.destination(.presented(.alert(.confirmRemovingInvestment)))) {
+                $0.destination = nil
             }
             await store.receive(\.delegate.didSubmitRemovingInvestment, 400)
         }
@@ -114,21 +141,22 @@ extension BaseSuite {
             }
 
             await store.send(.removeButtonTapped) {
-                $0.alert = AlertState {
-                    TextState("Remove Income")
-                } actions: {
-                    ButtonState(role: .destructive, action: .confirmRemoval) {
-                        TextState("Remove")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("Cancel")
-                    }
-                } message: {
-                    TextState("Your income and investments will be removed. Your expenses will stay.")
-                }
+                $0.destination = .alert(
+                    AlertState {
+                        TextState("Remove Income")
+                    } actions: {
+                        ButtonState(role: .destructive, action: .confirmRemoval) {
+                            TextState("Remove")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("Cancel")
+                        }
+                    } message: {
+                        TextState("Your income and investments will be removed. Your expenses will stay.")
+                    })
             }
-            await store.send(.alert(.presented(.confirmRemoval))) {
-                $0.alert = nil
+            await store.send(.destination(.presented(.alert(.confirmRemoval)))) {
+                $0.destination = nil
             }
             await store.receive(\.delegate.didRemove)
         }
@@ -141,21 +169,22 @@ extension BaseSuite {
             }
 
             await store.send(.removeButtonTapped) {
-                $0.alert = AlertState {
-                    TextState("Remove Income")
-                } actions: {
-                    ButtonState(role: .destructive, action: .confirmRemoval) {
-                        TextState("Remove")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("Cancel")
-                    }
-                } message: {
-                    TextState("Your income will be removed. Your expenses will stay.")
-                }
+                $0.destination = .alert(
+                    AlertState {
+                        TextState("Remove Income")
+                    } actions: {
+                        ButtonState(role: .destructive, action: .confirmRemoval) {
+                            TextState("Remove")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("Cancel")
+                        }
+                    } message: {
+                        TextState("Your income will be removed. Your expenses will stay.")
+                    })
             }
-            await store.send(.alert(.dismiss)) {
-                $0.alert = nil
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
             }
         }
 
@@ -196,19 +225,20 @@ extension BaseSuite {
                 }
                 #expect(store.state.hasChanges)
                 await store.send(.dismissButtonTapped) {
-                    $0.alert = AlertState {
-                        TextState("Discard Changes?")
-                    } actions: {
-                        ButtonState(role: .destructive, action: .confirmDiscard) {
-                            TextState("Discard Changes")
-                        }
-                        ButtonState(role: .cancel) {
-                            TextState("Keep Editing")
-                        }
-                    }
+                    $0.destination = .confirmationDialog(
+                        ConfirmationDialogState(titleVisibility: .hidden) {
+                            TextState("Discard Changes?")
+                        } actions: {
+                            ButtonState(role: .destructive, action: .confirmDiscard) {
+                                TextState("Discard Changes")
+                            }
+                            ButtonState(role: .cancel) {
+                                TextState("Keep Editing")
+                            }
+                        })
                 }
-                await store.send(.alert(.presented(.confirmDiscard))) {
-                    $0.alert = nil
+                await store.send(.destination(.presented(.confirmationDialog(.confirmDiscard)))) {
+                    $0.destination = nil
                 }
                 await store.finish()
             }

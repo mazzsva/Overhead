@@ -10,7 +10,7 @@ import Foundation
 
 @Reducer
 struct ExpenseForm {
-    enum Alert: Equatable {
+    enum Dialog: Equatable {
         case confirmDiscard
     }
 
@@ -20,9 +20,9 @@ struct ExpenseForm {
 
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<ExpenseForm.Alert>?
         var amountText: String
         var billingCycle: BillingCycle
+        @Presents var confirmationDialog: ConfirmationDialogState<ExpenseForm.Dialog>?
         let expense: Expense?
         var focus: Field?
         var isActive: Bool
@@ -45,10 +45,12 @@ struct ExpenseForm {
         }
 
         var hasChanges: Bool {
-            amountText != (expense?.amount.amountText(locale: locale) ?? "")
+            let isAmountInvalid = !amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount == nil
+            return amount != expense?.amount
+                || isAmountInvalid
                 || billingCycle != (expense?.billingCycle ?? .monthly)
                 || isActive != (expense?.isActive ?? true)
-                || name != (expense?.name ?? "")
+                || name.trimmingCharacters(in: .whitespacesAndNewlines) != (expense?.name ?? "")
         }
 
         var isCreating: Bool {
@@ -62,8 +64,8 @@ struct ExpenseForm {
     }
 
     enum Action: BindableAction {
-        case alert(PresentationAction<Alert>)
         case binding(BindingAction<State>)
+        case confirmationDialog(PresentationAction<Dialog>)
         case delegate(Delegate)
         case dismissButtonTapped
         case saveButtonTapped
@@ -82,13 +84,13 @@ struct ExpenseForm {
         BindingReducer()
         Reduce { state, action in
             switch action {
-            case .alert(.presented(.confirmDiscard)):
-                return .run { _ in await dismiss() }
-
-            case .alert:
+            case .binding:
                 return .none
 
-            case .binding:
+            case .confirmationDialog(.presented(.confirmDiscard)):
+                return .run { _ in await dismiss() }
+
+            case .confirmationDialog:
                 return .none
 
             case .delegate:
@@ -96,7 +98,7 @@ struct ExpenseForm {
 
             case .dismissButtonTapped:
                 guard state.hasChanges else { return .run { _ in await dismiss() } }
-                state.alert = .discardChanges(.confirmDiscard)
+                state.confirmationDialog = .discardChanges(.confirmDiscard)
                 return .none
 
             case .saveButtonTapped:
@@ -113,6 +115,6 @@ struct ExpenseForm {
                 return .send(.delegate(.didSubmit(expense)))
             }
         }
-        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
     }
 }

@@ -11,9 +11,18 @@ import Foundation
 @Reducer
 struct IncomeForm {
     enum Alert: Equatable {
-        case confirmDiscard
         case confirmRemoval
         case confirmRemovingInvestment
+    }
+
+    @Reducer
+    enum Destination {
+        case alert(AlertState<IncomeForm.Alert>)
+        case confirmationDialog(ConfirmationDialogState<IncomeForm.Dialog>)
+    }
+
+    enum Dialog: Equatable {
+        case confirmDiscard
     }
 
     enum Field: Hashable {
@@ -22,27 +31,24 @@ struct IncomeForm {
 
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<IncomeForm.Alert>?
+        @Presents var destination: Destination.State?
         var focus: Field?
         var incomeText: String
-        let initialIncomeText: String
+        let initialIncome: Decimal?
         var investment: Decimal?
-        let isEditing: Bool
         let locale: Locale
 
         init(budget: Budget?) {
             @Dependency(\.locale) var locale
-            let incomeText = budget?.income.amountText(locale: locale) ?? ""
             focus = budget == nil ? .income : nil
-            self.incomeText = incomeText
-            initialIncomeText = incomeText
+            incomeText = budget?.income.amountText(locale: locale) ?? ""
+            initialIncome = budget?.income
             investment = budget?.investment
-            isEditing = budget != nil
             self.locale = locale
         }
 
         var hasChanges: Bool {
-            incomeText != initialIncomeText
+            income != initialIncome || isIncomeInvalid
         }
 
         var income: Decimal? {
@@ -54,15 +60,19 @@ struct IncomeForm {
             return income < investment
         }
 
+        var isEditing: Bool {
+            initialIncome != nil
+        }
+
         var isIncomeInvalid: Bool {
             !incomeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && income == nil
         }
     }
 
     enum Action: BindableAction {
-        case alert(PresentationAction<Alert>)
         case binding(BindingAction<State>)
         case delegate(Delegate)
+        case destination(PresentationAction<Destination.Action>)
         case dismissButtonTapped
         case removeButtonTapped
         case saveButtonTapped
@@ -81,47 +91,49 @@ struct IncomeForm {
         BindingReducer()
         Reduce { state, action in
             switch action {
-            case .alert(.presented(.confirmDiscard)):
-                return .run { _ in await dismiss() }
-
-            case .alert(.presented(.confirmRemoval)):
-                return .send(.delegate(.didRemove))
-
-            case .alert(.presented(.confirmRemovingInvestment)):
-                guard let income = state.income else { return .none }
-                return .send(.delegate(.didSubmitRemovingInvestment(income)))
-
-            case .alert:
-                return .none
-
             case .binding:
                 return .none
 
             case .delegate:
                 return .none
 
+            case .destination(.presented(.alert(.confirmRemoval))):
+                return .send(.delegate(.didRemove))
+
+            case .destination(.presented(.alert(.confirmRemovingInvestment))):
+                guard let income = state.income else { return .none }
+                return .send(.delegate(.didSubmitRemovingInvestment(income)))
+
+            case .destination(.presented(.confirmationDialog(.confirmDiscard))):
+                return .run { _ in await dismiss() }
+
+            case .destination:
+                return .none
+
             case .dismissButtonTapped:
                 guard state.hasChanges else { return .run { _ in await dismiss() } }
-                state.alert = .discardChanges(.confirmDiscard)
+                state.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
                 return .none
 
             case .removeButtonTapped:
                 guard state.isEditing else { return .none }
-                state.alert = .confirmRemoval(removesInvestment: state.investment != nil)
+                state.destination = .alert(.confirmRemoval(removesInvestment: state.investment != nil))
                 return .none
 
             case .saveButtonTapped:
                 guard let income = state.income else { return .none }
                 if let investment = state.investment, income < investment {
-                    state.alert = .confirmRemovingInvestment(investment, locale: state.locale)
+                    state.destination = .alert(.confirmRemovingInvestment(investment, locale: state.locale))
                     return .none
                 }
                 return .send(.delegate(.didSubmit(income)))
             }
         }
-        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$destination, action: \.destination)
     }
 }
+
+extension IncomeForm.Destination.State: Equatable {}
 
 extension AlertState where Action == IncomeForm.Alert {
     static func confirmRemoval(removesInvestment: Bool) -> Self {
@@ -143,10 +155,10 @@ extension AlertState where Action == IncomeForm.Alert {
 
     static func confirmRemovingInvestment(_ investment: Decimal, locale: Locale) -> Self {
         AlertState {
-            TextState("Remove Investments?")
+            TextState("Remove Investments")
         } actions: {
             ButtonState(role: .destructive, action: .confirmRemovingInvestment) {
-                TextState("Remove Investments and Save")
+                TextState("Remove and Save")
             }
             ButtonState(role: .cancel) {
                 TextState("Cancel")

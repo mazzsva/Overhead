@@ -11,8 +11,17 @@ import Foundation
 @Reducer
 struct InvestmentForm {
     enum Alert: Equatable {
-        case confirmDiscard
         case confirmRemoval
+    }
+
+    @Reducer
+    enum Destination {
+        case alert(AlertState<InvestmentForm.Alert>)
+        case confirmationDialog(ConfirmationDialogState<InvestmentForm.Dialog>)
+    }
+
+    enum Dialog: Equatable {
+        case confirmDiscard
     }
 
     enum Field: Hashable {
@@ -23,22 +32,19 @@ struct InvestmentForm {
 
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<InvestmentForm.Alert>?
+        @Presents var destination: Destination.State?
         var focus: Field?
         var income: Decimal
-        let initialInvestmentText: String
+        let initialInvestment: Decimal?
         var investmentText: String
-        let isEditing: Bool
         let locale: Locale
 
         init(income: Decimal, investment: Decimal?) {
             @Dependency(\.locale) var locale
-            let investmentText = investment?.amountText(locale: locale) ?? ""
             focus = investment == nil ? .investment : nil
             self.income = income
-            initialInvestmentText = investmentText
-            self.investmentText = investmentText
-            isEditing = investment != nil
+            initialInvestment = investment
+            investmentText = investment?.amountText(locale: locale) ?? ""
             self.locale = locale
         }
 
@@ -48,11 +54,15 @@ struct InvestmentForm {
         }
 
         var hasChanges: Bool {
-            investmentText != initialInvestmentText
+            investment != initialInvestment || isInvestmentInvalid
         }
 
         var investment: Decimal? {
             Decimal(amountText: investmentText, locale: locale)
+        }
+
+        var isEditing: Bool {
+            initialInvestment != nil
         }
 
         var isInvestmentInvalid: Bool {
@@ -70,9 +80,9 @@ struct InvestmentForm {
     }
 
     enum Action: BindableAction {
-        case alert(PresentationAction<Alert>)
         case binding(BindingAction<State>)
         case delegate(Delegate)
+        case destination(PresentationAction<Destination.Action>)
         case dismissButtonTapped
         case removeButtonTapped
         case saveButtonTapped
@@ -91,29 +101,29 @@ struct InvestmentForm {
         BindingReducer()
         Reduce { state, action in
             switch action {
-            case .alert(.presented(.confirmDiscard)):
-                return .run { _ in await dismiss() }
-
-            case .alert(.presented(.confirmRemoval)):
-                return .send(.delegate(.didRemove))
-
-            case .alert:
-                return .none
-
             case .binding:
                 return .none
 
             case .delegate:
                 return .none
 
+            case .destination(.presented(.alert(.confirmRemoval))):
+                return .send(.delegate(.didRemove))
+
+            case .destination(.presented(.confirmationDialog(.confirmDiscard))):
+                return .run { _ in await dismiss() }
+
+            case .destination:
+                return .none
+
             case .dismissButtonTapped:
                 guard state.hasChanges else { return .run { _ in await dismiss() } }
-                state.alert = .discardChanges(.confirmDiscard)
+                state.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
                 return .none
 
             case .removeButtonTapped:
                 guard state.isEditing else { return .none }
-                state.alert = .confirmRemoval
+                state.destination = .alert(.confirmRemoval)
                 return .none
 
             case .saveButtonTapped:
@@ -127,9 +137,11 @@ struct InvestmentForm {
                 return .none
             }
         }
-        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$destination, action: \.destination)
     }
 }
+
+extension InvestmentForm.Destination.State: Equatable {}
 
 extension AlertState where Action == InvestmentForm.Alert {
     static let confirmRemoval = AlertState {

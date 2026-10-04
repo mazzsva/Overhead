@@ -228,9 +228,15 @@ extension BaseSuite {
 
             state.name = "Office"
             #expect(state.hasChanges)
+            state.name = " \(Expense.rent.name) "
+            #expect(!state.hasChanges)
             state.name = Expense.rent.name
 
             state.amountText = "1000"
+            #expect(state.hasChanges)
+            state.amountText = "950"
+            #expect(!state.hasChanges)
+            state.amountText = "abc"
             #expect(state.hasChanges)
             state.amountText = "950.00"
 
@@ -262,7 +268,7 @@ extension BaseSuite {
                     $0.name = "Office"
                 }
                 await store.send(.dismissButtonTapped) {
-                    $0.alert = AlertState {
+                    $0.confirmationDialog = ConfirmationDialogState(titleVisibility: .hidden) {
                         TextState("Discard Changes?")
                     } actions: {
                         ButtonState(role: .destructive, action: .confirmDiscard) {
@@ -273,8 +279,8 @@ extension BaseSuite {
                         }
                     }
                 }
-                await store.send(.alert(.presented(.confirmDiscard))) {
-                    $0.alert = nil
+                await store.send(.confirmationDialog(.presented(.confirmDiscard))) {
+                    $0.confirmationDialog = nil
                 }
                 await store.finish()
             }
@@ -290,10 +296,10 @@ extension BaseSuite {
                 $0.name = "Office"
             }
             await store.send(.dismissButtonTapped) {
-                $0.alert = .discardChanges(.confirmDiscard)
+                $0.confirmationDialog = .discardChanges(.confirmDiscard)
             }
-            await store.send(.alert(.dismiss)) {
-                $0.alert = nil
+            await store.send(.confirmationDialog(.dismiss)) {
+                $0.confirmationDialog = nil
             }
         }
     }

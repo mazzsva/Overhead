@@ -32,6 +32,11 @@ extension BaseSuite {
         }
 
         @Test
+        func theMockIsAValidBudget() {
+            expectNoDifference(Budget(income: 3000, investment: 450), .mock)
+        }
+
+        @Test
         func aDocumentDecodesIntoABudget() {
             expectNoDifference(
                 Budget(data: [BudgetField.income: 300_000, BudgetField.investment: 45000]),

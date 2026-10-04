@@ -64,9 +64,6 @@
     "Discard Changes?" : {
 
     },
-    "Dismiss" : {
-
-    },
     "Edit" : {
 
     },
@@ -127,16 +124,13 @@
     "Remove" : {
 
     },
+    "Remove and Save" : {
+
+    },
     "Remove Income" : {
 
     },
     "Remove Investments" : {
-
-    },
-    "Remove Investments and Save" : {
-
-    },
-    "Remove Investments?" : {
 
     },
     "Save" : {

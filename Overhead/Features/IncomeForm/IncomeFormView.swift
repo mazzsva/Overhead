@@ -56,16 +56,19 @@ struct IncomeFormView: View {
                     .disabled(store.income == nil)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Dismiss", systemImage: "xmark") {
+                    Button("Cancel", systemImage: "xmark") {
                         store.send(.dismissButtonTapped)
                     }
+                    .confirmationDialog(
+                        $store.scope(state: \.destination?.confirmationDialog, action: \.destination.confirmationDialog)
+                    )
                     .foregroundStyle(.secondary)
                     .labelStyle(.iconOnly)
                 }
             }
             .interactiveDismissDisabled(store.hasChanges)
             .bind($store.focus, to: $focus)
-            .alert($store.scope(state: \.alert, action: \.alert))
+            .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         }
     }
 }

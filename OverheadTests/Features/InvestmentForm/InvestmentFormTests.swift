@@ -121,6 +121,24 @@ extension BaseSuite {
         }
 
         @Test
+        func onlyADifferentAmountCountsAsAChange() {
+            var state = InvestmentForm.State(income: 3000, investment: 450)
+
+            state.investmentText = "450"
+            #expect(!state.hasChanges)
+
+            state.investmentText = "451"
+            #expect(state.hasChanges)
+
+            state.investmentText = ""
+            #expect(state.hasChanges)
+
+            var new = InvestmentForm.State(income: 3000, investment: nil)
+            new.investmentText = " "
+            #expect(!new.hasChanges)
+        }
+
+        @Test
         func savingSubmitsTheInvestment() async {
             let store = TestStore(initialState: InvestmentForm.State(income: 3000, investment: nil)) {
                 InvestmentForm()
@@ -152,21 +170,22 @@ extension BaseSuite {
             }
 
             await store.send(.removeButtonTapped) {
-                $0.alert = AlertState {
-                    TextState("Remove Investments")
-                } actions: {
-                    ButtonState(role: .destructive, action: .confirmRemoval) {
-                        TextState("Remove")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("Cancel")
-                    }
-                } message: {
-                    TextState("Your investments will be removed. Your income and expenses will stay.")
-                }
+                $0.destination = .alert(
+                    AlertState {
+                        TextState("Remove Investments")
+                    } actions: {
+                        ButtonState(role: .destructive, action: .confirmRemoval) {
+                            TextState("Remove")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("Cancel")
+                        }
+                    } message: {
+                        TextState("Your investments will be removed. Your income and expenses will stay.")
+                    })
             }
-            await store.send(.alert(.presented(.confirmRemoval))) {
-                $0.alert = nil
+            await store.send(.destination(.presented(.alert(.confirmRemoval)))) {
+                $0.destination = nil
             }
             await store.receive(\.delegate.didRemove)
         }
@@ -178,10 +197,10 @@ extension BaseSuite {
             }
 
             await store.send(.removeButtonTapped) {
-                $0.alert = .confirmRemoval
+                $0.destination = .alert(.confirmRemoval)
             }
-            await store.send(.alert(.dismiss)) {
-                $0.alert = nil
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
             }
         }
 
@@ -218,10 +237,10 @@ extension BaseSuite {
                 $0.investmentText = "300.00"
             }
             await store.send(.dismissButtonTapped) {
-                $0.alert = .discardChanges(.confirmDiscard)
+                $0.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
             }
-            await store.send(.alert(.dismiss)) {
-                $0.alert = nil
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
             }
         }
     }
