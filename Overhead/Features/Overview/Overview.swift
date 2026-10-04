@@ -77,6 +77,7 @@ struct Overview {
 
     @ObservableState
     struct State: Equatable {
+        @Presents var budgetForm: BudgetForm.State?
         var budgetStatus = BudgetStatus.loading
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
         let user: User
@@ -94,20 +95,29 @@ struct Overview {
             budgetStatus.loaded ?? nil
         }
 
+        var isPresenting: Bool {
+            budgetForm != nil
+        }
+
         var monthlyTotal: Decimal? {
             expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.monthlyAmount }.rounded(scale: 2) }
         }
     }
 
     enum Action {
+        case addIncomeButtonTapped
+        case budgetForm(PresentationAction<BudgetForm.Action>)
         case budgetStreamFailed
         case budgetUpdated(Budget?)
         case delegate(Delegate)
         case expensesRowTapped
+        case incomeRowTapped
+        case investmentsRowTapped
         case task
 
         @CasePathable
         enum Delegate {
+            case didFailToSaveBudget
             case didSelectExpenses
         }
     }
@@ -118,10 +128,25 @@ struct Overview {
 
     @Dependency(\.budgetClient) var budgetClient
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.hapticsClient) var hapticsClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
+            case .addIncomeButtonTapped, .incomeRowTapped:
+                state.budgetForm = BudgetForm.State(budget: state.budget, focus: .income)
+                return .none
+
+            case .budgetForm(.presented(.delegate(.didSubmit(let budget)))):
+                state.budgetForm = nil
+                return .merge(
+                    .run { _ in await hapticsClient.success() },
+                    save(budget, uid: state.user.uid)
+                )
+
+            case .budgetForm:
+                return .none
+
             case .budgetStreamFailed:
                 guard state.budgetStatus == .loading else { return .none }
                 state.budgetStatus = .failed
@@ -137,9 +162,25 @@ struct Overview {
             case .expensesRowTapped:
                 return .send(.delegate(.didSelectExpenses))
 
+            case .investmentsRowTapped:
+                state.budgetForm = BudgetForm.State(budget: state.budget, focus: .investment)
+                return .none
+
             case .task:
                 return subscribeToBudget(uid: state.user.uid)
             }
+        }
+        .ifLet(\.$budgetForm, action: \.budgetForm) {
+            BudgetForm()
+        }
+    }
+
+    private func save(_ budget: Budget, uid: String) -> Effect<Action> {
+        .run { _ in
+            try await budgetClient.save(budget: budget, uid: uid)
+        } catch: { error, send in
+            logger.error("Saving the budget failed: \(error, privacy: .public)")
+            await send(.delegate(.didFailToSaveBudget))
         }
     }
 

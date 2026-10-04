@@ -247,6 +247,79 @@ extension BaseSuite {
             await store.receive(\.delegate.didSelectExpenses)
         }
 
+        @Test
+        func theAddIncomeButtonOpensAnEmptyForm() async {
+            let store = TestStore(initialState: makeState(.loaded(nil))) {
+                Overview()
+            }
+
+            await store.send(.addIncomeButtonTapped) {
+                $0.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+            }
+        }
+
+        @Test
+        func eachRowOpensTheFormOnItsField() async {
+            let store = TestStore(initialState: makeState(.loaded(.mock))) {
+                Overview()
+            }
+
+            await store.send(.incomeRowTapped) {
+                $0.budgetForm = BudgetForm.State(budget: .mock, focus: .income)
+            }
+            await store.send(.budgetForm(.dismiss)) {
+                $0.budgetForm = nil
+            }
+            await store.send(.investmentsRowTapped) {
+                $0.budgetForm = BudgetForm.State(budget: .mock, focus: .investment)
+            }
+        }
+
+        @Test
+        func submittingTheFormSavesTheBudget() async {
+            var state = makeState(.loaded(nil))
+            state.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+
+            await confirmation("Plays the success haptic") { playsHaptic in
+                await confirmation("Saves the budget") { savesBudget in
+                    let store = TestStore(initialState: state) {
+                        Overview()
+                    } withDependencies: {
+                        $0.budgetClient.save = { budget, uid in
+                            expectNoDifference(budget, .mock)
+                            expectNoDifference(uid, User.mock.uid)
+                            savesBudget()
+                        }
+                        $0.hapticsClient.success = { playsHaptic() }
+                    }
+
+                    await store.send(.budgetForm(.presented(.delegate(.didSubmit(.mock))))) {
+                        $0.budgetForm = nil
+                    }
+                    await store.finish()
+                }
+            }
+        }
+
+        @Test
+        func aFailedSaveTellsTheParent() async {
+            var state = makeState(.loaded(nil))
+            state.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.save = { _, _ in throw BudgetFailure() }
+                $0.hapticsClient.success = {}
+            }
+
+            await store.send(.budgetForm(.presented(.delegate(.didSubmit(.mock))))) {
+                $0.budgetForm = nil
+            }
+            await store.receive(\.delegate.didFailToSaveBudget)
+            await store.finish()
+        }
+
         private func makeState(
             _ budgetStatus: Overview.BudgetStatus = .loading,
             expenses: [Expense]? = nil

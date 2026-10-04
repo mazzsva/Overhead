@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ of your income." : {
+
+    },
     "^[%lld expense](inflect: true)" : {
 
     },
@@ -8,6 +11,9 @@
 
     },
     "Add every fixed expense with its name and amount." : {
+
+    },
+    "Add Income" : {
 
     },
     "Add your income to see where your money goes." : {
@@ -86,6 +92,9 @@
 
     },
     "None" : {
+
+    },
+    "Optional. The amount you invest each month." : {
 
     },
     "Overhead" : {
@@ -176,6 +185,15 @@
 
     },
     "Your income couldn't be loaded." : {
+
+    },
+    "Your income couldn't be saved." : {
+
+    },
+    "Your investments can't be more than your income." : {
+
+    },
+    "Your monthly pay after tax." : {
 
     }
   },

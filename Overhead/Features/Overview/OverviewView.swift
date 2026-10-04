@@ -10,7 +10,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct OverviewView: View {
-    let store: StoreOf<Overview>
+    @Bindable var store: StoreOf<Overview>
 
     var body: some View {
         NavigationStack {
@@ -51,11 +51,16 @@ struct OverviewView: View {
                         Text("Your income couldn't be loaded.")
                             .foregroundStyle(.secondary)
                     case .loaded(let budget?):
-                        LabeledContent("Income") {
-                            Text(budget.income, format: .dollars)
-                                .foregroundStyle(.primary)
-                                .monospacedDigit()
+                        Button {
+                            store.send(.incomeRowTapped)
+                        } label: {
+                            LabeledContent("Income") {
+                                Text(budget.income, format: .dollars)
+                                    .foregroundStyle(.primary)
+                                    .monospacedDigit()
+                            }
                         }
+                        .tint(.primary)
                         if let breakdown = store.breakdown {
                             Button {
                                 store.send(.expensesRowTapped)
@@ -67,7 +72,12 @@ struct OverviewView: View {
                                 )
                             }
                             .tint(.primary)
-                            BudgetRow(part: .investments, line: breakdown.investments)
+                            Button {
+                                store.send(.investmentsRowTapped)
+                            } label: {
+                                BudgetRow(part: .investments, line: breakdown.investments)
+                            }
+                            .tint(.primary)
                             BudgetRow(
                                 part: .leftToSpend,
                                 line: breakdown.leftToSpend,
@@ -77,6 +87,9 @@ struct OverviewView: View {
                     case .loaded(nil):
                         Text("Add your income to see where your money goes.")
                             .foregroundStyle(.secondary)
+                        Button("Add Income") {
+                            store.send(.addIncomeButtonTapped)
+                        }
                     case .loading:
                         ProgressView()
                             .frame(maxWidth: .infinity)
@@ -95,6 +108,9 @@ struct OverviewView: View {
                         .fontWeight(.bold)
                 }
             }
+        }
+        .sheet(item: $store.scope(state: \.budgetForm, action: \.budgetForm)) { budgetFormStore in
+            BudgetFormView(store: budgetFormStore)
         }
     }
 }

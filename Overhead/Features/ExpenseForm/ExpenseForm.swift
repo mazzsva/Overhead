@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import Foundation
-import RegexBuilder
 
 @Reducer
 struct ExpenseForm {
@@ -22,14 +21,7 @@ struct ExpenseForm {
 
         init(expense: Expense? = nil) {
             @Dependency(\.locale) var locale
-            amountText =
-                expense?.amount
-                .formatted(
-                    .number
-                        .grouping(.never)
-                        .locale(locale)
-                        .precision(.fractionLength(2))
-                ) ?? ""
+            amountText = expense?.amount.amountText(locale: locale) ?? ""
             billingCycle = expense?.billingCycle ?? .monthly
             self.expense = expense
             isActive = expense?.isActive ?? true
@@ -38,14 +30,7 @@ struct ExpenseForm {
         }
 
         var amount: Decimal? {
-            let text = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
-            let number = Regex { Capture { Decimal.FormatStyle(locale: locale) } }
-            guard
-                let amount = text.wholeMatch(of: number)?.output.1,
-                amount > 0,
-                amount.cents != nil
-            else { return nil }
-            return amount
+            Decimal(amountText: amountText, locale: locale)
         }
 
         var isCreating: Bool {
