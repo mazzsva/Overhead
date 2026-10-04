@@ -34,7 +34,7 @@ struct Tabs {
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
             let expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
             self.expenses = expenses
-            overview = Overview.State(expenses: SharedReader(expenses.$expenses))
+            overview = Overview.State(expenses: SharedReader(expenses.$expenses), user: user)
             settings = Settings.State(user: user)
             self.user = user
         }
@@ -101,6 +101,10 @@ struct Tabs {
 
             case .expenses(.delegate(.didFailToSave)):
                 state.failedExpenseOperations.insert(.save)
+                return .none
+
+            case .overview(.delegate(.didSelectExpenses)):
+                state.selectedTab = .expenses
                 return .none
 
             case .expenses, .overview, .settings:

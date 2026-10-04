@@ -39,6 +39,18 @@ extension BaseSuite {
         }
 
         @Test
+        func theOverviewExpensesRowSelectsTheExpensesTab() async {
+            let store = TestStore(initialState: Tabs.State(user: .mock)) {
+                Tabs()
+            }
+
+            await store.send(.overview(.expensesRowTapped))
+            await store.receive(\.overview.delegate.didSelectExpenses) {
+                $0.selectedTab = .expenses
+            }
+        }
+
+        @Test
         func aFailedSaveShowsAnAlert() async {
             let state = makeReadyState()
 

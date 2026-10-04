@@ -284,7 +284,7 @@ extension BaseSuite {
         @Test
         func aFailedStreamKeepsTheExpensesAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
-            var state = Expenses.State(user: .mock)
+            let state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
 
             let store = TestStore(initialState: state) {
