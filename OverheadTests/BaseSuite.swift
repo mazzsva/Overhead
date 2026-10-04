@@ -10,5 +10,8 @@ import DependenciesTestSupport
 import Foundation
 import Testing
 
-@Suite(.dependencies { $0.locale = Locale(identifier: "en_US") })
+@Suite(
+    .serialized,
+    .dependencies { $0.locale = Locale(identifier: "en_US") }
+)
 struct BaseSuite {}

@@ -22,10 +22,10 @@ struct Settings {
     }
 
     enum DeletionStep: Equatable {
+        case budgetDeleted
         case credentialRevoked
         case deleting
         case reauthenticating
-        case userDataDeleted
     }
 
     @ObservableState
@@ -49,6 +49,7 @@ struct Settings {
         case alert(PresentationAction<Alert>)
         case appleCredentialReceived
         case appleCredentialRevoked
+        case budgetDeleted
         #if DEBUG
         case debugAddMockExpensesButtonTapped
         case debugDeleteAllExpensesButtonTapped
@@ -57,7 +58,6 @@ struct Settings {
         case deleteAccountButtonTapped
         case signOutButtonTapped
         case signOutFailed(any Error)
-        case userDataDeleted
     }
 
     @Dependency(\.authClient) var authClient
@@ -75,7 +75,7 @@ struct Settings {
                         "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
                     return signOut()
                 }
-                let hasDeletedUserData = state.deletionStep == .userDataDeleted
+                let hasDeletedUserData = state.deletionStep == .budgetDeleted
                 state.deletionStep = nil
                 if !error.isSignInWithAppleCancellation {
                     logger.error("Account deletion failed: \(error, privacy: .public)")
@@ -99,6 +99,10 @@ struct Settings {
 
             case .appleCredentialRevoked:
                 state.deletionStep = .credentialRevoked
+                return .none
+
+            case .budgetDeleted:
+                state.deletionStep = .budgetDeleted
                 return .none
 
             #if DEBUG
@@ -127,10 +131,6 @@ struct Settings {
                 state.deletionStep = nil
                 logger.error("Sign out failed: \(error, privacy: .public)")
                 state.alert = .signOutFailed
-                return .none
-
-            case .userDataDeleted:
-                state.deletionStep = .userDataDeleted
                 return .none
             }
         }
@@ -172,9 +172,9 @@ struct Settings {
                 group.addTask {
                     try await authClient.reauthenticate(credential: credential)
                     try Task.checkCancellation()
-                    try await expensesClient.deleteAll(uid: uid)
                     try await budgetClient.delete(uid: uid)
-                    await send(.userDataDeleted)
+                    await send(.budgetDeleted)
+                    try await expensesClient.deleteAll(uid: uid)
                     try Task.checkCancellation()
                     try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
                     await send(.appleCredentialRevoked)

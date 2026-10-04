@@ -28,9 +28,11 @@ extension BaseSuite {
             var data = try Expense.gym.documentData()
             data["amountMinorUnits"] = data.removeValue(forKey: "amountInCents")
 
+            var expense: Expense?
             withKnownIssue {
-                expectNoDifference(Expense(documentID: Expense.gym.id.uuidString, data: data), nil)
+                expense = Expense(documentID: Expense.gym.id.uuidString, data: data)
             }
+            expectNoDifference(expense, nil)
         }
 
         @Test
@@ -38,10 +40,12 @@ extension BaseSuite {
             var expense = Expense.gym
             expense.amount = try #require(Decimal(string: "39.901"))
 
+            var result: Result<[String: Any], any Error> = .success([:])
             withKnownIssue {
-                #expect(throws: (any Error).self) {
-                    try expense.documentData()
-                }
+                result = Result { try expense.documentData() }
+            }
+            #expect(throws: (any Error).self) {
+                try result.get()
             }
         }
     }

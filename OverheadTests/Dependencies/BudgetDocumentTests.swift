@@ -35,46 +35,30 @@ extension BaseSuite {
 
         @Test
         func aDocumentWithoutIncomeIsSkipped() {
-            withKnownIssue {
-                expectNoDifference(Budget(data: ["monthlyInvestmentInCents": 45000]), nil)
-            }
+            expectNoDifference(decodeReportingIssue(["monthlyInvestmentInCents": 45000]), nil)
         }
 
         @Test
         func aDocumentWithAnInvestmentThatIsNotCentsIsSkipped() {
-            withKnownIssue {
-                expectNoDifference(
-                    Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": "450"]),
-                    nil
-                )
-            }
+            expectNoDifference(
+                decodeReportingIssue(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": "450"]), nil)
         }
 
         @Test
         func aDocumentWithoutAPositiveIncomeIsSkipped() {
-            withKnownIssue {
-                expectNoDifference(Budget(data: ["monthlyIncomeInCents": 0]), nil)
-            }
+            expectNoDifference(decodeReportingIssue(["monthlyIncomeInCents": 0]), nil)
         }
 
         @Test
         func aDocumentWithoutAPositiveInvestmentIsSkipped() {
-            withKnownIssue {
-                expectNoDifference(
-                    Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 0]),
-                    nil
-                )
-            }
+            expectNoDifference(
+                decodeReportingIssue(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 0]), nil)
         }
 
         @Test
         func aDocumentWithAnInvestmentAboveTheIncomeIsSkipped() {
-            withKnownIssue {
-                expectNoDifference(
-                    Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001]),
-                    nil
-                )
-            }
+            expectNoDifference(
+                decodeReportingIssue(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001]), nil)
             expectNoDifference(
                 Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_000]),
                 Budget(income: 3000, investment: 3000)
@@ -85,10 +69,8 @@ extension BaseSuite {
         func anIncomeWithMoreThanTwoDecimalPlacesIsNotSaved() throws {
             let budget = Budget(income: try #require(Decimal(string: "3000.001")), investment: nil)
 
-            withKnownIssue {
-                #expect(throws: (any Error).self) {
-                    try budget.documentData()
-                }
+            #expect(throws: (any Error).self) {
+                try encodeReportingIssue(budget).get()
             }
         }
 
@@ -97,11 +79,25 @@ extension BaseSuite {
             let investment = try #require(Decimal(string: "450.001"))
             let budget = Budget(income: 3000, investment: investment)
 
-            withKnownIssue {
-                #expect(throws: (any Error).self) {
-                    try budget.documentData()
-                }
+            #expect(throws: (any Error).self) {
+                try encodeReportingIssue(budget).get()
             }
+        }
+
+        private func decodeReportingIssue(_ data: [String: Any]) -> Budget? {
+            var budget: Budget?
+            withKnownIssue {
+                budget = Budget(data: data)
+            }
+            return budget
+        }
+
+        private func encodeReportingIssue(_ budget: Budget) -> Result<[String: Any], any Error> {
+            var result: Result<[String: Any], any Error> = .success([:])
+            withKnownIssue {
+                result = Result { try budget.documentData() }
+            }
+            return result
         }
     }
 }

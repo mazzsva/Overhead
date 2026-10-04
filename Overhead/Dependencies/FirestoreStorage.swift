@@ -27,6 +27,7 @@ actor FirestoreStorage {
                         reportIssue("Budget listener reported neither a snapshot nor an error.")
                         return
                     }
+                    guard snapshot.exists || !snapshot.metadata.isFromCache else { return }
                     continuation.yield(snapshot.data().flatMap(Budget.init(data:)))
                 }
             continuation.onTermination = { _ in
