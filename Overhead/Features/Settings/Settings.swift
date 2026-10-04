@@ -24,8 +24,8 @@ struct Settings {
     enum DeletionStep: Equatable {
         case credentialRevoked
         case deleting
-        case expensesDeleted
         case reauthenticating
+        case userDataDeleted
     }
 
     @ObservableState
@@ -55,12 +55,13 @@ struct Settings {
         case debugResetWelcomeToggleChanged(Bool)
         #endif
         case deleteAccountButtonTapped
-        case expensesDeleted
         case signOutButtonTapped
         case signOutFailed(any Error)
+        case userDataDeleted
     }
 
     @Dependency(\.authClient) var authClient
+    @Dependency(\.budgetClient) var budgetClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.expensesClient) var expensesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
@@ -74,11 +75,11 @@ struct Settings {
                         "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
                     return signOut()
                 }
-                let hasDeletedExpenses = state.deletionStep == .expensesDeleted
+                let hasDeletedUserData = state.deletionStep == .userDataDeleted
                 state.deletionStep = nil
                 if !error.isSignInWithAppleCancellation {
                     logger.error("Account deletion failed: \(error, privacy: .public)")
-                    state.alert = hasDeletedExpenses ? .accountDeletionUnfinished : .accountDeletionFailed
+                    state.alert = hasDeletedUserData ? .accountDeletionUnfinished : .accountDeletionFailed
                 }
                 return .none
 
@@ -117,10 +118,6 @@ struct Settings {
                 state.alert = .confirmAccountDeletion
                 return .none
 
-            case .expensesDeleted:
-                state.deletionStep = .expensesDeleted
-                return .none
-
             case .signOutButtonTapped:
                 guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmSignOut
@@ -130,6 +127,10 @@ struct Settings {
                 state.deletionStep = nil
                 logger.error("Sign out failed: \(error, privacy: .public)")
                 state.alert = .signOutFailed
+                return .none
+
+            case .userDataDeleted:
+                state.deletionStep = .userDataDeleted
                 return .none
             }
         }
@@ -172,7 +173,8 @@ struct Settings {
                     try await authClient.reauthenticate(credential: credential)
                     try Task.checkCancellation()
                     try await expensesClient.deleteAll(uid: uid)
-                    await send(.expensesDeleted)
+                    try await budgetClient.delete(uid: uid)
+                    await send(.userDataDeleted)
                     try Task.checkCancellation()
                     try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
                     await send(.appleCredentialRevoked)
@@ -219,7 +221,7 @@ extension AlertState where Action == Settings.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Your account and all your expenses will be permanently deleted. Are you sure?")
+        TextState("Your account and all your data will be permanently deleted. Are you sure?")
     }
 
     static let confirmSignOut = AlertState {

@@ -112,6 +112,9 @@ extension BaseSuite {
                 $0.authClient.revokeAppleToken = { authorizationCode in
                     expectNoDifference(authorizationCode, AppleCredential.mock.authorizationCode)
                 }
+                $0.budgetClient.delete = { uid in
+                    expectNoDifference(uid, User.mock.uid)
+                }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { uid in
                     expectNoDifference(uid, User.mock.uid)
@@ -126,8 +129,8 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.expensesDeleted) {
-                $0.deletionStep = .expensesDeleted
+            await store.receive(\.userDataDeleted) {
+                $0.deletionStep = .userDataDeleted
             }
             await store.receive(\.appleCredentialRevoked) {
                 $0.deletionStep = .credentialRevoked
@@ -257,9 +260,8 @@ extension BaseSuite {
             await store.finish()
         }
 
-        // The expenses are already gone, so the alert must not report a deletion that did not start
         @Test
-        func aFailureAfterTheExpensesAreDeletedReportsAnUnfinishedDeletion() async {
+        func aFailureBeforeTheBudgetIsDeletedReportsAFailedDeletion() async {
             var state = Settings.State(user: .mock)
             state.alert = .confirmAccountDeletion
 
@@ -268,7 +270,7 @@ extension BaseSuite {
                 Settings()
             } withDependencies: {
                 $0.authClient.reauthenticate = { _ in }
-                $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
+                $0.budgetClient.delete = { _ in throw DeletionFailure() }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
@@ -281,8 +283,40 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.expensesDeleted) {
-                $0.deletionStep = .expensesDeleted
+            await store.receive(\.accountDeletionFailed) {
+                $0.alert = .accountDeletionFailed
+                $0.deletionStep = nil
+            }
+            await store.finish()
+        }
+
+        // The expenses are already gone, so the alert must not report a deletion that did not start
+        @Test
+        func aFailureAfterTheExpensesAreDeletedReportsAnUnfinishedDeletion() async {
+            var state = Settings.State(user: .mock)
+            state.alert = .confirmAccountDeletion
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                Settings()
+            } withDependencies: {
+                $0.authClient.reauthenticate = { _ in }
+                $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
+                $0.budgetClient.delete = { _ in }
+                $0.continuousClock = clock
+                $0.expensesClient.deleteAll = { _ in }
+                $0.signInWithAppleClient.requestCredential = { .mock }
+            }
+
+            await store.send(.alert(.presented(.confirmAccountDeletion))) {
+                $0.alert = nil
+                $0.deletionStep = .reauthenticating
+            }
+            await store.receive(\.appleCredentialReceived) {
+                $0.deletionStep = .deleting
+            }
+            await store.receive(\.userDataDeleted) {
+                $0.deletionStep = .userDataDeleted
             }
             await store.receive(\.accountDeletionFailed) {
                 $0.alert = .accountDeletionUnfinished
@@ -306,6 +340,7 @@ extension BaseSuite {
                     $0.authClient.reauthenticate = { _ in }
                     $0.authClient.revokeAppleToken = { _ in }
                     $0.authClient.signOut = { signsOut() }
+                    $0.budgetClient.delete = { _ in }
                     $0.continuousClock = clock
                     $0.expensesClient.deleteAll = { _ in }
                     $0.signInWithAppleClient.requestCredential = { .mock }
@@ -318,8 +353,8 @@ extension BaseSuite {
                 await store.receive(\.appleCredentialReceived) {
                     $0.deletionStep = .deleting
                 }
-                await store.receive(\.expensesDeleted) {
-                    $0.deletionStep = .expensesDeleted
+                await store.receive(\.userDataDeleted) {
+                    $0.deletionStep = .userDataDeleted
                 }
                 await store.receive(\.appleCredentialRevoked) {
                     $0.deletionStep = .credentialRevoked
@@ -343,6 +378,7 @@ extension BaseSuite {
                 $0.authClient.reauthenticate = { _ in }
                 $0.authClient.revokeAppleToken = { _ in }
                 $0.authClient.signOut = { throw SignOutFailure() }
+                $0.budgetClient.delete = { _ in }
                 $0.continuousClock = clock
                 $0.expensesClient.deleteAll = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
@@ -355,8 +391,8 @@ extension BaseSuite {
             await store.receive(\.appleCredentialReceived) {
                 $0.deletionStep = .deleting
             }
-            await store.receive(\.expensesDeleted) {
-                $0.deletionStep = .expensesDeleted
+            await store.receive(\.userDataDeleted) {
+                $0.deletionStep = .userDataDeleted
             }
             await store.receive(\.appleCredentialRevoked) {
                 $0.deletionStep = .credentialRevoked
