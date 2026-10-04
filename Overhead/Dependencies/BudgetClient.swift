@@ -62,10 +62,12 @@ extension DependencyValues {
 
 extension Budget {
     init?(data: [String: Any]) {
-        let investmentInCents = data["monthlyInvestmentInCents"]
+        let investmentValue = data["monthlyInvestmentInCents"]
+        let investmentInCents = investmentValue as? Int
         guard
             let incomeInCents = data["monthlyIncomeInCents"] as? Int,
-            investmentInCents == nil || investmentInCents is Int
+            incomeInCents > 0,
+            investmentValue == nil || (1 ... incomeInCents).contains(investmentInCents ?? 0)
         else {
             logger.error("Skipping a budget document that failed to decode.")
             reportIssue("Skipping a budget document that failed to decode.")
@@ -73,7 +75,7 @@ extension Budget {
         }
         self.init(
             income: Decimal(cents: incomeInCents),
-            investment: (investmentInCents as? Int).map(Decimal.init(cents:))
+            investment: investmentInCents.map(Decimal.init(cents:))
         )
     }
 

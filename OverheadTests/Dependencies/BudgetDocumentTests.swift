@@ -51,6 +51,37 @@ extension BaseSuite {
         }
 
         @Test
+        func aDocumentWithoutAPositiveIncomeIsSkipped() {
+            withKnownIssue {
+                expectNoDifference(Budget(data: ["monthlyIncomeInCents": 0]), nil)
+            }
+        }
+
+        @Test
+        func aDocumentWithoutAPositiveInvestmentIsSkipped() {
+            withKnownIssue {
+                expectNoDifference(
+                    Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 0]),
+                    nil
+                )
+            }
+        }
+
+        @Test
+        func aDocumentWithAnInvestmentAboveTheIncomeIsSkipped() {
+            withKnownIssue {
+                expectNoDifference(
+                    Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001]),
+                    nil
+                )
+            }
+            expectNoDifference(
+                Budget(data: ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_000]),
+                Budget(income: 3000, investment: 3000)
+            )
+        }
+
+        @Test
         func anIncomeWithMoreThanTwoDecimalPlacesIsNotSaved() throws {
             let budget = Budget(income: try #require(Decimal(string: "3000.001")), investment: nil)
 
@@ -63,7 +94,8 @@ extension BaseSuite {
 
         @Test
         func anInvestmentWithMoreThanTwoDecimalPlacesIsNotSaved() throws {
-            let budget = Budget(income: 3000, investment: try #require(Decimal(string: "450.001")))
+            let investment = try #require(Decimal(string: "450.001"))
+            let budget = Budget(income: 3000, investment: investment)
 
             withKnownIssue {
                 #expect(throws: (any Error).self) {
