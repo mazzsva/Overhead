@@ -114,14 +114,29 @@ actor FirestoreStorage {
         }
     }
 
-    func save(_ budget: Budget, uid: String) async throws {
+    func removeInvestment(uid: String) async throws {
         await waitForClearing()
-        try await budgetDocument(uid: uid).setData(budget.documentData())
+        try await budgetDocument(uid: uid).updateData([BudgetField.investment: FieldValue.delete()])
     }
 
     func save(_ expense: Expense, uid: String) async throws {
         await waitForClearing()
         try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
+    }
+
+    func saveIncome(_ income: Decimal, removingInvestment: Bool, uid: String) async throws {
+        await waitForClearing()
+        var data: [String: Any] = [BudgetField.income: try BudgetField.cents(of: income)]
+        if removingInvestment {
+            data[BudgetField.investment] = FieldValue.delete()
+        }
+        try await budgetDocument(uid: uid).setData(data, merge: true)
+    }
+
+    func saveInvestment(_ investment: Decimal, uid: String) async throws {
+        await waitForClearing()
+        try await budgetDocument(uid: uid)
+            .setData([BudgetField.investment: try BudgetField.cents(of: investment)], merge: true)
     }
 
     private func waitForClearing() async {

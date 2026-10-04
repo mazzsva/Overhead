@@ -11,8 +11,8 @@ import Foundation
 @Reducer
 struct Tabs {
     enum FailedOperation: Hashable {
+        case budget(Overview.BudgetChange)
         case deleteExpense
-        case saveBudget
         case saveExpense
     }
 
@@ -42,10 +42,16 @@ struct Tabs {
 
         var failureMessage: String {
             switch failedOperations {
+            case [.budget(.removeIncome)]:
+                return String(localized: "Your income couldn't be removed.")
+            case [.budget(.removeInvestments)]:
+                return String(localized: "Your investments couldn't be removed.")
+            case [.budget(.saveIncome)]:
+                return String(localized: "Your income couldn't be saved.")
+            case [.budget(.saveInvestments)]:
+                return String(localized: "Your investments couldn't be saved.")
             case [.deleteExpense]:
                 return String(localized: "Your expense couldn't be deleted.")
-            case [.saveBudget]:
-                return String(localized: "Your income couldn't be saved.")
             case [.saveExpense]:
                 return String(localized: "Your expense couldn't be saved.")
             default:
@@ -107,8 +113,8 @@ struct Tabs {
             case .failurePresentationChanged(true):
                 return .none
 
-            case .overview(.delegate(.didFailToSaveBudget)):
-                state.failedOperations.insert(.saveBudget)
+            case .overview(.delegate(.didFailToChangeBudget(let change))):
+                state.failedOperations.insert(.budget(change))
                 return .none
 
             case .overview(.delegate(.didSelectExpenses)):

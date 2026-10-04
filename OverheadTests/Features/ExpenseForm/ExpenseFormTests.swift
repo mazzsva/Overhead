@@ -220,5 +220,81 @@ extension BaseSuite {
                 await store.finish()
             }
         }
+
+        @Test
+        func everyFieldCountsAsAChange() {
+            var state = ExpenseForm.State(expense: .rent)
+            #expect(!state.hasChanges)
+
+            state.name = "Office"
+            #expect(state.hasChanges)
+            state.name = Expense.rent.name
+
+            state.amountText = "1000"
+            #expect(state.hasChanges)
+            state.amountText = "950.00"
+
+            state.billingCycle = .yearly
+            #expect(state.hasChanges)
+            state.billingCycle = .monthly
+
+            state.isActive = false
+            #expect(state.hasChanges)
+            state.isActive = true
+            #expect(!state.hasChanges)
+
+            var new = ExpenseForm.State()
+            #expect(!new.hasChanges)
+            new.name = "Gym"
+            #expect(new.hasChanges)
+        }
+
+        @Test
+        func dismissingWithChangesAsksToDiscardThem() async {
+            await confirmation("Dismisses the form") { dismissesForm in
+                let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
+                    ExpenseForm()
+                } withDependencies: {
+                    $0.dismiss = DismissEffect { dismissesForm() }
+                }
+
+                await store.send(.binding(.set(\.name, "Office"))) {
+                    $0.name = "Office"
+                }
+                await store.send(.dismissButtonTapped) {
+                    $0.alert = AlertState {
+                        TextState("Discard Changes?")
+                    } actions: {
+                        ButtonState(role: .destructive, action: .confirmDiscard) {
+                            TextState("Discard Changes")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("Keep Editing")
+                        }
+                    }
+                }
+                await store.send(.alert(.presented(.confirmDiscard))) {
+                    $0.alert = nil
+                }
+                await store.finish()
+            }
+        }
+
+        @Test
+        func keepingTheChangesLeavesTheFormOpen() async {
+            let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
+                ExpenseForm()
+            }
+
+            await store.send(.binding(.set(\.name, "Office"))) {
+                $0.name = "Office"
+            }
+            await store.send(.dismissButtonTapped) {
+                $0.alert = .discardChanges(.confirmDiscard)
+            }
+            await store.send(.alert(.dismiss)) {
+                $0.alert = nil
+            }
+        }
     }
 }

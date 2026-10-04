@@ -72,30 +72,37 @@ extension BaseSuite {
             }
         }
 
-        @Test
-        func aFailedBudgetSaveShowsAnAlert() async {
+        @Test(arguments: [
+            (Overview.BudgetChange.removeIncome, "Your income couldn't be removed."),
+            (.removeInvestments, "Your investments couldn't be removed."),
+            (.saveIncome, "Your income couldn't be saved."),
+            (.saveInvestments, "Your investments couldn't be saved."),
+        ])
+        func aFailedBudgetChangeShowsAnAlert(change: Overview.BudgetChange, message: String) async {
             let state = makeReadyState()
 
             let store = TestStore(initialState: state) {
                 Tabs()
             }
 
-            await store.send(.overview(.delegate(.didFailToSaveBudget))) {
-                $0.failedOperations = [.saveBudget]
+            await store.send(.overview(.delegate(.didFailToChangeBudget(change)))) {
+                $0.failedOperations = [.budget(change)]
             }
             #expect(store.state.isPresentingFailure)
-            expectNoDifference(store.state.failureMessage, "Your income couldn't be saved.")
+            expectNoDifference(store.state.failureMessage, message)
         }
 
         @Test
-        func aFailureWaitsForTheBudgetForm() {
+        func aFailureWaitsForTheBudgetForms() {
             var state = makeReadyState()
             state.failedOperations = [.saveExpense]
-            state.overview.budgetForm = BudgetForm.State(budget: nil, focus: .income)
-
+            state.overview.destination = .incomeForm(IncomeForm.State(budget: nil))
             #expect(!state.isPresentingFailure)
 
-            state.overview.budgetForm = nil
+            state.overview.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: nil))
+            #expect(!state.isPresentingFailure)
+
+            state.overview.destination = nil
             #expect(state.isPresentingFailure)
         }
 

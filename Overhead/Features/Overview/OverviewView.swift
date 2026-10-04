@@ -68,19 +68,27 @@ struct OverviewView: View {
                                 BudgetRow(
                                     part: .expenses,
                                     subtitle: Text("^[\(store.activeExpenseCount) expense](inflect: true)"),
-                                    line: breakdown.expenses
+                                    amount: breakdown.expenses.amount,
+                                    share: breakdown.expenses.share
                                 )
                             }
                             .tint(.primary)
-                            Button {
-                                store.send(.investmentsRowTapped)
-                            } label: {
-                                BudgetRow(part: .investments, line: breakdown.investments)
-                            }
-                            .tint(.primary)
+                        }
+                        Button {
+                            store.send(.investmentsRowTapped)
+                        } label: {
+                            BudgetRow(
+                                part: .investments,
+                                amount: budget.investment.map { -$0 },
+                                share: store.breakdown?.investments?.share
+                            )
+                        }
+                        .tint(.primary)
+                        if let breakdown = store.breakdown {
                             BudgetRow(
                                 part: .leftToSpend,
-                                line: breakdown.leftToSpend,
+                                amount: breakdown.leftToSpend.amount,
+                                share: breakdown.leftToSpend.share,
                                 isOverBudget: breakdown.isOverBudget
                             )
                         }
@@ -112,8 +120,13 @@ struct OverviewView: View {
                 }
             }
         }
-        .sheet(item: $store.scope(state: \.budgetForm, action: \.budgetForm)) { budgetFormStore in
-            BudgetFormView(store: budgetFormStore)
+        .sheet(item: $store.scope(state: \.destination?.incomeForm, action: \.destination.incomeForm)) { formStore in
+            IncomeFormView(store: formStore)
+        }
+        .sheet(
+            item: $store.scope(state: \.destination?.investmentForm, action: \.destination.investmentForm)
+        ) { formStore in
+            InvestmentFormView(store: formStore)
         }
     }
 }
@@ -158,7 +171,8 @@ private struct BudgetChart: View {
 private struct BudgetRow: View {
     let part: Overview.BudgetPart
     var subtitle: Text?
-    let line: Overview.Breakdown.Line?
+    let amount: Decimal?
+    let share: Decimal?
     var isOverBudget = false
 
     @ScaledMetric private var dotSize = 10
@@ -166,14 +180,16 @@ private struct BudgetRow: View {
     var body: some View {
         LabeledContent {
             HStack(spacing: 12) {
-                if let line {
-                    Text(line.share, format: .percent.precision(.fractionLength(0)))
+                if let share {
+                    Text(share, format: .percent.precision(.fractionLength(0)))
                         .foregroundStyle(.secondary)
-                    Text(line.amount, format: .dollars)
+                }
+                if let amount {
+                    Text(amount, format: .dollars)
                         .foregroundStyle(isOverBudget ? .red : .primary)
                 } else {
-                    Text("None")
-                        .foregroundStyle(.secondary)
+                    Text("Add")
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .monospacedDigit()

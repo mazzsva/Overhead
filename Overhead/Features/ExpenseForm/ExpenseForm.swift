@@ -10,12 +10,17 @@ import Foundation
 
 @Reducer
 struct ExpenseForm {
+    enum Alert: Equatable {
+        case confirmDiscard
+    }
+
     enum Field: Hashable {
         case name
     }
 
     @ObservableState
     struct State: Equatable {
+        @Presents var alert: AlertState<ExpenseForm.Alert>?
         var amountText: String
         var billingCycle: BillingCycle
         let expense: Expense?
@@ -39,6 +44,13 @@ struct ExpenseForm {
             Decimal(amountText: amountText, locale: locale)
         }
 
+        var hasChanges: Bool {
+            amountText != (expense?.amount.amountText(locale: locale) ?? "")
+                || billingCycle != (expense?.billingCycle ?? .monthly)
+                || isActive != (expense?.isActive ?? true)
+                || name != (expense?.name ?? "")
+        }
+
         var isCreating: Bool {
             expense == nil
         }
@@ -50,6 +62,7 @@ struct ExpenseForm {
     }
 
     enum Action: BindableAction {
+        case alert(PresentationAction<Alert>)
         case binding(BindingAction<State>)
         case delegate(Delegate)
         case dismissButtonTapped
@@ -69,6 +82,12 @@ struct ExpenseForm {
         BindingReducer()
         Reduce { state, action in
             switch action {
+            case .alert(.presented(.confirmDiscard)):
+                return .run { _ in await dismiss() }
+
+            case .alert:
+                return .none
+
             case .binding:
                 return .none
 
@@ -76,7 +95,9 @@ struct ExpenseForm {
                 return .none
 
             case .dismissButtonTapped:
-                return .run { _ in await dismiss() }
+                guard state.hasChanges else { return .run { _ in await dismiss() } }
+                state.alert = .discardChanges(.confirmDiscard)
+                return .none
 
             case .saveButtonTapped:
                 guard state.isSubmittable, let amount = state.amount else { return .none }
@@ -92,5 +113,6 @@ struct ExpenseForm {
                 return .send(.delegate(.didSubmit(expense)))
             }
         }
+        .ifLet(\.$alert, action: \.alert)
     }
 }

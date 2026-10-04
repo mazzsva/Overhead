@@ -47,26 +47,26 @@ extension BaseSuite.IntegrationSuite {
             defer { budgets.cancel() }
             try await budgets.wait { $0.map(\.budget) == [nil] }
 
-            try await FirestoreStorage.shared.save(Budget.mock, uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, .mock] }
+            let income = try #require(Budget(income: 3000, investment: nil))
+            try await FirestoreStorage.shared.saveIncome(3000, removingInvestment: false, uid: uid)
+            try await budgets.wait { $0.map(\.budget) == [nil, income] }
 
-            let raise = Budget(income: 3500, investment: nil)
-            try await FirestoreStorage.shared.save(raise, uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, .mock, raise] }
+            try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
+            try await budgets.wait { $0.map(\.budget) == [nil, income, .mock] }
 
             try await FirestoreStorage.shared.deleteBudget(uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, .mock, raise, nil] }
+            try await budgets.wait { $0.map(\.budget) == [nil, income, .mock, nil] }
 
-            let marker = Budget(income: 1, investment: nil)
-            try await FirestoreStorage.shared.save(marker, uid: uid)
+            let marker = try #require(Budget(income: 1, investment: nil))
+            try await FirestoreStorage.shared.saveIncome(1, removingInvestment: false, uid: uid)
             try await budgets.wait { $0.last?.budget == marker }
-            expectNoDifference(budgets.values.map(\.budget), [nil, .mock, raise, nil, marker])
+            expectNoDifference(budgets.values.map(\.budget), [nil, income, .mock, nil, marker])
         }
 
         @Test
         func aBudgetRemovedOfflineBecomesNilAtOnce() async throws {
             let uid = try await FirebaseEmulators.signIn()
-            try await FirestoreStorage.shared.save(Budget.mock, uid: uid)
+            try await seed(.mock, uid: uid)
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
             try await budgets.wait { $0.last == BudgetSnapshot(budget: .mock, isFromCache: false) }
@@ -82,11 +82,11 @@ extension BaseSuite.IntegrationSuite {
         @Test
         func theRulesRefuseAnotherUsersBudget() async throws {
             let owner = try await FirebaseEmulators.signIn()
-            try await FirestoreStorage.shared.save(Budget.mock, uid: owner)
+            try await seed(.mock, uid: owner)
             _ = try await FirebaseEmulators.signIn()
 
             let error = await #expect(throws: NSError.self) {
-                try await FirestoreStorage.shared.save(Budget(income: 1, investment: nil), uid: owner)
+                try await FirestoreStorage.shared.saveIncome(1, removingInvestment: false, uid: owner)
             }
             expectNoDifference(error?.code, FirestoreErrorCode.permissionDenied.rawValue)
 
@@ -95,6 +95,51 @@ extension BaseSuite.IntegrationSuite {
             let failure = try await budgets.waitForFailure() as NSError
             expectNoDifference(failure.code, FirestoreErrorCode.permissionDenied.rawValue)
             expectNoDifference(budgets.values.map(\.budget), [])
+        }
+
+        @Test
+        func eachBudgetWriteKeepsTheOtherField() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            defer { budgets.cancel() }
+            try await budgets.wait { $0.map(\.budget) == [nil] }
+
+            try await FirestoreStorage.shared.saveIncome(3000, removingInvestment: false, uid: uid)
+            try await budgets.wait { $0.last?.budget == Budget(income: 3000, investment: nil) }
+
+            try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
+            try await budgets.wait { $0.last?.budget == .mock }
+
+            try await FirestoreStorage.shared.saveIncome(3500, removingInvestment: false, uid: uid)
+            try await budgets.wait { $0.last?.budget == Budget(income: 3500, investment: 450) }
+
+            try await FirestoreStorage.shared.removeInvestment(uid: uid)
+            try await budgets.wait { $0.last?.budget == Budget(income: 3500, investment: nil) }
+
+            try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
+            try await FirestoreStorage.shared.saveIncome(400, removingInvestment: true, uid: uid)
+            try await budgets.wait { $0.last?.budget == Budget(income: 400, investment: nil) }
+        }
+
+        @Test
+        func theRulesRefuseAnInvestmentWithoutAnIncome() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+
+            let error = await #expect(throws: NSError.self) {
+                try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
+            }
+            expectNoDifference(error?.code, FirestoreErrorCode.permissionDenied.rawValue)
+        }
+
+        @Test
+        func theRulesRefuseAnIncomeBelowTheInvestment() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            try await seed(.mock, uid: uid)
+
+            let error = await #expect(throws: NSError.self) {
+                try await FirestoreStorage.shared.saveIncome(400, removingInvestment: false, uid: uid)
+            }
+            expectNoDifference(error?.code, FirestoreErrorCode.permissionDenied.rawValue)
         }
 
         @Test
@@ -137,6 +182,13 @@ extension BaseSuite.IntegrationSuite {
             stored.name = "Gym Plus"
             try await FirestoreStorage.shared.save(stored, uid: uid)
         }
+    }
+}
+
+private func seed(_ budget: Budget, uid: String) async throws {
+    try await FirestoreStorage.shared.saveIncome(budget.income, removingInvestment: false, uid: uid)
+    if let investment = budget.investment {
+        try await FirestoreStorage.shared.saveInvestment(investment, uid: uid)
     }
 }
 

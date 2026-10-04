@@ -68,7 +68,9 @@ struct ExpenseFormView: View {
                     .labelStyle(.iconOnly)
                 }
             }
+            .interactiveDismissDisabled(store.hasChanges)
             .bind($store.focus, to: $focus)
+            .alert($store.scope(state: \.alert, action: \.alert))
         }
     }
 }
