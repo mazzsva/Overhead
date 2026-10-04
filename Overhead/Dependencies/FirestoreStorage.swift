@@ -18,7 +18,7 @@ actor FirestoreStorage {
     func budget(uid: String) async -> AsyncThrowingStream<Budget?, any Error> {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
-            let lastBudget = LockIsolated<Budget??>(nil)
+            let delivered = LockIsolated<NSDictionary??>(nil)
             nonisolated(unsafe) let listener = budgetDocument(uid: uid)
                 .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
                     if let error {
@@ -29,11 +29,18 @@ actor FirestoreStorage {
                         reportIssue("Budget listener reported neither a snapshot nor an error.")
                         return
                     }
-                    guard snapshot.exists || !snapshot.metadata.isFromCache else { return }
-                    let budget = snapshot.data().flatMap(Budget.init(data:))
-                    guard lastBudget.value != .some(budget) else { return }
-                    lastBudget.setValue(budget)
-                    continuation.yield(budget)
+                    let data = snapshot.data()
+                    let isNew = delivered.withValue { delivered in
+                        let current = data.map(NSDictionary.init(dictionary:))
+                        guard
+                            snapshot.exists || !snapshot.metadata.isFromCache || delivered != nil,
+                            delivered != .some(current)
+                        else { return false }
+                        delivered = .some(current)
+                        return true
+                    }
+                    guard isNew else { return }
+                    continuation.yield(data.flatMap(Budget.init(data:)))
                 }
             continuation.onTermination = { _ in
                 listener.remove()
