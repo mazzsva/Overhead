@@ -104,10 +104,21 @@ extension Expense {
         return [
             "amountInCents": amountInCents,
             "billingCycle": billingCycle.rawValue,
-            "createdAt": Timestamp(date: createdAt),
+            "createdAt": Timestamp(roundingToMicroseconds: createdAt),
             "isActive": isActive,
             "name": name,
         ]
+    }
+}
+
+extension Timestamp {
+    convenience init(roundingToMicroseconds date: Date) {
+        let microseconds = (date.timeIntervalSince1970 * 1_000_000).rounded()
+        let seconds = (microseconds / 1_000_000).rounded(.down)
+        self.init(
+            seconds: Int64(seconds),
+            nanoseconds: Int32(microseconds - seconds * 1_000_000) * 1000
+        )
     }
 }
 
