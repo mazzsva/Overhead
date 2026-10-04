@@ -20,6 +20,7 @@ struct Expenses {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
+        var hasFailedFirstLoad = false
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User
@@ -42,7 +43,7 @@ struct Expenses {
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
-        var isLoadingFirstExpenses: Bool { expenses == nil }
+        var isLoadingFirstExpenses: Bool { expenses == nil && !hasFailedFirstLoad }
 
         var isPresenting: Bool {
             destination != nil || path.contains { $0.isPresenting }
@@ -53,7 +54,6 @@ struct Expenses {
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case expenseCardTapped(Expense.ID)
-        case expensesRetryTimerElapsed
         case expensesStreamFailed
         case expensesUpdated([Expense])
         case newExpenseButtonTapped
@@ -100,22 +100,14 @@ struct Expenses {
                 state.path.append(ExpenseDetail.State(expense: SharedReader(expense)))
                 return .none
 
-            case .expensesRetryTimerElapsed:
-                return subscribeToExpenses(state)
-
             case .expensesStreamFailed:
-                let retry: Effect<Action> =
-                    .run { send in
-                        try await clock.sleep(for: .seconds(5))
-                        await send(.expensesRetryTimerElapsed)
-                    }
-                    .cancellable(id: CancelID.expensesSubscription, cancelInFlight: true)
-                guard state.expenses == nil else { return retry }
-                state.$expenses.withLock { $0 = [] }
-                return .merge(retry, celebrateFirstLoad(state))
+                guard state.isLoadingFirstExpenses else { return .none }
+                state.hasFailedFirstLoad = true
+                return celebrateFirstLoad(state)
 
             case .expensesUpdated(let expenses):
-                let isFirstLoad = state.expenses == nil
+                let isFirstLoad = state.isLoadingFirstExpenses
+                state.hasFailedFirstLoad = false
                 let expenses = IdentifiedArray(uniqueElements: expenses.sorted(by: Expense.listOrder))
                 state.$expenses.withLock { $0 = expenses }
                 for id in Array(state.path.ids) {
@@ -182,14 +174,18 @@ struct Expenses {
         let uid = state.user.uid
         return
             .run { send in
-                do {
-                    let snapshots = await expensesClient.expenses(uid: uid)
-                    for try await expenses in snapshots {
-                        await send(.expensesUpdated(expenses))
+                while true {
+                    do {
+                        let snapshots = await expensesClient.expenses(uid: uid)
+                        for try await expenses in snapshots {
+                            await send(.expensesUpdated(expenses))
+                        }
+                        return
+                    } catch {
+                        logger.error("Expenses stream failed: \(error, privacy: .public)")
+                        await send(.expensesStreamFailed)
                     }
-                } catch {
-                    logger.error("Expenses stream failed: \(error, privacy: .public)")
-                    await send(.expensesStreamFailed)
+                    try await clock.sleep(for: .seconds(5))
                 }
             }
             .cancellable(id: CancelID.expensesSubscription, cancelInFlight: true)

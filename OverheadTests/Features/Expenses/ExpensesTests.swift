@@ -249,41 +249,53 @@ extension BaseSuite {
 
         // An empty array replaces nil, so the list shows the empty state and not the spinner
         @Test
-        func aFailedFirstLoadShowsTheEmptyStateAndRetries() async {
+        func aFailedFirstLoadShowsTheFailureAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
-            let hasFailed = LockIsolated(false)
+            let attempts = LockIsolated(0)
 
             let store = TestStore(initialState: Expenses.State(user: .mock)) {
                 Expenses()
             } withDependencies: {
                 $0.continuousClock = clock
                 $0.expensesClient.expenses = { _ in
-                    let isFirstAttempt = hasFailed.withValue { failed -> Bool in
-                        defer { failed = true }
-                        return !failed
+                    let attempt = attempts.withValue {
+                        $0 += 1
+                        return $0
                     }
                     return AsyncThrowingStream { continuation in
-                        isFirstAttempt
-                            ? continuation.finish(throwing: ExpensesFailure())
-                            : continuation.finish()
+                        if attempt == 1 {
+                            continuation.finish(throwing: ExpensesFailure())
+                        } else {
+                            continuation.yield(Expense.mocks)
+                            continuation.finish()
+                        }
                     }
                 }
             }
 
             await store.send(.task)
             await store.receive(\.expensesStreamFailed) {
-                $0.$expenses.withLock { $0 = [] }
+                $0.hasFailedFirstLoad = true
             }
+            #expect(!store.state.isLoadingFirstExpenses)
 
-            await clock.advance(by: .seconds(5))
-            await store.receive(\.expensesRetryTimerElapsed)
+            await clock.advance(by: .seconds(4))
+            expectNoDifference(attempts.value, 1)
+
+            await clock.advance(by: .seconds(1))
+            await store.receive(\.expensesUpdated) {
+                $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+                $0.hasFailedFirstLoad = false
+            }
             await store.finish()
+            expectNoDifference(attempts.value, 2)
         }
 
         // The expenses the user can already read must not disappear on a failure
         @Test
         func aFailedStreamKeepsTheExpensesAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
+            let attempts = LockIsolated(0)
             let state = Expenses.State(user: .mock)
             state.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
 
@@ -292,14 +304,21 @@ extension BaseSuite {
             } withDependencies: {
                 $0.continuousClock = clock
                 $0.expensesClient.expenses = { _ in
-                    AsyncThrowingStream { continuation in continuation.finish() }
+                    let attempt = attempts.withValue {
+                        $0 += 1
+                        return $0
+                    }
+                    return AsyncThrowingStream { continuation in
+                        attempt == 1 ? continuation.finish(throwing: ExpensesFailure()) : continuation.finish()
+                    }
                 }
             }
 
-            await store.send(.expensesStreamFailed)
+            await store.send(.task)
+            await store.receive(\.expensesStreamFailed)
             await clock.advance(by: .seconds(5))
-            await store.receive(\.expensesRetryTimerElapsed)
             await store.finish()
+            expectNoDifference(attempts.value, 2)
         }
 
         // Only the first load welcomes the user, and the later ones stay quiet
@@ -325,25 +344,23 @@ extension BaseSuite {
         // The haptic welcomes the user, so it does not depend on the expenses
         @Test
         func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
-            let clock = TestClock()
             let state = Expenses.State(user: .mock, sessionOrigin: .freshSignIn)
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
                     Expenses()
                 } withDependencies: {
-                    $0.continuousClock = clock
-                    $0.expensesClient.expenses = { _ in
-                        AsyncThrowingStream { continuation in continuation.finish() }
-                    }
                     $0.hapticsClient.success = { playsHaptic() }
                 }
 
                 await store.send(.expensesStreamFailed) {
-                    $0.$expenses.withLock { $0 = [] }
+                    $0.hasFailedFirstLoad = true
                 }
-                await clock.advance(by: .seconds(5))
-                await store.receive(\.expensesRetryTimerElapsed)
+                await store.send(.expensesStreamFailed)
+                await store.send(.expensesUpdated(Expense.mocks)) {
+                    $0.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
+                    $0.hasFailedFirstLoad = false
+                }
                 await store.finish()
             }
         }

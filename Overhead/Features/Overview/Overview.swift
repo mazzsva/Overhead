@@ -11,8 +11,66 @@ import os
 
 @Reducer
 struct Overview {
+    struct Breakdown: Equatable {
+        struct Line: Equatable {
+            let amount: Decimal
+            let share: Decimal
+        }
+
+        struct Segment: Equatable, Identifiable {
+            let amount: Decimal
+            let part: BudgetPart
+
+            var id: BudgetPart { part }
+        }
+
+        let expenses: Line
+        let income: Decimal
+        let investments: Line?
+        let leftToSpend: Line
+
+        init(budget: Budget, monthlyTotal: Decimal) {
+            let expenses = Line(amount: -monthlyTotal, share: (monthlyTotal / budget.income).rounded(scale: 2))
+            let investments = budget.investment.map {
+                Line(amount: -$0, share: ($0 / budget.income).rounded(scale: 2))
+            }
+            self.expenses = expenses
+            income = budget.income
+            self.investments = investments
+            leftToSpend = Line(
+                amount: budget.income + expenses.amount + (investments?.amount ?? 0),
+                share: 1 - expenses.share - (investments?.share ?? 0)
+            )
+        }
+
+        var chartSegments: [Segment] {
+            [
+                Segment(amount: -expenses.amount, part: .expenses),
+                Segment(amount: -(investments?.amount ?? 0), part: .investments),
+                Segment(amount: leftToSpend.amount, part: .leftToSpend),
+            ]
+            .filter { $0.amount > 0 }
+        }
+
+        var chartUpperBound: Decimal {
+            max(income, -expenses.amount - (investments?.amount ?? 0))
+        }
+
+        var isOverBudget: Bool {
+            leftToSpend.amount < 0
+        }
+    }
+
+    enum BudgetPart: Hashable {
+        case expenses
+        case investments
+        case leftToSpend
+    }
+
     @CasePathable
+    @dynamicMemberLookup
     enum BudgetStatus: Equatable {
+        case failed
         case loaded(Budget?)
         case loading
     }
@@ -27,37 +85,21 @@ struct Overview {
             (expenses ?? []).count(where: \.isActive)
         }
 
+        var breakdown: Breakdown? {
+            guard let budget, let monthlyTotal else { return nil }
+            return Breakdown(budget: budget, monthlyTotal: monthlyTotal)
+        }
+
         var budget: Budget? {
-            budgetStatus[case: \.loaded] ?? nil
+            budgetStatus.loaded ?? nil
         }
 
-        var expensesShare: Decimal? {
-            shareOfIncome(monthlyTotal)
-        }
-
-        var investmentShare: Decimal? {
-            budget?.investment.flatMap(shareOfIncome)
-        }
-
-        var leftToSpend: Decimal? {
-            budget.map { $0.income - monthlyTotal - ($0.investment ?? 0) }
-        }
-
-        var leftToSpendShare: Decimal? {
-            leftToSpend.flatMap(shareOfIncome)
-        }
-
-        var monthlyTotal: Decimal {
-            (expenses ?? []).filter(\.isActive).reduce(0) { $0 + $1.monthlyAmount }
-        }
-
-        private func shareOfIncome(_ amount: Decimal) -> Decimal? {
-            budget.map { amount / $0.income }
+        var monthlyTotal: Decimal? {
+            expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.monthlyAmount }.rounded(scale: 2) }
         }
     }
 
     enum Action {
-        case budgetRetryTimerElapsed
         case budgetStreamFailed
         case budgetUpdated(Budget?)
         case delegate(Delegate)
@@ -80,16 +122,10 @@ struct Overview {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .budgetRetryTimerElapsed:
-                return subscribeToBudget(uid: state.user.uid)
-
             case .budgetStreamFailed:
-                return
-                    .run { send in
-                        try await clock.sleep(for: .seconds(5))
-                        await send(.budgetRetryTimerElapsed)
-                    }
-                    .cancellable(id: CancelID.budgetSubscription, cancelInFlight: true)
+                guard state.budgetStatus == .loading else { return .none }
+                state.budgetStatus = .failed
+                return .none
 
             case .budgetUpdated(let budget):
                 state.budgetStatus = .loaded(budget)
@@ -109,14 +145,18 @@ struct Overview {
 
     private func subscribeToBudget(uid: String) -> Effect<Action> {
         .run { send in
-            do {
-                let snapshots = await budgetClient.budget(uid: uid)
-                for try await budget in snapshots {
-                    await send(.budgetUpdated(budget))
+            while true {
+                do {
+                    let snapshots = await budgetClient.budget(uid: uid)
+                    for try await budget in snapshots {
+                        await send(.budgetUpdated(budget))
+                    }
+                    return
+                } catch {
+                    logger.error("Budget stream failed: \(error, privacy: .public)")
+                    await send(.budgetStreamFailed)
                 }
-            } catch {
-                logger.error("Budget stream failed: \(error, privacy: .public)")
-                await send(.budgetStreamFailed)
+                try await clock.sleep(for: .seconds(5))
             }
         }
         .cancellable(id: CancelID.budgetSubscription, cancelInFlight: true)

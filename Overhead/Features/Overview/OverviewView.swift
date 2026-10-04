@@ -21,22 +21,23 @@ struct OverviewView: View {
                             Text("Expenses")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text(store.monthlyTotal, format: .dollars)
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
-                            Text("per month")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            if let monthlyTotal = store.monthlyTotal {
+                                Text(monthlyTotal, format: .dollars)
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                Text("per month")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Your expenses couldn't be loaded.")
+                                    .font(.title3)
+                            }
                         }
                         .accessibilityElement(children: .combine)
 
-                        if let budget = store.budget {
-                            BudgetChart(
-                                budget: budget,
-                                expenses: store.monthlyTotal,
-                                leftToSpend: store.leftToSpend ?? 0
-                            )
+                        if let breakdown = store.breakdown {
+                            BudgetChart(breakdown: breakdown)
                         }
                     }
                     .padding(.vertical, 4)
@@ -44,43 +45,42 @@ struct OverviewView: View {
                     Text("The total of your active expenses, with weekly and yearly amounts converted to a month.")
                 }
 
-                switch store.budgetStatus {
-                case .loaded(let budget?):
-                    Section("Where Your Money Goes") {
+                Section("Where Your Money Goes") {
+                    switch store.budgetStatus {
+                    case .failed:
+                        Text("Your income couldn't be loaded.")
+                            .foregroundStyle(.secondary)
+                    case .loaded(let budget?):
                         LabeledContent("Income") {
                             Text(budget.income, format: .dollars)
                                 .foregroundStyle(.primary)
                                 .monospacedDigit()
                         }
-                        Button {
-                            store.send(.expensesRowTapped)
-                        } label: {
+                        if let breakdown = store.breakdown {
+                            Button {
+                                store.send(.expensesRowTapped)
+                            } label: {
+                                BudgetRow(
+                                    part: .expenses,
+                                    subtitle: Text("^[\(store.activeExpenseCount) expense](inflect: true)"),
+                                    line: breakdown.expenses
+                                )
+                            }
+                            .tint(.primary)
+                            BudgetRow(part: .investments, line: breakdown.investments)
                             BudgetRow(
-                                part: .expenses,
-                                subtitle: Text("^[\(store.activeExpenseCount) expense](inflect: true)"),
-                                amount: -store.monthlyTotal,
-                                share: store.expensesShare
+                                part: .leftToSpend,
+                                line: breakdown.leftToSpend,
+                                isOverBudget: breakdown.isOverBudget
                             )
                         }
-                        .tint(.primary)
-                        BudgetRow(
-                            part: .investments,
-                            amount: budget.investment.map { -$0 },
-                            share: store.investmentShare
-                        )
-                        BudgetRow(
-                            part: .leftToSpend,
-                            amount: store.leftToSpend,
-                            share: store.leftToSpendShare
-                        )
-                    }
-                case .loaded(nil):
-                    Section("Where Your Money Goes") {
+                    case .loaded(nil):
                         Text("Add your income to see where your money goes.")
                             .foregroundStyle(.secondary)
+                    case .loading:
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
                     }
-                case .loading:
-                    EmptyView()
                 }
             }
             .scrollContentBackground(.hidden)
@@ -99,12 +99,8 @@ struct OverviewView: View {
     }
 }
 
-private enum BudgetPart {
-    case expenses
-    case investments
-    case leftToSpend
-
-    var color: Color {
+extension Overview.BudgetPart {
+    fileprivate var color: Color {
         switch self {
         case .expenses: .orange
         case .investments: .teal
@@ -112,7 +108,7 @@ private enum BudgetPart {
         }
     }
 
-    var title: LocalizedStringResource {
+    fileprivate var title: LocalizedStringResource {
         switch self {
         case .expenses: "Expenses"
         case .investments: "Investments"
@@ -122,50 +118,40 @@ private enum BudgetPart {
 }
 
 private struct BudgetChart: View {
-    let budget: Budget
-    let expenses: Decimal
-    let leftToSpend: Decimal
+    let breakdown: Overview.Breakdown
+
+    @ScaledMetric private var height = 12
 
     var body: some View {
-        Chart(segments, id: \.part) { segment in
+        Chart(breakdown.chartSegments) { segment in
             BarMark(x: .value("Amount", segment.amount))
                 .foregroundStyle(segment.part.color)
-                .accessibilityLabel(Text(segment.part.title))
-                .accessibilityValue(Text(segment.amount, format: .dollars))
         }
-        .chartXScale(domain: 0 ... max(budget.income, expenses + (budget.investment ?? 0)))
+        .chartXScale(domain: 0 ... breakdown.chartUpperBound)
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
         .chartPlotStyle { $0.clipShape(.capsule) }
-        .frame(height: 12)
-    }
-
-    private var segments: [(part: BudgetPart, amount: Decimal)] {
-        [
-            (.expenses, expenses),
-            (.investments, budget.investment ?? 0),
-            (.leftToSpend, max(leftToSpend, 0)),
-        ]
-        .filter { $0.amount > 0 }
+        .frame(height: height)
+        .accessibilityHidden(true)
     }
 }
 
 private struct BudgetRow: View {
-    let part: BudgetPart
+    let part: Overview.BudgetPart
     var subtitle: Text?
-    let amount: Decimal?
-    let share: Decimal?
+    let line: Overview.Breakdown.Line?
+    var isOverBudget = false
+
+    @ScaledMetric private var dotSize = 10
 
     var body: some View {
         LabeledContent {
             HStack(spacing: 12) {
-                if let share {
-                    Text(share, format: .percent.precision(.fractionLength(0)))
+                if let line {
+                    Text(line.share, format: .percent.precision(.fractionLength(0)))
                         .foregroundStyle(.secondary)
-                }
-                if let amount {
-                    Text(amount, format: .dollars)
-                        .foregroundStyle(part == .leftToSpend && amount < 0 ? .red : .primary)
+                    Text(line.amount, format: .dollars)
+                        .foregroundStyle(isOverBudget ? .red : .primary)
                 } else {
                     Text("None")
                         .foregroundStyle(.secondary)
@@ -176,7 +162,7 @@ private struct BudgetRow: View {
             HStack(spacing: 12) {
                 Circle()
                     .fill(part.color)
-                    .frame(width: 10, height: 10)
+                    .frame(width: dotSize, height: dotSize)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(part.title)
                     if let subtitle {
@@ -188,6 +174,7 @@ private struct BudgetRow: View {
             }
         }
         .fontWeight(part == .leftToSpend ? .semibold : nil)
+        .accessibilityElement(children: .combine)
     }
 }
 

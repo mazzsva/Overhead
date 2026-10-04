@@ -91,6 +91,9 @@
     "Overhead" : {
       "shouldTranslate" : false
     },
+    "Overhead will try again automatically." : {
+
+    },
     "Overview" : {
 
     },
@@ -125,6 +128,9 @@
 
     },
     "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
+
+    },
+    "Unable to Load Expenses" : {
 
     },
     "Unknown" : {
@@ -164,6 +170,12 @@
 
     },
     "Your expense couldn't be saved." : {
+
+    },
+    "Your expenses couldn't be loaded." : {
+
+    },
+    "Your income couldn't be loaded." : {
 
     }
   },
