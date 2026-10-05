@@ -1,0 +1,151 @@
+//
+//  FirestoreRulesTests.swift
+//  OverheadTests
+//
+//  Created by Lorenzo Mazzarotto on 04/10/26.
+//
+
+import FirebaseFirestore
+import Foundation
+import Testing
+
+@testable import Overhead
+
+extension BaseSuite.IntegrationSuite {
+    @Suite
+    struct FirestoreRulesTests {
+        @Test
+        func theOwnerCanWriteAValidBudget() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+
+            try await profile(uid).setData(["monthlyIncomeInCents": 300_000])
+            try await profile(uid).setData(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_000])
+            try await profile(uid).delete()
+        }
+
+        @Test(
+            arguments: [
+                [:],
+                ["monthlyIncomeInCents": 0],
+                ["monthlyIncomeInCents": -1],
+                ["monthlyIncomeInCents": 1.5],
+                ["monthlyIncomeInCents": "300000"],
+                ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 0],
+                ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001],
+                ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": true],
+                ["monthlyIncomeInCents": 300_000, "defaultCurrency": "USD"],
+            ] as [[String: any Sendable]])
+        func theRulesRefuseAnInvalidBudget(data: [String: any Sendable]) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+
+            await expectRefused {
+                try await profile(uid).setData(data)
+            }
+        }
+
+        @Test
+        func theOwnerCanWriteAValidExpense() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let document = expense(uid, Expense.gym.id)
+
+            try await document.setData(Expense.gym.documentData())
+            var data = try Expense.gym.documentData()
+            data["isActive"] = false
+            data["name"] = String(repeating: "a", count: Expense.maximumNameLength)
+            try await document.setData(data)
+            try await document.delete()
+        }
+
+        @Test(
+            arguments: [
+                ("amountInCents", 0),
+                ("amountInCents", -1),
+                ("amountInCents", 39.9),
+                ("billingCycle", "daily"),
+                ("createdAt", "2026-10-04"),
+                ("isActive", "yes"),
+                ("name", ""),
+                ("name", String(repeating: "a", count: Expense.maximumNameLength + 1)),
+                ("currency", "USD"),
+            ] as [(String, any Sendable)])
+        func theRulesRefuseAnInvalidExpense(field: String, value: any Sendable) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            var data = try Expense.gym.documentData()
+            data[field] = value
+
+            await expectRefused {
+                try await expense(uid, Expense.gym.id).setData(data)
+            }
+        }
+
+        @Test(arguments: ["amountInCents", "billingCycle", "createdAt", "isActive", "name"])
+        func theRulesRefuseAnExpenseWithoutAField(field: String) async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            var data = try Expense.gym.documentData()
+            data[field] = nil
+
+            await expectRefused {
+                try await expense(uid, Expense.gym.id).setData(data)
+            }
+        }
+
+        @Test
+        func theRulesKeepTheCreationDate() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let document = expense(uid, Expense.gym.id)
+            try await document.setData(Expense.gym.documentData())
+            var data = try Expense.gym.documentData()
+            data["createdAt"] = Timestamp(date: Date(timeIntervalSince1970: 0))
+
+            await expectRefused {
+                try await document.setData(data)
+            }
+        }
+
+        @Test
+        func theRulesRefuseAnotherUsersData() async throws {
+            let owner = try await FirebaseEmulators.signIn()
+            try await profile(owner).setData(["monthlyIncomeInCents": 300_000])
+            try await expense(owner, Expense.gym.id).setData(Expense.gym.documentData())
+            _ = try await FirebaseEmulators.signIn()
+
+            await expectRefused {
+                _ = try await profile(owner).getDocument(source: .server)
+            }
+            await expectRefused {
+                _ = try await expense(owner, Expense.gym.id).getDocument(source: .server)
+            }
+            await expectRefused {
+                try await expense(owner, Expense.gym.id).delete()
+            }
+            await expectRefused {
+                try await profile(owner).delete()
+            }
+        }
+
+        private func expectRefused(
+            sourceLocation: SourceLocation = #_sourceLocation,
+            _ operation: () async throws -> Void
+        ) async {
+            do {
+                try await operation()
+                Issue.record("The rules accepted the operation.", sourceLocation: sourceLocation)
+            } catch {
+                let code = (error as NSError).code
+                #expect(
+                    code == FirestoreErrorCode.permissionDenied.rawValue,
+                    "Expected a permission error, got \(error).",
+                    sourceLocation: sourceLocation
+                )
+            }
+        }
+
+        private func expense(_ uid: String, _ id: Expense.ID) -> DocumentReference {
+            profile(uid).collection("expenses").document(id.uuidString)
+        }
+
+        private func profile(_ uid: String) -> DocumentReference {
+            Firestore.firestore().collection("users").document(uid)
+        }
+    }
+}

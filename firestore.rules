@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasOnly(['monthlyIncomeInCents', 'monthlyInvestmentInCents'])
+        && data.keys().hasAll(['monthlyIncomeInCents'])
+        && data.monthlyIncomeInCents is int
+        && data.monthlyIncomeInCents > 0
+        && (
+          !('monthlyInvestmentInCents' in data)
+          || (
+            data.monthlyInvestmentInCents is int
+            && data.monthlyInvestmentInCents > 0
+            && data.monthlyInvestmentInCents <= data.monthlyIncomeInCents
+          )
+        );
+    }
+
+    function isValidExpense(data) {
+      return data.keys().hasOnly(['amountInCents', 'billingCycle', 'createdAt', 'isActive', 'name'])
+        && data.keys().hasAll(['amountInCents', 'billingCycle', 'createdAt', 'isActive', 'name'])
+        && data.amountInCents is int
+        && data.amountInCents > 0
+        && data.billingCycle in ['weekly', 'monthly', 'yearly']
+        && data.createdAt is timestamp
+        && data.isActive is bool
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 100;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidProfile(request.resource.data);
+
+      match /expenses/{expenseId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidExpense(request.resource.data);
+        allow update: if isOwner(uid)
+          && isValidExpense(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+    }
+  }
+}
