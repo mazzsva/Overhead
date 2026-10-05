@@ -51,10 +51,10 @@ extension BaseSuite {
             state.name = "  " + String(repeating: "a", count: Expense.maximumNameLength) + "  "
             #expect(state.isSubmittable)
 
-            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 2)
+            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 4)
             #expect(state.isSubmittable)
 
-            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 2 + 1)
+            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 4 + 1)
             #expect(!state.isSubmittable)
         }
 
