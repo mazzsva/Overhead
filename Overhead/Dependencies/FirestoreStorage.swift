@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 04/10/26.
 //
 
+import ConcurrencyExtras
 import FirebaseFirestore
 import Foundation
 import IssueReporting
@@ -14,12 +15,15 @@ actor FirestoreStorage {
 
     private var clearing: Task<Void, any Error>?
 
-    func budget(uid: String) async -> AsyncThrowingStream<Budget?, any Error> {
+    func budget(uid: String) async -> AsyncThrowingStream<BudgetSnapshot, any Error> {
         await waitForClearing()
         return AsyncThrowingStream { continuation in
-            nonisolated(unsafe) let listener = budgetDocument(uid: uid)
-                .addSnapshotListener { snapshot, error in
+            let delivered = LockIsolated<(data: NSDictionary?, isFromCache: Bool)?>(nil)
+            let registration = ListenerRegistrationBox()
+            let listener = budgetDocument(uid: uid)
+                .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
                     if let error {
+                        registration.remove()
                         continuation.finish(throwing: error)
                         return
                     }
@@ -27,11 +31,24 @@ actor FirestoreStorage {
                         reportIssue("Budget listener reported neither a snapshot nor an error.")
                         return
                     }
-                    guard snapshot.exists || !snapshot.metadata.isFromCache else { return }
-                    continuation.yield(snapshot.data().flatMap(Budget.init(data:)))
+                    let data = snapshot.data()
+                    let isFromCache = snapshot.metadata.isFromCache
+                    let isNew = delivered.withValue { delivered in
+                        let current = data.map(NSDictionary.init(dictionary:))
+                        if let delivered, delivered.data == current, delivered.isFromCache == isFromCache {
+                            return false
+                        }
+                        delivered = (current, isFromCache)
+                        return true
+                    }
+                    guard isNew else { return }
+                    continuation.yield(
+                        BudgetSnapshot(budget: data.flatMap(Budget.init(data:)), isFromCache: isFromCache)
+                    )
                 }
+            registration.set(listener)
             continuation.onTermination = { _ in
-                listener.remove()
+                registration.remove()
             }
         }
     }
@@ -109,6 +126,19 @@ actor FirestoreStorage {
 
     private func waitForClearing() async {
         _ = try? await clearing?.value
+    }
+}
+
+private final class ListenerRegistrationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var registration: (any ListenerRegistration)?
+
+    func remove() {
+        lock.withLock { registration }?.remove()
+    }
+
+    func set(_ registration: any ListenerRegistration) {
+        lock.withLock { self.registration = registration }
     }
 }
 

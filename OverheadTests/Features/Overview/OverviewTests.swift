@@ -117,7 +117,7 @@ extension BaseSuite {
 
         @Test
         func theTaskObservesTheBudget() async {
-            let budget = AsyncThrowingStream<Budget?, any Error>.makeStream()
+            let budget = AsyncThrowingStream<BudgetSnapshot, any Error>.makeStream()
 
             let store = TestStore(initialState: makeState()) {
                 Overview()
@@ -130,17 +130,53 @@ extension BaseSuite {
 
             let task = await store.send(.task)
 
-            budget.continuation.yield(nil)
+            budget.continuation.yield(BudgetSnapshot(budget: nil, isFromCache: false))
             await store.receive(\.budgetUpdated) {
                 $0.budgetStatus = .loaded(nil)
             }
 
-            budget.continuation.yield(.mock)
+            budget.continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
             await store.receive(\.budgetUpdated) {
                 $0.budgetStatus = .loaded(.mock)
             }
 
             await task.cancel()
+        }
+
+        @Test
+        func aCachedMissingBudgetBeforeAnyLoadMeansOffline() async {
+            let store = TestStore(initialState: makeState()) {
+                Overview()
+            }
+
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: true))) {
+                $0.budgetStatus = .offline
+            }
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+                $0.budgetStatus = .loaded(nil)
+            }
+        }
+
+        @Test
+        func aCachedBudgetLoadsWhileOffline() async {
+            let store = TestStore(initialState: makeState()) {
+                Overview()
+            }
+
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: .mock, isFromCache: true))) {
+                $0.budgetStatus = .loaded(.mock)
+            }
+        }
+
+        @Test
+        func aBudgetRemovedOfflineDisappearsAtOnce() async {
+            let store = TestStore(initialState: makeState(.loaded(.mock))) {
+                Overview()
+            }
+
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: true))) {
+                $0.budgetStatus = .loaded(nil)
+            }
         }
 
         @Test
@@ -160,7 +196,7 @@ extension BaseSuite {
                         if attempt == 1 {
                             continuation.finish(throwing: BudgetFailure())
                         } else {
-                            continuation.yield(.mock)
+                            continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
                             continuation.finish()
                         }
                     }
