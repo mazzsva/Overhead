@@ -10,6 +10,10 @@ import Foundation
 
 @Reducer
 struct ExpenseForm {
+    enum Dialog: Equatable {
+        case confirmDiscard
+    }
+
     enum Field: Hashable {
         case name
     }
@@ -18,6 +22,7 @@ struct ExpenseForm {
     struct State: Equatable {
         var amountText: String
         var billingCycle: BillingCycle
+        @Presents var confirmationDialog: ConfirmationDialogState<ExpenseForm.Dialog>?
         let expense: Expense?
         var focus: Field?
         var isActive: Bool
@@ -39,6 +44,15 @@ struct ExpenseForm {
             Decimal(amountText: amountText, locale: locale)
         }
 
+        var hasChanges: Bool {
+            let isAmountInvalid = !amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount == nil
+            return amount != expense?.amount
+                || isAmountInvalid
+                || billingCycle != (expense?.billingCycle ?? .monthly)
+                || isActive != (expense?.isActive ?? true)
+                || name.trimmingCharacters(in: .whitespacesAndNewlines) != (expense?.name ?? "")
+        }
+
         var isCreating: Bool {
             expense == nil
         }
@@ -51,6 +65,7 @@ struct ExpenseForm {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case confirmationDialog(PresentationAction<Dialog>)
         case delegate(Delegate)
         case dismissButtonTapped
         case saveButtonTapped
@@ -72,11 +87,19 @@ struct ExpenseForm {
             case .binding:
                 return .none
 
+            case .confirmationDialog(.presented(.confirmDiscard)):
+                return .run { _ in await dismiss() }
+
+            case .confirmationDialog:
+                return .none
+
             case .delegate:
                 return .none
 
             case .dismissButtonTapped:
-                return .run { _ in await dismiss() }
+                guard state.hasChanges else { return .run { _ in await dismiss() } }
+                state.confirmationDialog = .discardChanges(.confirmDiscard)
+                return .none
 
             case .saveButtonTapped:
                 guard state.isSubmittable, let amount = state.amount else { return .none }
@@ -92,5 +115,6 @@ struct ExpenseForm {
                 return .send(.delegate(.didSubmit(expense)))
             }
         }
+        .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
     }
 }

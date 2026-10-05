@@ -11,6 +11,12 @@ import os
 
 @Reducer
 struct Overview {
+    @Reducer
+    enum Destination {
+        case incomeForm(IncomeForm)
+        case investmentForm(InvestmentForm)
+    }
+
     struct Breakdown: Equatable {
         struct Line: Equatable {
             let amount: Decimal
@@ -61,6 +67,13 @@ struct Overview {
         }
     }
 
+    enum BudgetChange: Hashable {
+        case removeIncome
+        case removeInvestments
+        case saveIncome
+        case saveInvestments
+    }
+
     enum BudgetPart: Hashable {
         case expenses
         case investments
@@ -78,8 +91,8 @@ struct Overview {
 
     @ObservableState
     struct State: Equatable {
-        @Presents var budgetForm: BudgetForm.State?
         var budgetStatus = BudgetStatus.loading
+        @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
         let user: User
 
@@ -97,7 +110,7 @@ struct Overview {
         }
 
         var isPresenting: Bool {
-            budgetForm != nil
+            destination != nil
         }
 
         var monthlyTotal: Decimal? {
@@ -107,10 +120,10 @@ struct Overview {
 
     enum Action {
         case addIncomeButtonTapped
-        case budgetForm(PresentationAction<BudgetForm.Action>)
         case budgetStreamFailed
         case budgetUpdated(BudgetSnapshot)
         case delegate(Delegate)
+        case destination(PresentationAction<Destination.Action>)
         case expensesRowTapped
         case incomeRowTapped
         case investmentsRowTapped
@@ -118,7 +131,7 @@ struct Overview {
 
         @CasePathable
         enum Delegate {
-            case didFailToSaveBudget
+            case didFailToChangeBudget(BudgetChange)
             case didSelectExpenses
         }
     }
@@ -135,17 +148,8 @@ struct Overview {
         Reduce { state, action in
             switch action {
             case .addIncomeButtonTapped, .incomeRowTapped:
-                state.budgetForm = BudgetForm.State(budget: state.budget, focus: .income)
-                return .none
-
-            case .budgetForm(.presented(.delegate(.didSubmit(let budget)))):
-                state.budgetForm = nil
-                return .merge(
-                    .run { _ in await hapticsClient.success() },
-                    save(budget, uid: state.user.uid)
-                )
-
-            case .budgetForm:
+                guard state.destination == nil else { return .none }
+                state.destination = .incomeForm(IncomeForm.State(budget: state.budget))
                 return .none
 
             case .budgetStreamFailed:
@@ -160,35 +164,100 @@ struct Overview {
                     state.budgetStatus = .offline
                     return .none
                 }
-                state.budgetStatus = .loaded(snapshot.budget)
+                let budget = snapshot.budget
+                state.budgetStatus = .loaded(budget)
+                switch state.destination {
+                case .incomeForm:
+                    state.destination?.modify(\.incomeForm) { $0.investment = budget?.investment }
+                case .investmentForm:
+                    guard let budget else {
+                        state.destination = nil
+                        return .none
+                    }
+                    state.destination?.modify(\.investmentForm) { $0.income = budget.income }
+                case nil:
+                    break
+                }
                 return .none
 
             case .delegate:
+                return .none
+
+            case .destination(.presented(.incomeForm(.delegate(.didRemove)))):
+                state.destination = nil
+                let uid = state.user.uid
+                return .merge(
+                    .run { _ in await hapticsClient.warning() },
+                    changeBudget(.removeIncome) { try await budgetClient.delete(uid: uid) }
+                )
+
+            case .destination(.presented(.incomeForm(.delegate(.didSubmit(let income))))):
+                state.destination = nil
+                return save(income: income, removingInvestment: false, uid: state.user.uid)
+
+            case .destination(.presented(.incomeForm(.delegate(.didSubmitRemovingInvestment(let income))))):
+                state.destination = nil
+                return save(income: income, removingInvestment: true, uid: state.user.uid)
+
+            case .destination(.presented(.investmentForm(.delegate(.didRemove)))):
+                state.destination = nil
+                let uid = state.user.uid
+                return .merge(
+                    .run { _ in await hapticsClient.warning() },
+                    changeBudget(.removeInvestments) { try await budgetClient.removeInvestment(uid: uid) }
+                )
+
+            case .destination(.presented(.investmentForm(.delegate(.didSubmit(let investment))))):
+                state.destination = nil
+                let uid = state.user.uid
+                return .merge(
+                    .run { _ in await hapticsClient.success() },
+                    changeBudget(.saveInvestments) {
+                        try await budgetClient.saveInvestment(investment: investment, uid: uid)
+                    }
+                )
+
+            case .destination:
                 return .none
 
             case .expensesRowTapped:
                 return .send(.delegate(.didSelectExpenses))
 
             case .investmentsRowTapped:
-                state.budgetForm = BudgetForm.State(budget: state.budget, focus: .investment)
+                guard state.destination == nil, let budget = state.budget else { return .none }
+                state.destination = .investmentForm(
+                    InvestmentForm.State(income: budget.income, investment: budget.investment)
+                )
                 return .none
 
             case .task:
                 return subscribeToBudget(uid: state.user.uid)
             }
         }
-        .ifLet(\.$budgetForm, action: \.budgetForm) {
-            BudgetForm()
+        .ifLet(\.$destination, action: \.destination)
+    }
+
+    private func changeBudget(
+        _ change: BudgetChange,
+        operation: @escaping @Sendable () async throws -> Void
+    ) -> Effect<Action> {
+        .run { _ in
+            try await operation()
+        } catch: { error, send in
+            logger.error(
+                "Changing the budget failed (\(String(describing: change), privacy: .public)): \(error, privacy: .public)"
+            )
+            await send(.delegate(.didFailToChangeBudget(change)))
         }
     }
 
-    private func save(_ budget: Budget, uid: String) -> Effect<Action> {
-        .run { _ in
-            try await budgetClient.save(budget: budget, uid: uid)
-        } catch: { error, send in
-            logger.error("Saving the budget failed: \(error, privacy: .public)")
-            await send(.delegate(.didFailToSaveBudget))
-        }
+    private func save(income: Decimal, removingInvestment: Bool, uid: String) -> Effect<Action> {
+        .merge(
+            .run { _ in await hapticsClient.success() },
+            changeBudget(.saveIncome) {
+                try await budgetClient.saveIncome(income: income, removingInvestment: removingInvestment, uid: uid)
+            }
+        )
     }
 
     private func subscribeToBudget(uid: String) -> Effect<Action> {
@@ -210,5 +279,7 @@ struct Overview {
         .cancellable(id: CancelID.budgetSubscription, cancelInFlight: true)
     }
 }
+
+extension Overview.Destination.State: Equatable {}
 
 private let logger = Logger(category: "Overview")

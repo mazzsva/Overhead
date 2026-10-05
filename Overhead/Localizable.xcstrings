@@ -1,13 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ of your income." : {
+    "%@ of your %@ income." : {
 
     },
     "^[%lld expense](inflect: true)" : {
 
     },
     "Active" : {
+
+    },
+    "Add" : {
 
     },
     "Add every fixed expense with its name and amount." : {
@@ -55,7 +58,10 @@
     "Deleting your account…" : {
 
     },
-    "Dismiss" : {
+    "Discard Changes" : {
+
+    },
+    "Discard Changes?" : {
 
     },
     "Edit" : {
@@ -79,10 +85,13 @@
     "Income" : {
 
     },
-    "Invest %@ of Income" : {
+    "Invest %@ of income" : {
 
     },
     "Investments" : {
+
+    },
+    "Keep Editing" : {
 
     },
     "Left to Spend" : {
@@ -100,12 +109,6 @@
     "No Expenses" : {
 
     },
-    "None" : {
-
-    },
-    "Optional. The amount you invest each month." : {
-
-    },
     "Overhead" : {
       "shouldTranslate" : false
     },
@@ -118,7 +121,22 @@
     "per month" : {
 
     },
+    "Remove" : {
+
+    },
+    "Remove and Save" : {
+
+    },
+    "Remove Income" : {
+
+    },
+    "Remove Investments" : {
+
+    },
     "Save" : {
+
+    },
+    "Saving will remove your investments of %@." : {
 
     },
     "Settings" : {
@@ -143,6 +161,9 @@
 
     },
     "Tap the plus button to add an expense." : {
+
+    },
+    "The amount you invest each month." : {
 
     },
     "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
@@ -193,13 +214,34 @@
     "Your expenses couldn't be loaded." : {
 
     },
+    "Your income and investments will be removed. Your expenses will stay." : {
+
+    },
     "Your income couldn't be loaded." : {
+
+    },
+    "Your income couldn't be removed." : {
 
     },
     "Your income couldn't be saved." : {
 
     },
+    "Your income will be removed. Your expenses will stay." : {
+
+    },
     "Your investments can't be more than your income." : {
+
+    },
+    "Your investments couldn't be removed." : {
+
+    },
+    "Your investments couldn't be saved." : {
+
+    },
+    "Your investments of %@ are more than this income." : {
+
+    },
+    "Your investments will be removed. Your income and expenses will stay." : {
 
     },
     "Your monthly pay after tax." : {

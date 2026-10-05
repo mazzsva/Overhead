@@ -79,9 +79,9 @@ extension BaseSuite {
         }
 
         @Test
-        func theSharesAlwaysAddUpToTheWhole() {
+        func theSharesAlwaysAddUpToTheWhole() throws {
             let breakdown = Overview.Breakdown(
-                budget: Budget(income: 3000, investment: Decimal(cents: 100_050)),
+                budget: try #require(Budget(income: 3000, investment: Decimal(cents: 100_050))),
                 monthlyTotal: Decimal(cents: 100_050)
             )
 
@@ -91,8 +91,9 @@ extension BaseSuite {
         }
 
         @Test
-        func aBudgetWithoutInvestmentHasNoInvestmentLine() {
-            let breakdown = Overview.Breakdown(budget: Budget(income: 3000, investment: nil), monthlyTotal: 1000)
+        func aBudgetWithoutInvestmentHasNoInvestmentLine() throws {
+            let budget = try #require(Budget(income: 3000, investment: nil))
+            let breakdown = Overview.Breakdown(budget: budget, monthlyTotal: 1000)
 
             expectNoDifference(breakdown.investments, nil)
             expectNoDifference(breakdown.leftToSpend, .init(amount: 2000, share: percent(67)))
@@ -103,8 +104,9 @@ extension BaseSuite {
         }
 
         @Test
-        func costsAboveTheIncomeFillTheChartWithoutANegativePart() {
-            let breakdown = Overview.Breakdown(budget: Budget(income: 900, investment: 100), monthlyTotal: 1000)
+        func costsAboveTheIncomeFillTheChartWithoutANegativePart() throws {
+            let budget = try #require(Budget(income: 900, investment: 100))
+            let breakdown = Overview.Breakdown(budget: budget, monthlyTotal: 1000)
 
             expectNoDifference(breakdown.leftToSpend.amount, -200)
             #expect(breakdown.isOverBudget)
@@ -284,75 +286,271 @@ extension BaseSuite {
         }
 
         @Test
-        func theAddIncomeButtonOpensAnEmptyForm() async {
+        func theAddIncomeButtonOpensAnEmptyIncomeForm() async {
             let store = TestStore(initialState: makeState(.loaded(nil))) {
                 Overview()
             }
 
             await store.send(.addIncomeButtonTapped) {
-                $0.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+                $0.destination = .incomeForm(IncomeForm.State(budget: nil))
             }
         }
 
         @Test
-        func eachRowOpensTheFormOnItsField() async {
+        func eachRowOpensItsOwnForm() async {
             let store = TestStore(initialState: makeState(.loaded(.mock))) {
                 Overview()
             }
 
             await store.send(.incomeRowTapped) {
-                $0.budgetForm = BudgetForm.State(budget: .mock, focus: .income)
+                $0.destination = .incomeForm(IncomeForm.State(budget: .mock))
             }
-            await store.send(.budgetForm(.dismiss)) {
-                $0.budgetForm = nil
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
             }
             await store.send(.investmentsRowTapped) {
-                $0.budgetForm = BudgetForm.State(budget: .mock, focus: .investment)
+                $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 450))
             }
         }
 
         @Test
-        func submittingTheFormSavesTheBudget() async {
-            var state = makeState(.loaded(nil))
-            state.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+        func theInvestmentsNeedAnIncome() async {
+            let store = TestStore(initialState: makeState(.loaded(nil))) {
+                Overview()
+            }
 
-            await confirmation("Plays the success haptic") { playsHaptic in
-                await confirmation("Saves the budget") { savesBudget in
-                    let store = TestStore(initialState: state) {
-                        Overview()
-                    } withDependencies: {
-                        $0.budgetClient.save = { budget, uid in
-                            expectNoDifference(budget, .mock)
-                            expectNoDifference(uid, User.mock.uid)
-                            savesBudget()
-                        }
-                        $0.hapticsClient.success = { playsHaptic() }
-                    }
+            await store.send(.investmentsRowTapped)
+        }
 
-                    await store.send(.budgetForm(.presented(.delegate(.didSubmit(.mock))))) {
-                        $0.budgetForm = nil
-                    }
-                    await store.finish()
-                }
+        @Test
+        func theInvestmentsRowWithoutInvestmentsOpensAnEmptyForm() async throws {
+            let budget = try #require(Budget(income: 3000, investment: nil))
+            let store = TestStore(initialState: makeState(.loaded(budget))) {
+                Overview()
+            }
+
+            await store.send(.investmentsRowTapped) {
+                $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: nil))
             }
         }
 
         @Test
-        func aFailedSaveTellsTheParent() async {
-            var state = makeState(.loaded(nil))
-            state.budgetForm = BudgetForm.State(budget: nil, focus: .income)
+        func aSecondTapDoesNotReplaceTheOpenForm() async {
+            let store = TestStore(initialState: makeState(.loaded(.mock))) {
+                Overview()
+            }
+
+            await store.send(.incomeRowTapped) {
+                $0.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            }
+            await store.send(.investmentsRowTapped)
+            await store.send(.addIncomeButtonTapped)
+        }
+
+        @Test
+        func anOpenFormFollowsTheBudget() async throws {
+            var state = makeState(.loaded(.mock))
+            state.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            let store = TestStore(initialState: state) {
+                Overview()
+            }
+
+            let raised = try #require(Budget(income: 3000, investment: 600))
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: raised, isFromCache: false))) {
+                $0.budgetStatus = .loaded(raised)
+                $0.destination?.modify(\.incomeForm) { $0.investment = 600 }
+            }
+
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
+            }
+            await store.send(.investmentsRowTapped) {
+                $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 600))
+            }
+            let promoted = try #require(Budget(income: 4000, investment: 600))
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: promoted, isFromCache: false))) {
+                $0.budgetStatus = .loaded(promoted)
+                $0.destination?.modify(\.investmentForm) { $0.income = 4000 }
+            }
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+                $0.budgetStatus = .loaded(nil)
+                $0.destination = nil
+            }
+        }
+
+        @Test
+        func anOpenIncomeFormStaysOpenWhenTheBudgetIsRemoved() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            let store = TestStore(initialState: state) {
+                Overview()
+            }
+
+            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+                $0.budgetStatus = .loaded(nil)
+                $0.destination?.modify(\.incomeForm) { $0.investment = nil }
+            }
+        }
+
+        @Test
+        func savingTheIncomeWritesOnlyTheIncome() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            let calls = LockIsolated<[Call]>([])
 
             let store = TestStore(initialState: state) {
                 Overview()
             } withDependencies: {
-                $0.budgetClient.save = { _, _ in throw BudgetFailure() }
-                $0.hapticsClient.success = {}
+                $0.budgetClient.saveIncome = { income, removingInvestment, uid in
+                    calls.withValue { $0.append(.saveIncome(income, removingInvestment: removingInvestment, uid: uid)) }
+                }
+                $0.hapticsClient.success = { calls.withValue { $0.append(.success) } }
             }
 
-            await store.send(.budgetForm(.presented(.delegate(.didSubmit(.mock))))) {
-                $0.budgetForm = nil
+            await store.send(.destination(.presented(.incomeForm(.delegate(.didSubmit(3500)))))) {
+                $0.destination = nil
             }
-            await store.receive(\.delegate.didFailToSaveBudget)
+            await store.finish()
+            expectNoDifference(
+                Set(calls.value), [.saveIncome(3500, removingInvestment: false, uid: User.mock.uid), .success])
+        }
+
+        @Test
+        func savingTheIncomeCanRemoveTheInvestmentInTheSameWrite() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            let calls = LockIsolated<[Call]>([])
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.saveIncome = { income, removingInvestment, uid in
+                    calls.withValue { $0.append(.saveIncome(income, removingInvestment: removingInvestment, uid: uid)) }
+                }
+                $0.hapticsClient.success = { calls.withValue { $0.append(.success) } }
+            }
+
+            await store.send(.destination(.presented(.incomeForm(.delegate(.didSubmitRemovingInvestment(400)))))) {
+                $0.destination = nil
+            }
+            await store.finish()
+            expectNoDifference(
+                Set(calls.value), [.saveIncome(400, removingInvestment: true, uid: User.mock.uid), .success])
+        }
+
+        @Test
+        func savingTheInvestmentWritesOnlyTheInvestment() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 450))
+            let calls = LockIsolated<[Call]>([])
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.saveInvestment = { investment, uid in
+                    calls.withValue { $0.append(.saveInvestment(investment, uid: uid)) }
+                }
+                $0.hapticsClient.success = { calls.withValue { $0.append(.success) } }
+            }
+
+            await store.send(.destination(.presented(.investmentForm(.delegate(.didSubmit(300)))))) {
+                $0.destination = nil
+            }
+            await store.finish()
+            expectNoDifference(Set(calls.value), [.saveInvestment(300, uid: User.mock.uid), .success])
+        }
+
+        @Test
+        func removingTheInvestmentKeepsTheIncome() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 450))
+            let calls = LockIsolated<[Call]>([])
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.removeInvestment = { uid in
+                    calls.withValue { $0.append(.removeInvestment(uid: uid)) }
+                }
+                $0.hapticsClient.warning = { calls.withValue { $0.append(.warning) } }
+            }
+
+            await store.send(.destination(.presented(.investmentForm(.delegate(.didRemove))))) {
+                $0.destination = nil
+            }
+            await store.finish()
+            expectNoDifference(Set(calls.value), [.removeInvestment(uid: User.mock.uid), .warning])
+        }
+
+        @Test
+        func removingTheIncomeDeletesTheBudget() async {
+            var state = makeState(.loaded(.mock))
+            state.destination = .incomeForm(IncomeForm.State(budget: .mock))
+            let calls = LockIsolated<[Call]>([])
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.delete = { uid in
+                    calls.withValue { $0.append(.delete(uid: uid)) }
+                }
+                $0.hapticsClient.warning = { calls.withValue { $0.append(.warning) } }
+            }
+
+            await store.send(.destination(.presented(.incomeForm(.delegate(.didRemove))))) {
+                $0.destination = nil
+            }
+            await store.finish()
+            expectNoDifference(Set(calls.value), [.delete(uid: User.mock.uid), .warning])
+        }
+
+        @Test
+        func aFailedChangeTellsTheParentWhichChangeFailed() async {
+            await expectFailure(
+                of: .destination(.presented(.incomeForm(.delegate(.didRemove)))),
+                in: .incomeForm(IncomeForm.State(budget: .mock)),
+                reports: .removeIncome
+            )
+            await expectFailure(
+                of: .destination(.presented(.incomeForm(.delegate(.didSubmit(3500))))),
+                in: .incomeForm(IncomeForm.State(budget: .mock)),
+                reports: .saveIncome
+            )
+            await expectFailure(
+                of: .destination(.presented(.investmentForm(.delegate(.didRemove)))),
+                in: .investmentForm(InvestmentForm.State(income: 3000, investment: 450)),
+                reports: .removeInvestments
+            )
+            await expectFailure(
+                of: .destination(.presented(.investmentForm(.delegate(.didSubmit(300))))),
+                in: .investmentForm(InvestmentForm.State(income: 3000, investment: 450)),
+                reports: .saveInvestments
+            )
+        }
+
+        private func expectFailure(
+            of action: Overview.Action,
+            in destination: Overview.Destination.State,
+            reports change: Overview.BudgetChange
+        ) async {
+            var state = makeState(.loaded(.mock))
+            state.destination = destination
+
+            let store = TestStore(initialState: state) {
+                Overview()
+            } withDependencies: {
+                $0.budgetClient.delete = { _ in throw BudgetFailure() }
+                $0.budgetClient.removeInvestment = { _ in throw BudgetFailure() }
+                $0.budgetClient.saveIncome = { _, _, _ in throw BudgetFailure() }
+                $0.budgetClient.saveInvestment = { _, _ in throw BudgetFailure() }
+                $0.hapticsClient.success = {}
+                $0.hapticsClient.warning = {}
+            }
+
+            await store.send(action) {
+                $0.destination = nil
+            }
+            await store.receive(\.delegate.didFailToChangeBudget, change)
             await store.finish()
         }
 
@@ -369,6 +567,15 @@ extension BaseSuite {
 
         private func percent(_ value: Int) -> Decimal {
             Decimal(value) / 100
+        }
+
+        private enum Call: Hashable {
+            case delete(uid: String)
+            case removeInvestment(uid: String)
+            case saveIncome(Decimal, removingInvestment: Bool, uid: String)
+            case saveInvestment(Decimal, uid: String)
+            case success
+            case warning
         }
 
         private struct BudgetFailure: Error {}

@@ -18,7 +18,9 @@ struct BudgetClient: Sendable {
     }
 
     var delete: @Sendable (_ uid: String) async throws -> Void
-    var save: @Sendable (_ budget: Budget, _ uid: String) async throws -> Void
+    var removeInvestment: @Sendable (_ uid: String) async throws -> Void
+    var saveIncome: @Sendable (_ income: Decimal, _ removingInvestment: Bool, _ uid: String) async throws -> Void
+    var saveInvestment: @Sendable (_ investment: Decimal, _ uid: String) async throws -> Void
 }
 
 extension BudgetClient: DependencyKey {
@@ -30,8 +32,14 @@ extension BudgetClient: DependencyKey {
             delete: { uid in
                 try await FirestoreStorage.shared.deleteBudget(uid: uid)
             },
-            save: { budget, uid in
-                try await FirestoreStorage.shared.save(budget, uid: uid)
+            removeInvestment: { uid in
+                try await FirestoreStorage.shared.removeInvestment(uid: uid)
+            },
+            saveIncome: { income, removingInvestment, uid in
+                try await FirestoreStorage.shared.saveIncome(income, removingInvestment: removingInvestment, uid: uid)
+            },
+            saveInvestment: { investment, uid in
+                try await FirestoreStorage.shared.saveInvestment(investment, uid: uid)
             }
         )
     }
@@ -44,7 +52,9 @@ extension BudgetClient: DependencyKey {
                 }
             },
             delete: { _ in },
-            save: { _, _ in }
+            removeInvestment: { _ in },
+            saveIncome: { _, _, _ in },
+            saveInvestment: { _, _ in }
         )
     }
 
@@ -65,39 +75,36 @@ extension DependencyValues {
     }
 }
 
+enum BudgetField {
+    static let income = "monthlyIncomeInCents"
+    static let investment = "monthlyInvestmentInCents"
+
+    static func cents(of amount: Decimal) throws -> Int {
+        guard let cents = amount.cents else {
+            reportIssue("The budget has an amount that cents cannot represent.")
+            throw InexactAmountError()
+        }
+        return cents
+    }
+}
+
 extension Budget {
     init?(data: [String: Any]) {
-        let investmentValue = data["monthlyInvestmentInCents"]
+        let investmentValue = data[BudgetField.investment]
         let investmentInCents = investmentValue as? Int
         guard
-            let incomeInCents = data["monthlyIncomeInCents"] as? Int,
-            incomeInCents > 0,
-            investmentValue == nil || (1 ... incomeInCents).contains(investmentInCents ?? 0)
+            let incomeInCents = data[BudgetField.income] as? Int,
+            investmentValue == nil || investmentInCents != nil,
+            let budget = Budget(
+                income: Decimal(cents: incomeInCents),
+                investment: investmentInCents.map(Decimal.init(cents:))
+            )
         else {
             logger.error("Skipping a budget document that failed to decode.")
             reportIssue("Skipping a budget document that failed to decode.")
             return nil
         }
-        self.init(
-            income: Decimal(cents: incomeInCents),
-            investment: investmentInCents.map(Decimal.init(cents:))
-        )
-    }
-
-    func documentData() throws -> [String: Any] {
-        guard let incomeInCents = income.cents else {
-            reportIssue("The budget has an income that cents cannot represent.")
-            throw InexactAmountError()
-        }
-        var data: [String: Any] = ["monthlyIncomeInCents": incomeInCents]
-        if let investment {
-            guard let investmentInCents = investment.cents else {
-                reportIssue("The budget has an investment that cents cannot represent.")
-                throw InexactAmountError()
-            }
-            data["monthlyInvestmentInCents"] = investmentInCents
-        }
-        return data
+        self = budget
     }
 }
 
