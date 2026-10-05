@@ -90,6 +90,9 @@ struct OverviewView: View {
                         Button("Add Income") {
                             store.send(.addIncomeButtonTapped)
                         }
+                    case .offline:
+                        Text("Connect to the internet to see your income.")
+                            .foregroundStyle(.secondary)
                     case .loading:
                         ProgressView()
                             .frame(maxWidth: .infinity)

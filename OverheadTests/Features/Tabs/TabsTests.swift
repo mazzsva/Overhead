@@ -40,7 +40,7 @@ extension BaseSuite {
 
         @Test
         func theOverviewTaskObservesTheBudget() async {
-            let budget = AsyncThrowingStream<Budget?, any Error>.makeStream()
+            let budget = AsyncThrowingStream<BudgetSnapshot, any Error>.makeStream()
 
             let store = TestStore(initialState: Tabs.State(user: .mock)) {
                 Tabs()
@@ -52,7 +52,7 @@ extension BaseSuite {
             }
 
             await store.send(.overview(.task))
-            budget.continuation.yield(.mock)
+            budget.continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
             await store.receive(\.overview.budgetUpdated) {
                 $0.overview.budgetStatus = .loaded(.mock)
             }
