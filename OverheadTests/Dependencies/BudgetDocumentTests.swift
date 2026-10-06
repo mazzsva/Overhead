@@ -24,10 +24,11 @@ extension BaseSuite {
 
         @Test
         func theInvestmentIsAboveZeroAndAtMostTheIncome() throws {
+            let investment = try #require(Decimal(string: "450.001"))
             #expect(Budget(income: 3000, investment: 0) == nil)
             #expect(Budget(income: 3000, investment: -1) == nil)
             #expect(Budget(income: 3000, investment: Decimal(cents: 300_001)) == nil)
-            #expect(Budget(income: 3000, investment: try #require(Decimal(string: "450.001"))) == nil)
+            #expect(Budget(income: 3000, investment: investment) == nil)
             expectNoDifference(Budget(income: 3000, investment: 3000)?.investment, 3000)
         }
 
