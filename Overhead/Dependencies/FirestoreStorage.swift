@@ -33,8 +33,8 @@ actor FirestoreStorage {
                     }
                     let data = snapshot.data()
                     let isFromCache = snapshot.metadata.isFromCache
+                    nonisolated(unsafe) let current = data.map(NSDictionary.init(dictionary:))
                     let isNew = delivered.withValue { delivered in
-                        let current = data.map(NSDictionary.init(dictionary:))
                         if let delivered, delivered.data == current, delivered.isFromCache == isFromCache {
                             return false
                         }
