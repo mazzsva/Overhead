@@ -103,6 +103,7 @@ struct OverviewView: View {
                     }
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .contentMargins(.top, 8, for: .scrollContent)

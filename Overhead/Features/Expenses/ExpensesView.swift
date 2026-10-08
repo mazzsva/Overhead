@@ -16,21 +16,22 @@ struct ExpensesView: View {
         let inactiveExpenses = store.inactiveExpenses
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             List {
-                if !activeExpenses.isEmpty {
+                ForEach(activeExpenses) { expense in
                     Section {
-                        ForEach(activeExpenses) { expense in
-                            row(expense)
-                        }
+                        row(expense)
                     }
                 }
-                if !inactiveExpenses.isEmpty {
-                    Section("Inactive") {
-                        ForEach(inactiveExpenses) { expense in
-                            row(expense)
+                ForEach(inactiveExpenses) { expense in
+                    Section {
+                        row(expense)
+                    } header: {
+                        if expense.id == inactiveExpenses.first?.id {
+                            Text("Inactive")
                         }
                     }
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .contentMargins(.top, 8, for: .scrollContent)

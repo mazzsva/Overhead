@@ -53,6 +53,7 @@ struct SettingsView: View {
                 #endif
             }
             .scrollDisabled(true)
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .contentMargins(.top, 8, for: .scrollContent)
