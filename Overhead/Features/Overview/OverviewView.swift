@@ -143,7 +143,7 @@ extension Overview.BudgetPart {
     fileprivate var title: LocalizedStringResource {
         switch self {
         case .expenses: "Expenses"
-        case .investments: "Investments"
+        case .investments: "Savings"
         case .leftToSpend: "Left to Spend"
         }
     }

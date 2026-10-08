@@ -172,7 +172,7 @@ extension BaseSuite {
             await store.send(.removeButtonTapped) {
                 $0.destination = .alert(
                     AlertState {
-                        TextState("Remove Investments")
+                        TextState("Remove Savings")
                     } actions: {
                         ButtonState(role: .destructive, action: .confirmRemoval) {
                             TextState("Remove")
@@ -181,7 +181,7 @@ extension BaseSuite {
                             TextState("Cancel")
                         }
                     } message: {
-                        TextState("Your investments will be removed. Your income and expenses will stay.")
+                        TextState("Your savings will be removed. Your income and expenses will stay.")
                     })
             }
             await store.send(.destination(.presented(.alert(.confirmRemoval)))) {

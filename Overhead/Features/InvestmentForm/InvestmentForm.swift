@@ -145,7 +145,7 @@ extension InvestmentForm.Destination.State: Equatable {}
 
 extension AlertState where Action == InvestmentForm.Alert {
     static let confirmRemoval = AlertState {
-        TextState("Remove Investments")
+        TextState("Remove Savings")
     } actions: {
         ButtonState(role: .destructive, action: .confirmRemoval) {
             TextState("Remove")
@@ -154,6 +154,6 @@ extension AlertState where Action == InvestmentForm.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Your investments will be removed. Your income and expenses will stay.")
+        TextState("Your savings will be removed. Your income and expenses will stay.")
     }
 }

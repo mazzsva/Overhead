@@ -85,12 +85,6 @@
     "Income" : {
 
     },
-    "Invest %@ of income" : {
-
-    },
-    "Investments" : {
-
-    },
     "Keep Editing" : {
 
     },
@@ -130,13 +124,16 @@
     "Remove Income" : {
 
     },
-    "Remove Investments" : {
+    "Remove Savings" : {
 
     },
     "Save" : {
 
     },
-    "Saving will remove your investments of %@." : {
+    "Save %@ of income" : {
+
+    },
+    "Savings" : {
 
     },
     "Settings" : {
@@ -163,7 +160,7 @@
     "Tap the plus button to add an expense." : {
 
     },
-    "The amount you invest each month." : {
+    "The amount you save or invest each month." : {
 
     },
     "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
@@ -214,7 +211,7 @@
     "Your expenses couldn't be loaded." : {
 
     },
-    "Your income and investments will be removed. Your expenses will stay." : {
+    "Your income and savings will be removed. Your expenses will stay." : {
 
     },
     "Your income couldn't be loaded." : {
@@ -229,22 +226,25 @@
     "Your income will be removed. Your expenses will stay." : {
 
     },
-    "Your investments can't be more than your income." : {
-
-    },
-    "Your investments couldn't be removed." : {
-
-    },
-    "Your investments couldn't be saved." : {
-
-    },
-    "Your investments of %@ are more than this income." : {
-
-    },
-    "Your investments will be removed. Your income and expenses will stay." : {
-
-    },
     "Your monthly pay after tax." : {
+
+    },
+    "Your savings can't be more than your income." : {
+
+    },
+    "Your savings couldn't be removed." : {
+
+    },
+    "Your savings couldn't be saved." : {
+
+    },
+    "Your savings of %@ are more than this income." : {
+
+    },
+    "Your savings of %@ will be removed." : {
+
+    },
+    "Your savings will be removed. Your income and expenses will stay." : {
 
     }
   },
