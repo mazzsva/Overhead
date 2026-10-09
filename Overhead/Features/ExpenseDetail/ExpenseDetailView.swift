@@ -32,6 +32,7 @@ struct ExpenseDetailView: View {
                 }
             }
         }
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .groupedBackground()
         .navigationTitle(store.expense.name)

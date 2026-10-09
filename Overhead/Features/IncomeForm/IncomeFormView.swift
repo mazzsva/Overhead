@@ -43,6 +43,7 @@ struct IncomeFormView: View {
                     }
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .navigationTitle("Income")

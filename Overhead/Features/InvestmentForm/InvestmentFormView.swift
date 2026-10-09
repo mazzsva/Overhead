@@ -59,6 +59,7 @@ struct InvestmentFormView: View {
                     }
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .navigationTitle("Savings")

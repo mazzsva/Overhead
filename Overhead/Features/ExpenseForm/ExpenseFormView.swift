@@ -48,6 +48,7 @@ struct ExpenseFormView: View {
                     }
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .navigationTitle(store.isCreating ? "New Expense" : "Edit Expense")
