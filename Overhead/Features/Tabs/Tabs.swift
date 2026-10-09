@@ -49,7 +49,7 @@ struct Tabs {
             case [.budget(.saveIncome)]:
                 return String(localized: "Your income couldn't be saved.")
             case [.budget(.saveInvestments)]:
-                return String(localized: "Your savings couldn't be saved.")
+                return String(localized: "Your savings couldn't be updated.")
             case [.deleteExpense]:
                 return String(localized: "Your expense couldn't be deleted.")
             case [.saveExpense]:
