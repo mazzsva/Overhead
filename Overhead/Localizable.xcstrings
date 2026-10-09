@@ -19,7 +19,7 @@
     "Add Income" : {
 
     },
-    "Add your income to see where your money goes." : {
+    "Add your monthly income to see how much remains after expenses and savings." : {
 
     },
     "Amount" : {
@@ -136,6 +136,9 @@
     "Savings" : {
 
     },
+    "See What Is Left to Spend" : {
+
+    },
     "Settings" : {
 
     },
@@ -163,9 +166,6 @@
     "The amount you save or invest each month." : {
 
     },
-    "The total of your active expenses, with weekly and yearly amounts converted to a month." : {
-
-    },
     "Unable to Load Expenses" : {
 
     },
@@ -179,9 +179,6 @@
 
     },
     "Welcome to" : {
-
-    },
-    "Where Your Money Goes" : {
 
     },
     "Yearly" : {

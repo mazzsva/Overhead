@@ -41,11 +41,9 @@ struct OverviewView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                } footer: {
-                    Text("The total of your active expenses, with weekly and yearly amounts converted to a month.")
                 }
 
-                Section("Where Your Money Goes") {
+                Section {
                     switch store.budgetStatus {
                     case .failed:
                         Text("Your income couldn't be loaded.")
@@ -93,9 +91,7 @@ struct OverviewView: View {
                             )
                         }
                     case .loaded(nil):
-                        Text("Add your income to see where your money goes.")
-                            .foregroundStyle(.secondary)
-                        Button("Add Income") {
+                        IncomeSetUp {
                             store.send(.addIncomeButtonTapped)
                         }
                     case .offline:
@@ -135,7 +131,7 @@ extension Overview.BudgetPart {
     fileprivate var color: Color {
         switch self {
         case .expenses: .orange
-        case .investments: .teal
+        case .investments: .blue
         case .leftToSpend: .green
         }
     }
@@ -165,6 +161,51 @@ private struct BudgetChart: View {
         .chartPlotStyle { $0.clipShape(.capsule) }
         .frame(height: height)
         .accessibilityHidden(true)
+    }
+}
+
+private struct IncomeSetUp: View {
+    let onAdd: () -> Void
+
+    @ScaledMetric private var height = 12
+
+    private let sample = [
+        Overview.Breakdown.Segment(amount: 46, part: .expenses),
+        Overview.Breakdown.Segment(amount: 14, part: .investments),
+        Overview.Breakdown.Segment(amount: 40, part: .leftToSpend),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Chart(sample) { segment in
+                BarMark(x: .value("Amount", segment.amount))
+                    .foregroundStyle(segment.part.color.opacity(0.5))
+            }
+            .chartXScale(domain: 0 ... 100)
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartPlotStyle { $0.clipShape(.capsule) }
+            .frame(height: height)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("See What Is Left to Spend")
+                    .font(.headline)
+                Text("Add your monthly income to see how much remains after expenses and savings.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button(action: onAdd) {
+                Text("Add Income")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .buttonBorderShape(.capsule)
+        }
+        .padding(.vertical, 8)
     }
 }
 
