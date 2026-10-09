@@ -18,7 +18,7 @@ struct InvestmentFormView: View {
             Form {
                 Section {
                     TextField(
-                        "Investments",
+                        "Savings",
                         text: $store.investmentText,
                         prompt: Text(Decimal.zero, format: .dollars.locale(store.locale))
                     )
@@ -33,14 +33,14 @@ struct InvestmentFormView: View {
                                 Text(share, format: .percent)
                                     .frame(maxWidth: .infinity)
                             }
-                            .accessibilityLabel(Text("Invest \(Text(share, format: .percent)) of income"))
+                            .accessibilityLabel(Text("Save \(Text(share, format: .percent)) of income"))
                         }
                     }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.capsule)
                 } footer: {
                     if store.exceedsIncome {
-                        Text("Your investments can't be more than your income.")
+                        Text("Your savings can't be more than your income.")
                     } else if store.isInvestmentInvalid {
                         Text("Enter a valid amount.")
                     } else if let share = store.share {
@@ -48,12 +48,12 @@ struct InvestmentFormView: View {
                             "\(Text(share, format: .percent.precision(.fractionLength(0)))) of your \(Text(store.income, format: .dollars.locale(store.locale))) income."
                         )
                     } else {
-                        Text("The amount you invest each month.")
+                        Text("The amount you save or invest each month.")
                     }
                 }
                 if store.isEditing {
                     Section {
-                        Button("Remove Investments", role: .destructive) {
+                        Button("Remove Savings", role: .destructive) {
                             store.send(.removeButtonTapped)
                         }
                     }
@@ -61,7 +61,7 @@ struct InvestmentFormView: View {
             }
             .scrollContentBackground(.hidden)
             .groupedBackground()
-            .navigationTitle("Investments")
+            .navigationTitle("Savings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

@@ -148,14 +148,14 @@ extension AlertState where Action == IncomeForm.Alert {
             }
         } message: {
             removesInvestment
-                ? TextState("Your income and investments will be removed. Your expenses will stay.")
+                ? TextState("Your income and savings will be removed. Your expenses will stay.")
                 : TextState("Your income will be removed. Your expenses will stay.")
         }
     }
 
     static func confirmRemovingInvestment(_ investment: Decimal, locale: Locale) -> Self {
         AlertState {
-            TextState("Remove Investments")
+            TextState("Remove Savings")
         } actions: {
             ButtonState(role: .destructive, action: .confirmRemovingInvestment) {
                 TextState("Remove and Save")
@@ -165,7 +165,7 @@ extension AlertState where Action == IncomeForm.Alert {
             }
         } message: {
             TextState(
-                "Your investments of \(investment.formatted(.dollars.locale(locale))) are more than this income."
+                "Your savings of \(investment.formatted(.dollars.locale(locale))) are more than this income."
             )
         }
     }

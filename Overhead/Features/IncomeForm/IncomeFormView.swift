@@ -27,7 +27,7 @@ struct IncomeFormView: View {
                 } footer: {
                     if store.isBelowInvestment, let investment = store.investment {
                         Text(
-                            "Saving will remove your investments of \(Text(investment, format: .dollars.locale(store.locale)))."
+                            "Your savings of \(Text(investment, format: .dollars.locale(store.locale))) will be removed."
                         )
                     } else if store.isIncomeInvalid {
                         Text("Enter a valid amount.")

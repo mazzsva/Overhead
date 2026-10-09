@@ -74,9 +74,9 @@ extension BaseSuite {
 
         @Test(arguments: [
             (Overview.BudgetChange.removeIncome, "Your income couldn't be removed."),
-            (.removeInvestments, "Your investments couldn't be removed."),
+            (.removeInvestments, "Your savings couldn't be removed."),
             (.saveIncome, "Your income couldn't be saved."),
-            (.saveInvestments, "Your investments couldn't be saved."),
+            (.saveInvestments, "Your savings couldn't be updated."),
         ])
         func aFailedBudgetChangeShowsAnAlert(change: Overview.BudgetChange, message: String) async {
             let state = makeReadyState()
