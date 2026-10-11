@@ -78,8 +78,9 @@ struct BarLayout: Equatable {
     static let minimumWidth = 6.0
 
     let frames: [Frame]
+    let markX: Double?
 
-    init(segments: [Overview.Breakdown.Segment], width: Double) {
+    init(incomeMark: Double?, segments: [Overview.Breakdown.Segment], width: Double) {
         let gaps = segments.indices.map { Self.gap(before: $0, in: segments) }
         let usable = max(width - gaps.reduce(0, +), 0)
         var widths = segments.map { max(($0.end - $0.start) * usable, Self.minimumWidth) }
@@ -88,10 +89,17 @@ struct BarLayout: Equatable {
             widths[widest] = max(widths[widest] - excess, Self.minimumWidth)
         }
         var x = 0.0
-        frames = widths.indices.map { index in
+        let frames = widths.indices.map { index in
             x += gaps[index]
             defer { x += widths[index] }
             return Frame(width: widths[index], x: x)
+        }
+        self.frames = frames
+        markX = incomeMark.flatMap { mark in
+            guard let index = segments.firstIndex(where: { $0.end >= mark }) else { return nil }
+            let segment = segments[index]
+            guard segment.end > segment.start else { return frames[index].x }
+            return frames[index].x + (mark - segment.start) / (segment.end - segment.start) * frames[index].width
         }
     }
 
@@ -208,7 +216,7 @@ private struct HeroCard: View {
         case .expensesOnly(_, .offline):
             Track(message: "Connect to the internet to see your income.")
         case .summary(let breakdown):
-            SegmentedBar(segments: breakdown.segments)
+            SegmentedBar(incomeMark: breakdown.incomeMark, segments: breakdown.segments)
         }
     }
 
@@ -255,11 +263,15 @@ private struct Track: View {
 }
 
 private struct SegmentedBar: View {
+    let incomeMark: Double?
     let segments: [Overview.Breakdown.Segment]
+
+    @ScaledMetric private var markOverhang = 4
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = BarLayout(segments: segments, width: proxy.size.width)
+            let layout = BarLayout(incomeMark: incomeMark, segments: segments, width: proxy.size.width)
             ZStack(alignment: .leading) {
                 ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
                     UnevenRoundedRectangle(
@@ -275,6 +287,20 @@ private struct SegmentedBar: View {
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
+            .mask(alignment: .leading) {
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .frame(width: layout.markX ?? proxy.size.width)
+                    Rectangle()
+                        .opacity(colorScheme == .dark ? 0.5 : 0.35)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if let markX = layout.markX {
+                    IncomeMark(height: proxy.size.height + markOverhang * 2, width: proxy.size.width, x: markX)
+                        .offset(y: -markOverhang)
+                }
+            }
         }
         .accessibilityHidden(true)
     }
@@ -285,6 +311,30 @@ private struct SegmentedBar: View {
 
     private func trailingRadius(at index: Int) -> Double {
         index + 1 < segments.count && BarLayout.gap(before: index + 1, in: segments) == 3 ? 4 : 12
+    }
+}
+
+private struct IncomeMark: View {
+    let height: Double
+    let width: Double
+    let x: Double
+
+    var body: some View {
+        Capsule()
+            .fill(.primary)
+            .frame(width: 3, height: height)
+            .padding(.horizontal, 2)
+            .background(Color(.secondarySystemGroupedBackground), in: .capsule)
+            .overlay(alignment: .top) {
+                Text("Income")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                    .alignmentGuide(.top) { $0[.bottom] + 4 }
+                    .alignmentGuide(HorizontalAlignment.center) { x < width / 2 ? $0[.leading] - 4 : $0[.trailing] + 4 }
+            }
+            .offset(x: x - 3.5)
     }
 }
 
@@ -321,11 +371,17 @@ private struct TileGrid: View {
     }
 
     private var availableTile: some View {
+        let isOverBudget = breakdown.isOverBudget
         let share = breakdown.availableShareLabel.text
-        return Tile(title: "Available", color: Overview.BudgetPart.available.color, tint: .green) {
-            Amount(value: breakdown.available.amount)
+        return Tile(
+            title: isOverBudget ? "Over Budget" : "Available",
+            color: isOverBudget ? .red : Overview.BudgetPart.available.color,
+            tint: isOverBudget ? .red : .green
+        ) {
+            Amount(value: abs(breakdown.available.amount))
+                .foregroundStyle(isOverBudget ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
         } caption: {
-            if breakdown.isOverBudget {
+            if isOverBudget {
                 Text("\(share) more than income")
             } else if breakdown.isFullyCommitted {
                 Text("Fully committed")
