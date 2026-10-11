@@ -122,6 +122,21 @@ extension BaseSuite {
         }
 
         @Test
+        func aFailedCurrencySaveShowsAnAlert() async {
+            let state = makeReadyState()
+
+            let store = TestStore(initialState: state) {
+                Tabs()
+            }
+
+            await store.send(.settings(.delegate(.didFailToSaveCurrency))) {
+                $0.failedOperations = [.saveCurrency]
+            }
+            #expect(store.state.isPresentingFailure)
+            expectNoDifference(store.state.failureMessage, "Your currency couldn't be saved.")
+        }
+
+        @Test
         func differentFailuresShowACombinedMessage() async {
             let state = makeReadyState()
 

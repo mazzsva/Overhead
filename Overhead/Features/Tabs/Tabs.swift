@@ -13,6 +13,7 @@ struct Tabs {
     enum FailedOperation: Hashable {
         case budget(Overview.BudgetChange)
         case deleteExpense
+        case saveCurrency
         case saveExpense
     }
 
@@ -52,6 +53,8 @@ struct Tabs {
                 return String(localized: "Your savings couldn't be updated.")
             case [.deleteExpense]:
                 return String(localized: "Your expense couldn't be deleted.")
+            case [.saveCurrency]:
+                return String(localized: "Your currency couldn't be saved.")
             case [.saveExpense]:
                 return String(localized: "Your expense couldn't be saved.")
             default:
@@ -119,6 +122,10 @@ struct Tabs {
 
             case .overview(.delegate(.didSelectExpenses)):
                 state.selectedTab = .expenses
+                return .none
+
+            case .settings(.delegate(.didFailToSaveCurrency)):
+                state.failedOperations.insert(.saveCurrency)
                 return .none
 
             case .expenses, .overview, .settings:

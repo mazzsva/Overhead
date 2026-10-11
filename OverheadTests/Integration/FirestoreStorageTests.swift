@@ -56,7 +56,7 @@ extension BaseSuite.IntegrationSuite {
         }
 
         @Test
-        func aSavedBudgetArrivesOnceAndADeletedBudgetBecomesNil() async throws {
+        func aSavedBudgetArrivesOnceAndARemovedIncomeBecomesNil() async throws {
             let uid = try await FirebaseEmulators.signIn()
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
@@ -69,7 +69,7 @@ extension BaseSuite.IntegrationSuite {
             try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
             try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock)] }
 
-            try await FirestoreStorage.shared.deleteBudget(uid: uid)
+            try await FirestoreStorage.shared.removeIncome(uid: uid)
             try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock), .known(nil)] }
 
             let marker = try #require(Budget(income: 1, investment: nil))
@@ -88,7 +88,7 @@ extension BaseSuite.IntegrationSuite {
             try await budgets.wait { $0.last == .known(.mock) }
 
             try await Firestore.firestore().disableNetwork()
-            let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
+            let deletion = Task { try await FirestoreStorage.shared.removeIncome(uid: uid) }
 
             try await budgets.wait { $0.last == .known(nil) }
             try await Firestore.firestore().enableNetwork()
@@ -107,11 +107,35 @@ extension BaseSuite.IntegrationSuite {
             try await budgets.wait { $0.last == .known(income) }
 
             try await Firestore.firestore().disableNetwork()
-            let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
+            let deletion = Task { try await FirestoreStorage.shared.removeIncome(uid: uid) }
 
             try await budgets.wait { $0.last == .known(nil) }
             try await Firestore.firestore().enableNetwork()
             try await deletion.value
+        }
+
+        @Test
+        func removingTheIncomeKeepsTheCurrencyAndDeletingTheProfileRemovesIt() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            let currencies = Recording(await FirestoreStorage.shared.currency(uid: uid))
+            defer {
+                budgets.cancel()
+                currencies.cancel()
+            }
+            try await currencies.wait { $0 == [.known(nil)] }
+
+            try await FirestoreStorage.shared.saveCurrency(.eur, uid: uid)
+            try await currencies.wait { $0 == [.known(nil), .known(.eur)] }
+
+            try await seed(.mock, uid: uid)
+            try await budgets.wait { $0.last == .known(.mock) }
+            try await FirestoreStorage.shared.removeIncome(uid: uid)
+            try await budgets.wait { $0.last == .known(nil) }
+            expectNoDifference(currencies.values, [.known(nil), .known(.eur)])
+
+            try await FirestoreStorage.shared.deleteProfile(uid: uid)
+            try await currencies.wait { $0 == [.known(nil), .known(.eur), .known(nil)] }
         }
 
         @Test

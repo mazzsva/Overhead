@@ -18,6 +18,7 @@ struct BudgetClient: Sendable {
     }
 
     var delete: @Sendable (_ uid: String) async throws -> Void
+    var removeIncome: @Sendable (_ uid: String) async throws -> Void
     var removeInvestment: @Sendable (_ uid: String) async throws -> Void
     var saveIncome: @Sendable (_ income: Decimal, _ removingInvestment: Bool, _ uid: String) async throws -> Void
     var saveInvestment: @Sendable (_ investment: Decimal, _ uid: String) async throws -> Void
@@ -30,7 +31,10 @@ extension BudgetClient: DependencyKey {
                 await FirestoreStorage.shared.budget(uid: uid)
             },
             delete: { uid in
-                try await FirestoreStorage.shared.deleteBudget(uid: uid)
+                try await FirestoreStorage.shared.deleteProfile(uid: uid)
+            },
+            removeIncome: { uid in
+                try await FirestoreStorage.shared.removeIncome(uid: uid)
             },
             removeInvestment: { uid in
                 try await FirestoreStorage.shared.removeInvestment(uid: uid)
@@ -52,6 +56,7 @@ extension BudgetClient: DependencyKey {
                 }
             },
             delete: { _ in },
+            removeIncome: { _ in },
             removeInvestment: { _ in },
             saveIncome: { _, _, _ in },
             saveInvestment: { _, _ in }
@@ -61,11 +66,6 @@ extension BudgetClient: DependencyKey {
     static var testValue: BudgetClient {
         BudgetClient()
     }
-}
-
-enum BudgetSnapshot: Equatable, Sendable {
-    case known(Budget?)
-    case unknown
 }
 
 extension DependencyValues {
@@ -90,6 +90,7 @@ enum BudgetField {
 
 extension Budget {
     init?(data: [String: Any]) {
+        guard data[BudgetField.income] != nil || data[BudgetField.investment] != nil else { return nil }
         let investmentValue = data[BudgetField.investment]
         let investmentInCents = investmentValue as? Int
         guard

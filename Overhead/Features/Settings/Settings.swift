@@ -52,20 +52,34 @@ struct Settings {
         case appleCredentialRevoked
         case budgetDeleted
         case currencyPickerChanged(Currency)
+        case currencyUpdated(CurrencySnapshot)
         #if DEBUG
         case debugAddMockExpensesButtonTapped
         case debugDeleteAllExpensesButtonTapped
         case debugResetWelcomeToggleChanged(Bool)
         #endif
+        case delegate(Delegate)
         case deleteAccountButtonTapped
         case signOutButtonTapped
         case signOutFailed(any Error)
+        case task
+
+        @CasePathable
+        enum Delegate {
+            case didFailToSaveCurrency
+        }
+    }
+
+    enum CancelID {
+        case currencySubscription
     }
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.budgetClient) var budgetClient
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.currencyClient) var currencyClient
     @Dependency(\.expensesClient) var expensesClient
+    @Dependency(\.locale) var locale
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
@@ -109,6 +123,19 @@ struct Settings {
 
             case .currencyPickerChanged(let currency):
                 state.$currency.withLock { $0 = currency }
+                let uid = state.user.uid
+                return .run { _ in
+                    try await currencyClient.save(currency: currency, uid: uid)
+                } catch: { error, send in
+                    logger.error("Saving the currency failed: \(error, privacy: .public)")
+                    await send(.delegate(.didFailToSaveCurrency))
+                }
+
+            case .currencyUpdated(.known(let currency)):
+                state.$currency.withLock { $0 = currency ?? Currency(locale: locale) }
+                return .none
+
+            case .currencyUpdated(.unknown):
                 return .none
 
             #if DEBUG
@@ -122,6 +149,9 @@ struct Settings {
                 state.$showsWelcomeAtNextLaunch.withLock { $0 = isOn }
                 return .none
             #endif
+
+            case .delegate:
+                return .none
 
             case .deleteAccountButtonTapped:
                 guard !state.isDeletingAccount else { return .none }
@@ -138,6 +168,9 @@ struct Settings {
                 logger.error("Sign out failed: \(error, privacy: .public)")
                 state.alert = .signOutFailed
                 return .none
+
+            case .task:
+                return subscribeToCurrency(uid: state.user.uid)
             }
         }
         .ifLet(\.$alert, action: \.alert)
@@ -201,6 +234,24 @@ struct Settings {
         } catch: { error, send in
             await send(.signOutFailed(error))
         }
+    }
+
+    private func subscribeToCurrency(uid: String) -> Effect<Action> {
+        .run { send in
+            while true {
+                do {
+                    let snapshots = await currencyClient.currency(uid: uid)
+                    for try await snapshot in snapshots {
+                        await send(.currencyUpdated(snapshot))
+                    }
+                    return
+                } catch {
+                    logger.error("Currency stream failed: \(error, privacy: .public)")
+                }
+                try await clock.sleep(for: .seconds(5))
+            }
+        }
+        .cancellable(id: CancelID.currencySubscription, cancelInFlight: true)
     }
 }
 

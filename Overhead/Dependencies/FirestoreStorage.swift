@@ -16,42 +16,7 @@ actor FirestoreStorage {
     private var clearing: Task<Void, any Error>?
 
     func budget(uid: String) async -> AsyncThrowingStream<BudgetSnapshot, any Error> {
-        await waitForClearing()
-        let isCached = await isBudgetCached(uid: uid)
-        await waitForClearing()
-        return AsyncThrowingStream { continuation in
-            let delivered = LockIsolated<(data: NSDictionary?, isKnown: Bool)?>(nil)
-            let registration = ListenerRegistrationBox()
-            let listener = budgetDocument(uid: uid)
-                .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
-                    if let error {
-                        registration.remove()
-                        continuation.finish(throwing: error)
-                        return
-                    }
-                    guard let snapshot else {
-                        reportIssue("Budget listener reported neither a snapshot nor an error.")
-                        return
-                    }
-                    let data = snapshot.data()
-                    let isConfirmed = isCached || snapshot.exists || !snapshot.metadata.isFromCache
-                    nonisolated(unsafe) let current = data.map(NSDictionary.init(dictionary:))
-                    let isKnown = delivered.withValue { delivered -> Bool? in
-                        let isKnown = isConfirmed || delivered?.isKnown == true
-                        if let delivered, delivered.data == current, delivered.isKnown == isKnown {
-                            return nil
-                        }
-                        delivered = (current, isKnown)
-                        return isKnown
-                    }
-                    guard let isKnown else { return }
-                    continuation.yield(isKnown ? .known(data.flatMap(Budget.init(data:))) : .unknown)
-                }
-            registration.set(listener)
-            continuation.onTermination = { _ in
-                registration.remove()
-            }
-        }
+        await profile(uid: uid) { $0.flatMap(Budget.init(data:)) }
     }
 
     func clearLocalData() async throws {
@@ -87,9 +52,13 @@ actor FirestoreStorage {
         }
     }
 
-    func deleteBudget(uid: String) async throws {
+    func currency(uid: String) async -> AsyncThrowingStream<CurrencySnapshot, any Error> {
+        await profile(uid: uid) { $0.flatMap(Currency.init(data:)) }
+    }
+
+    func deleteProfile(uid: String) async throws {
         await waitForClearing()
-        try await budgetDocument(uid: uid).delete()
+        try await profileDocument(uid: uid).delete()
     }
 
     func expenses(uid: String) async -> AsyncThrowingStream<[Expense], any Error> {
@@ -115,14 +84,28 @@ actor FirestoreStorage {
         }
     }
 
+    func removeIncome(uid: String) async throws {
+        await waitForClearing()
+        try await profileDocument(uid: uid)
+            .updateData([
+                BudgetField.income: FieldValue.delete(),
+                BudgetField.investment: FieldValue.delete(),
+            ])
+    }
+
     func removeInvestment(uid: String) async throws {
         await waitForClearing()
-        try await budgetDocument(uid: uid).updateData([BudgetField.investment: FieldValue.delete()])
+        try await profileDocument(uid: uid).updateData([BudgetField.investment: FieldValue.delete()])
     }
 
     func save(_ expense: Expense, uid: String) async throws {
         await waitForClearing()
         try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
+    }
+
+    func saveCurrency(_ currency: Currency, uid: String) async throws {
+        await waitForClearing()
+        try await profileDocument(uid: uid).setData([CurrencyField.currency: currency.rawValue], merge: true)
     }
 
     func saveIncome(_ income: Decimal, removingInvestment: Bool, uid: String) async throws {
@@ -131,26 +114,70 @@ actor FirestoreStorage {
         if removingInvestment {
             data[BudgetField.investment] = FieldValue.delete()
         }
-        try await budgetDocument(uid: uid).setData(data, merge: true)
+        try await profileDocument(uid: uid).setData(data, merge: true)
     }
 
     func saveInvestment(_ investment: Decimal, uid: String) async throws {
         await waitForClearing()
-        try await budgetDocument(uid: uid)
+        try await profileDocument(uid: uid)
             .setData([BudgetField.investment: try BudgetField.cents(of: investment)], merge: true)
     }
 
-    private func isBudgetCached(uid: String) async -> Bool {
+    private func isProfileCached(uid: String) async -> Bool {
         do {
-            _ = try await budgetDocument(uid: uid).getDocument(source: .cache)
+            _ = try await profileDocument(uid: uid).getDocument(source: .cache)
             return true
         } catch let error as NSError
             where error.domain == FirestoreErrorDomain && error.code == FirestoreErrorCode.unavailable.rawValue
         {
             return false
         } catch {
-            reportIssue(error, "Reading the cached budget failed.")
+            reportIssue(error, "Reading the cached profile failed.")
             return false
+        }
+    }
+
+    private func profile<Value: Equatable & Sendable>(
+        uid: String,
+        decode: @escaping @Sendable ([String: Any]?) -> Value
+    ) async -> AsyncThrowingStream<ProfileSnapshot<Value>, any Error> {
+        await waitForClearing()
+        let isCached = await isProfileCached(uid: uid)
+        await waitForClearing()
+        return AsyncThrowingStream { continuation in
+            let delivered = LockIsolated<(data: NSDictionary?, snapshot: ProfileSnapshot<Value>)?>(nil)
+            let registration = ListenerRegistrationBox()
+            let listener = profileDocument(uid: uid)
+                .addSnapshotListener(includeMetadataChanges: true) { snapshot, error in
+                    if let error {
+                        registration.remove()
+                        continuation.finish(throwing: error)
+                        return
+                    }
+                    guard let snapshot else {
+                        reportIssue("Profile listener reported neither a snapshot nor an error.")
+                        return
+                    }
+                    nonisolated(unsafe) let data = snapshot.data()
+                    let isConfirmed = isCached || snapshot.exists || !snapshot.metadata.isFromCache
+                    nonisolated(unsafe) let current = data.map(NSDictionary.init(dictionary:))
+                    let next = delivered.withValue { delivered -> ProfileSnapshot<Value>? in
+                        let isKnown = isConfirmed || delivered.map { $0.snapshot != .unknown } == true
+                        if let delivered, delivered.data == current, (delivered.snapshot != .unknown) == isKnown {
+                            return nil
+                        }
+                        let previous = delivered?.snapshot
+                        let next: ProfileSnapshot<Value> = isKnown ? .known(decode(data)) : .unknown
+                        delivered = (current, next)
+                        return next == previous ? nil : next
+                    }
+                    guard let next else { return }
+                    continuation.yield(next)
+                }
+            registration.set(listener)
+            continuation.onTermination = { _ in
+                registration.remove()
+            }
         }
     }
 
@@ -172,7 +199,7 @@ private final class ListenerRegistrationBox: @unchecked Sendable {
     }
 }
 
-private func budgetDocument(uid: String) -> DocumentReference {
+private func profileDocument(uid: String) -> DocumentReference {
     Firestore.firestore().collection("users").document(uid)
 }
 
