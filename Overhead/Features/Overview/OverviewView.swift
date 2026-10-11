@@ -454,8 +454,7 @@ private struct TileGrid: View {
         let share = breakdown.availableShareLabel.text
         return Tile(
             title: isOverBudget ? "Over Budget" : "Available",
-            color: isOverBudget ? .red : Overview.BudgetPart.available.color,
-            tint: isOverBudget ? .red : .green
+            color: isOverBudget ? .red : Overview.BudgetPart.available.color
         ) {
             Amount(value: abs(breakdown.available.amount))
                 .foregroundStyle(isOverBudget ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
@@ -522,7 +521,6 @@ private struct TileGrid: View {
 private struct Tile<Value: View, Caption: View>: View {
     let title: LocalizedStringResource
     let color: Color
-    var tint: Color?
     @ViewBuilder let value: Value
     @ViewBuilder let caption: Caption
 
@@ -551,15 +549,7 @@ private struct Tile<Value: View, Caption: View>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(16)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
-            ZStack {
-                shape.fill(Color(.secondarySystemGroupedBackground))
-                if let tint {
-                    shape.fill(tint.opacity(0.15))
-                }
-            }
-        }
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
