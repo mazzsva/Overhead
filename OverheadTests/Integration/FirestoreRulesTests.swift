@@ -15,17 +15,17 @@ extension BaseSuite.IntegrationSuite {
     @Suite
     struct FirestoreRulesTests {
         @Test
-        func theOwnerCanWriteAValidBudget() async throws {
+        func theOwnerCanWriteAValidProfile() async throws {
             let uid = try await FirebaseEmulators.signIn()
 
             try await profile(uid).setData(["monthlyIncomeInCents": 300_000])
             try await profile(uid).setData(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_000])
+            try await profile(uid).setData([:])
             try await profile(uid).delete()
         }
 
         @Test(
             arguments: [
-                [:],
                 ["monthlyIncomeInCents": 0],
                 ["monthlyIncomeInCents": -1],
                 ["monthlyIncomeInCents": 1.5],
@@ -34,8 +34,9 @@ extension BaseSuite.IntegrationSuite {
                 ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001],
                 ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": true],
                 ["monthlyIncomeInCents": 300_000, "defaultCurrency": "USD"],
+                ["monthlyInvestmentInCents": 45000],
             ] as [[String: any Sendable]])
-        func theRulesRefuseAnInvalidBudget(data: [String: any Sendable]) async throws {
+        func theRulesRefuseAnInvalidProfile(data: [String: any Sendable]) async throws {
             let uid = try await FirebaseEmulators.signIn()
 
             await expectRefused {
@@ -45,7 +46,6 @@ extension BaseSuite.IntegrationSuite {
 
         @Test(
             arguments: [
-                [:],
                 ["monthlyIncomeInCents": 0],
                 ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_001],
                 ["monthlyIncomeInCents": 300_000, "defaultCurrency": "USD"],

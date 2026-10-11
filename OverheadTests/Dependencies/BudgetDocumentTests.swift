@@ -49,6 +49,11 @@ extension BaseSuite {
             )
         }
 
+        @Test
+        func aProfileWithoutAnIncomeHasNoBudget() {
+            expectNoDifference(Budget(data: [:]), nil)
+        }
+
         @Test(
             arguments: [
                 [BudgetField.investment: 45000],

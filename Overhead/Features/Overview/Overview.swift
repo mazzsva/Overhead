@@ -318,7 +318,7 @@ struct Overview {
                 let uid = state.user.uid
                 return .merge(
                     .run { _ in await hapticsClient.warning() },
-                    changeBudget(.removeIncome) { try await budgetClient.delete(uid: uid) }
+                    changeBudget(.removeIncome) { try await budgetClient.removeIncome(uid: uid) }
                 )
 
             case .destination(.presented(.incomeForm(.delegate(.didSubmit(let income))))):

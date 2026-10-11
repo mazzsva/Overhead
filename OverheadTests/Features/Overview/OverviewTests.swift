@@ -731,7 +731,7 @@ extension BaseSuite {
         }
 
         @Test
-        func removingTheIncomeDeletesTheBudget() async {
+        func removingTheIncomeRemovesOnlyTheBudget() async {
             var state = makeState(.loaded(.mock))
             state.destination = .incomeForm(IncomeForm.State(budget: .mock))
             let calls = LockIsolated<[Call]>([])
@@ -739,8 +739,8 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 Overview()
             } withDependencies: {
-                $0.budgetClient.delete = { uid in
-                    calls.withValue { $0.append(.delete(uid: uid)) }
+                $0.budgetClient.removeIncome = { uid in
+                    calls.withValue { $0.append(.removeIncome(uid: uid)) }
                 }
                 $0.hapticsClient.warning = { calls.withValue { $0.append(.warning) } }
             }
@@ -749,7 +749,7 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.finish()
-            expectNoDifference(Set(calls.value), [.delete(uid: User.mock.uid), .warning])
+            expectNoDifference(Set(calls.value), [.removeIncome(uid: User.mock.uid), .warning])
         }
 
         @Test
@@ -787,7 +787,7 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 Overview()
             } withDependencies: {
-                $0.budgetClient.delete = { _ in throw BudgetFailure() }
+                $0.budgetClient.removeIncome = { _ in throw BudgetFailure() }
                 $0.budgetClient.removeInvestment = { _ in throw BudgetFailure() }
                 $0.budgetClient.saveIncome = { _, _, _ in throw BudgetFailure() }
                 $0.budgetClient.saveInvestment = { _, _ in throw BudgetFailure() }
@@ -829,7 +829,7 @@ extension BaseSuite {
         }
 
         private enum Call: Hashable {
-            case delete(uid: String)
+            case removeIncome(uid: String)
             case removeInvestment(uid: String)
             case saveIncome(Decimal, removingInvestment: Bool, uid: String)
             case saveInvestment(Decimal, uid: String)

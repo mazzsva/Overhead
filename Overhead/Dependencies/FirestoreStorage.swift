@@ -80,6 +80,15 @@ actor FirestoreStorage {
         }
     }
 
+    func removeIncome(uid: String) async throws {
+        await waitForClearing()
+        try await profileDocument(uid: uid)
+            .updateData([
+                BudgetField.income: FieldValue.delete(),
+                BudgetField.investment: FieldValue.delete(),
+            ])
+    }
+
     func removeInvestment(uid: String) async throws {
         await waitForClearing()
         try await profileDocument(uid: uid).updateData([BudgetField.investment: FieldValue.delete()])
