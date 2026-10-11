@@ -18,7 +18,7 @@ extension BaseSuite {
     struct OverviewTests {
         @Test
         func theAnnualExpensesAddTheAnnualAmountOfEachActiveExpense() {
-            let state = makeState(expenses: [expense(15, .weekly), expense(1200, .yearly), .phonePlan])
+            let state = makeState(expenses: [expense(15, .weekly, id: 10), expense(1200, .yearly, id: 11), .phonePlan])
 
             expectNoDifference(state.annualExpenses, 1980)
         }
@@ -97,7 +97,7 @@ extension BaseSuite {
             #expect(!breakdown.hasExpenses)
             expectNoDifference(breakdown.expensesShareLabel, .percent(0))
             expectNoDifference(breakdown.availableShareLabel, .percent(1))
-            expectNoDifference(breakdown.segments.map(\.part), [.available])
+            expectNoDifference(breakdown.segments, [.init(end: 1, part: .available, start: 0)])
         }
 
         @Test
@@ -153,7 +153,13 @@ extension BaseSuite {
         func withoutExpensesTheBarStartsWithTheSavings() {
             let breakdown = Overview.Breakdown(annualExpenses: 0, budget: .mock)
 
-            expectNoDifference(breakdown.segments.map(\.part), [.savings, .available])
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(5400) / 36000).doubleValue, part: .savings, start: 0),
+                    .init(end: 1, part: .available, start: (Decimal(5400) / 36000).doubleValue),
+                ]
+            )
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(15)))
         }
 
@@ -196,8 +202,11 @@ extension BaseSuite {
             expectNoDifference(breakdown.committed, .init(amount: 1000, share: percent(33)))
             expectNoDifference(breakdown.available, .init(amount: 2000, share: percent(67)))
             expectNoDifference(
-                breakdown.segments.map(\.part),
-                [.expenses, .available]
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(12000) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .available, start: (Decimal(12000) / 36000).doubleValue),
+                ]
             )
         }
 
@@ -674,12 +683,12 @@ extension BaseSuite {
             )
         }
 
-        private func expense(_ amount: Decimal, _ billingCycle: BillingCycle) -> Expense {
+        private func expense(_ amount: Decimal, _ billingCycle: BillingCycle, id: Int) -> Expense {
             Expense(
                 amount: amount,
                 billingCycle: billingCycle,
                 createdAt: Date(timeIntervalSince1970: 1_750_000_000),
-                id: UUID(),
+                id: UUID(id),
                 isActive: true,
                 name: billingCycle.rawValue
             )
