@@ -40,6 +40,15 @@ struct OverviewView: View {
                         .font(.title)
                         .fontWeight(.bold)
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(
+                        store.hidesAmounts ? "Show Amounts" : "Hide Amounts",
+                        systemImage: store.hidesAmounts ? "eye.slash" : "eye"
+                    ) {
+                        store.send(.amountsVisibilityButtonTapped, animation: reduceMotion ? nil : .snappy)
+                    }
+                    .contentTransition(.symbolEffect(.replace))
+                }
             }
         }
         .sheet(item: $store.scope(state: \.destination?.incomeForm, action: \.destination.incomeForm)) { formStore in
@@ -65,7 +74,12 @@ struct OverviewView: View {
             .pickerStyle(.segmented)
             .sensoryFeedback(.selection, trigger: store.period)
 
-            HeroCard(content: content, currency: store.currency, period: store.period) {
+            HeroCard(
+                content: content,
+                currency: store.currency,
+                isHidingAmounts: store.hidesAmounts,
+                period: store.period
+            ) {
                 store.send(.addIncomeButtonTapped)
             }
 
@@ -73,6 +87,7 @@ struct OverviewView: View {
                 TileGrid(
                     breakdown: breakdown,
                     currency: store.currency,
+                    isHidingAmounts: store.hidesAmounts,
                     onExpenses: { store.send(.expensesTileTapped) },
                     onIncome: { store.send(.incomeTileTapped) },
                     onSavings: { store.send(.savingsTileTapped) }
@@ -189,9 +204,10 @@ extension Overview.Period {
 private struct Amount: View {
     let value: Decimal
     let currency: Currency
+    let isHidden: Bool
 
     var body: some View {
-        Text(value, format: .currency(currency))
+        AmountText(value: value, currency: currency, isHidden: isHidden)
             .monospacedDigit()
             .contentTransition(.numericText(value: value.doubleValue))
             .lineLimit(1)
@@ -202,6 +218,7 @@ private struct Amount: View {
 private struct HeroCard: View {
     let content: Overview.Content
     let currency: Currency
+    let isHidingAmounts: Bool
     let period: Overview.Period
     let onAddIncome: () -> Void
 
@@ -223,9 +240,9 @@ private struct HeroCard: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
                     : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
                 amountLayout {
-                    Amount(value: amount, currency: currency)
+                    Amount(value: amount, currency: currency, isHidden: isHidingAmounts)
                         .font(.system(size: amountSize, weight: .bold, design: .rounded))
-                        .foregroundStyle(amount == 0 ? .tertiary : .primary)
+                        .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
                         .animation(reduceMotion ? nil : .snappy, value: content.summary)
                     Text(period.caption)
                         .font(.subheadline)
@@ -421,6 +438,7 @@ extension Transition where Self == RevealTransition {
 private struct TileGrid: View {
     let breakdown: Overview.Breakdown
     let currency: Currency
+    let isHidingAmounts: Bool
     let onExpenses: () -> Void
     let onIncome: () -> Void
     let onSavings: () -> Void
@@ -460,7 +478,7 @@ private struct TileGrid: View {
             title: isOverBudget ? "Over Budget" : "Available",
             color: isOverBudget ? .red : Overview.BudgetPart.available.color
         ) {
-            Amount(value: abs(breakdown.available.amount), currency: currency)
+            Amount(value: abs(breakdown.available.amount), currency: currency, isHidden: isHidingAmounts)
                 .foregroundStyle(isOverBudget ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
         } caption: {
             if isOverBudget {
@@ -476,7 +494,7 @@ private struct TileGrid: View {
     private var expensesTile: some View {
         Button(action: onExpenses) {
             Tile(title: "Expenses", color: Overview.BudgetPart.expenses.color) {
-                Amount(value: breakdown.expenses.amount, currency: currency)
+                Amount(value: breakdown.expenses.amount, currency: currency, isHidden: isHidingAmounts)
             } caption: {
                 if breakdown.hasExpenses {
                     Text("\(breakdown.expensesShareLabel.text) of income")
@@ -491,7 +509,7 @@ private struct TileGrid: View {
     private var incomeTile: some View {
         Button(action: onIncome) {
             Tile(title: "Income", color: .gray) {
-                Amount(value: breakdown.income, currency: currency)
+                Amount(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
             } caption: {
                 Text(breakdown.period.afterTaxCaption)
             }
@@ -503,7 +521,7 @@ private struct TileGrid: View {
         Button(action: onSavings) {
             if let savings = breakdown.savings, let share = breakdown.savingsShareLabel {
                 Tile(title: "Savings", color: Overview.BudgetPart.savings.color) {
-                    Amount(value: savings.amount, currency: currency)
+                    Amount(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
                 } caption: {
                     Text("\(share.text) of income")
                 }

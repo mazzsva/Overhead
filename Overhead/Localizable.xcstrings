@@ -130,6 +130,9 @@
     "Hidden" : {
 
     },
+    "Hide Amounts" : {
+
+    },
     "Inactive" : {
 
     },
@@ -197,6 +200,9 @@
 
     },
     "Settings" : {
+
+    },
+    "Show Amounts" : {
 
     },
     "Sign in with Apple to keep every expense in your account." : {
