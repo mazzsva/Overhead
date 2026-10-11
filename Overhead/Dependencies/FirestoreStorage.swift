@@ -17,6 +17,8 @@ actor FirestoreStorage {
 
     func budget(uid: String) async -> AsyncThrowingStream<BudgetSnapshot, any Error> {
         await waitForClearing()
+        let isCached = await isBudgetCached(uid: uid)
+        await waitForClearing()
         return AsyncThrowingStream { continuation in
             let delivered = LockIsolated<(data: NSDictionary?, isKnown: Bool)?>(nil)
             let registration = ListenerRegistrationBox()
@@ -32,7 +34,7 @@ actor FirestoreStorage {
                         return
                     }
                     let data = snapshot.data()
-                    let isConfirmed = snapshot.exists || !snapshot.metadata.isFromCache
+                    let isConfirmed = isCached || snapshot.exists || !snapshot.metadata.isFromCache
                     nonisolated(unsafe) let current = data.map(NSDictionary.init(dictionary:))
                     let isKnown = delivered.withValue { delivered -> Bool? in
                         let isKnown = isConfirmed || delivered?.isKnown == true
@@ -136,6 +138,20 @@ actor FirestoreStorage {
         await waitForClearing()
         try await budgetDocument(uid: uid)
             .setData([BudgetField.investment: try BudgetField.cents(of: investment)], merge: true)
+    }
+
+    private func isBudgetCached(uid: String) async -> Bool {
+        do {
+            _ = try await budgetDocument(uid: uid).getDocument(source: .cache)
+            return true
+        } catch let error as NSError
+            where error.domain == FirestoreErrorDomain && error.code == FirestoreErrorCode.unavailable.rawValue
+        {
+            return false
+        } catch {
+            reportIssue(error, "Reading the cached budget failed.")
+            return false
+        }
     }
 
     private func waitForClearing() async {

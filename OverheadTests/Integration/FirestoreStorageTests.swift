@@ -41,6 +41,21 @@ extension BaseSuite.IntegrationSuite {
         }
 
         @Test
+        func aSyncedMissingBudgetIsKnownWhileOffline() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let synced = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            try await synced.wait { $0.last == .known(nil) }
+            synced.cancel()
+
+            try await Firestore.firestore().disableNetwork()
+            let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            defer { budgets.cancel() }
+
+            try await budgets.wait { $0 == [.known(nil)] }
+            try await Firestore.firestore().enableNetwork()
+        }
+
+        @Test
         func aSavedBudgetArrivesOnceAndADeletedBudgetBecomesNil() async throws {
             let uid = try await FirebaseEmulators.signIn()
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
@@ -71,6 +86,25 @@ extension BaseSuite.IntegrationSuite {
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
             try await budgets.wait { $0.last == .known(.mock) }
+
+            try await Firestore.firestore().disableNetwork()
+            let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
+
+            try await budgets.wait { $0.last == .known(nil) }
+            try await Firestore.firestore().enableNetwork()
+            try await deletion.value
+        }
+
+        @Test
+        func aBudgetRemovedOfflineAfterTheFirstSyncBecomesNil() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            defer { budgets.cancel() }
+            try await budgets.wait { $0 == [.known(nil)] }
+
+            let income = try #require(Budget(income: 3000, investment: nil))
+            try await FirestoreStorage.shared.saveIncome(3000, removingInvestment: false, uid: uid)
+            try await budgets.wait { $0.last == .known(income) }
 
             try await Firestore.firestore().disableNetwork()
             let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
