@@ -31,6 +31,7 @@ struct Settings {
     @ObservableState
     struct State: Equatable {
         @Presents var alert: AlertState<Settings.Alert>?
+        @Shared(.currency) var currency
         var deletionStep: DeletionStep?
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
@@ -50,6 +51,7 @@ struct Settings {
         case appleCredentialReceived
         case appleCredentialRevoked
         case budgetDeleted
+        case currencyPickerChanged(Currency)
         #if DEBUG
         case debugAddMockExpensesButtonTapped
         case debugDeleteAllExpensesButtonTapped
@@ -103,6 +105,10 @@ struct Settings {
 
             case .budgetDeleted:
                 state.deletionStep = .budgetDeleted
+                return .none
+
+            case .currencyPickerChanged(let currency):
+                state.$currency.withLock { $0 = currency }
                 return .none
 
             #if DEBUG

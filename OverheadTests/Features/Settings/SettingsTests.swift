@@ -83,6 +83,17 @@ extension BaseSuite {
             }
         }
 
+        @Test
+        func theCurrencyPickerChangesTheCurrency() async {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.currencyPickerChanged(.eur)) {
+                $0.$currency.withLock { $0 = .eur }
+            }
+        }
+
         // The deletion removes the expenses from every device
         @Test
         func theDeleteAccountButtonAsksForConfirmation() async {

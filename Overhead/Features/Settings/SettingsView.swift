@@ -11,6 +11,8 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var store: StoreOf<Settings>
 
+    @Environment(\.locale) private var locale
+
     var body: some View {
         NavigationStack {
             List {
@@ -24,6 +26,16 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
                 }
+                Section {
+                    Picker("Currency", selection: $store.currency.sending(\.currencyPickerChanged)) {
+                        ForEach(Currency.allCases, id: \.self) { currency in
+                            Text(currency.name(locale: locale))
+                        }
+                    }
+                } footer: {
+                    Text("Amounts are shown in this currency. They aren't converted.")
+                }
+                .disabled(store.isDeletingAccount)
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
@@ -52,7 +64,7 @@ struct SettingsView: View {
                 .disabled(store.isDeletingAccount)
                 #endif
             }
-            .scrollDisabled(true)
+            .scrollBounceBehavior(.basedOnSize)
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
@@ -75,6 +87,12 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom)
         }
+    }
+}
+
+extension Currency {
+    fileprivate func name(locale: Locale) -> String {
+        locale.localizedString(forCurrencyCode: rawValue) ?? rawValue
     }
 }
 
