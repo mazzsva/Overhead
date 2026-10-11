@@ -11,6 +11,8 @@ import SwiftUI
 struct OverviewView: View {
     @Bindable var store: StoreOf<Overview>
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         NavigationStack {
             Group {
@@ -52,12 +54,16 @@ struct OverviewView: View {
 
     private func dashboard(_ content: Overview.Content) -> some View {
         VStack(spacing: 12) {
-            Picker("Period", selection: $store.period.sending(\.periodPickerChanged)) {
+            Picker(
+                "Period",
+                selection: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? nil : .snappy)
+            ) {
                 ForEach(Overview.Period.allCases, id: \.self) { period in
                     Text(period.title)
                 }
             }
             .pickerStyle(.segmented)
+            .sensoryFeedback(.selection, trigger: store.period)
 
             HeroCard(content: content, period: store.period) {
                 store.send(.addIncomeButtonTapped)
@@ -70,9 +76,14 @@ struct OverviewView: View {
                     onIncome: { store.send(.incomeTileTapped) },
                     onSavings: { store.send(.savingsTileTapped) }
                 )
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
             }
         }
         .padding(.horizontal)
+        .animation(
+            reduceMotion ? .easeInOut(duration: 0.25) : .spring(duration: 0.5).delay(0.25),
+            value: content.expensesOnly?.income == .missing
+        )
     }
 }
 
@@ -180,6 +191,7 @@ private struct Amount: View {
     var body: some View {
         Text(value, format: .dollars)
             .monospacedDigit()
+            .contentTransition(.numericText(value: value.doubleValue))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
     }
@@ -194,6 +206,7 @@ private struct HeroCard: View {
     @ScaledMetric private var barHeight = 44
     @ScaledMetric(relativeTo: .caption2) private var barSpacing = 20
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -210,6 +223,7 @@ private struct HeroCard: View {
                     Amount(value: amount)
                         .font(.system(size: amountSize, weight: .bold, design: .rounded))
                         .foregroundStyle(amount == 0 ? .tertiary : .primary)
+                        .animation(reduceMotion ? nil : .snappy, value: content.summary)
                     Text(period.caption)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -238,22 +252,29 @@ private struct HeroCard: View {
 
     @ViewBuilder
     private var barSlot: some View {
-        switch content {
-        case .expensesOnly(_, .missing):
-            Button(action: onAddIncome) {
-                Label("Add Income", systemImage: "plus")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ZStack {
+            switch content {
+            case .expensesOnly(_, .missing):
+                Button(action: onAddIncome) {
+                    Label("Add Income", systemImage: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .buttonStyle(ProminentTrackButtonStyle())
+                .transition(.opacity.animation(.easeOut(duration: 0.15)))
+            case .expensesOnly(_, .failed):
+                Track(message: "Your income couldn't be loaded.")
+                    .transition(.opacity)
+            case .expensesOnly(_, .loading):
+                Track(message: nil)
+                    .transition(.opacity)
+            case .expensesOnly(_, .offline):
+                Track(message: "Connect to the internet to see your income.")
+                    .transition(.opacity)
+            case .summary(let breakdown):
+                SegmentedBar(incomeMark: breakdown.incomeMark, segments: breakdown.segments)
+                    .transition(reduceMotion ? .opacity : AnyTransition(.reveal))
             }
-            .buttonStyle(ProminentTrackButtonStyle())
-        case .expensesOnly(_, .failed):
-            Track(message: "Your income couldn't be loaded.")
-        case .expensesOnly(_, .loading):
-            Track(message: nil)
-        case .expensesOnly(_, .offline):
-            Track(message: "Connect to the internet to see your income.")
-        case .summary(let breakdown):
-            SegmentedBar(incomeMark: breakdown.incomeMark, segments: breakdown.segments)
         }
     }
 
@@ -305,6 +326,7 @@ private struct SegmentedBar: View {
 
     @ScaledMetric private var markOverhang = 4
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
@@ -336,9 +358,12 @@ private struct SegmentedBar: View {
                 if let markX = layout.markX {
                     IncomeMark(height: proxy.size.height + markOverhang * 2, width: proxy.size.width, x: markX)
                         .offset(y: -markOverhang)
+                        .transition(.opacity)
                 }
             }
         }
+        .animation(reduceMotion ? nil : .snappy, value: segments)
+        .animation(reduceMotion ? nil : .snappy, value: incomeMark)
         .accessibilityHidden(true)
     }
 
@@ -375,6 +400,21 @@ private struct IncomeMark: View {
     }
 }
 
+private struct RevealTransition: Transition {
+    func body(content: Content, phase: TransitionPhase) -> some View {
+        content.mask(alignment: .leading) {
+            Rectangle()
+                .padding(.horizontal, -8)
+                .padding(.vertical, -100)
+                .scaleEffect(x: phase.isIdentity ? 1 : 0, anchor: .leading)
+        }
+    }
+}
+
+extension Transition where Self == RevealTransition {
+    fileprivate static var reveal: Self { RevealTransition() }
+}
+
 private struct TileGrid: View {
     let breakdown: Overview.Breakdown
     let onExpenses: () -> Void
@@ -382,6 +422,7 @@ private struct TileGrid: View {
     let onSavings: () -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -405,6 +446,7 @@ private struct TileGrid: View {
                 }
             }
         }
+        .animation(reduceMotion ? nil : .snappy, value: breakdown)
     }
 
     private var availableTile: some View {
