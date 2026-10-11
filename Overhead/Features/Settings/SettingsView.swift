@@ -32,8 +32,6 @@ struct SettingsView: View {
                             Text(currency.name(locale: locale))
                         }
                     }
-                } footer: {
-                    Text("Amounts are shown in this currency. They aren't converted.")
                 }
                 .disabled(store.isDeletingAccount)
                 Section {
