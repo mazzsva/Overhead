@@ -135,6 +135,7 @@ extension BaseSuite {
         @Test
         func theBarKeepsTinyPartsVisible() {
             let layout = BarLayout(
+                incomeMark: nil,
                 segments: [
                     .init(end: 0.0078125, part: .expenses, start: 0),
                     .init(end: 0.015625, part: .savings, start: 0.0078125),
@@ -149,6 +150,21 @@ extension BaseSuite {
             )
         }
 
+        @Test(arguments: [(0.5, 150.0), (0.75, 228.0)])
+        func theIncomeMarkFollowsTheDrawnSegments(mark: Double, x: Double) {
+            let layout = BarLayout(
+                incomeMark: mark,
+                segments: [
+                    .init(end: 0.5, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: 0.5),
+                ],
+                width: 303
+            )
+
+            expectNoDifference(layout.frames, [.init(width: 150, x: 0), .init(width: 150, x: 153)])
+            expectNoDifference(layout.markX, x)
+        }
+
         @Test
         func withoutExpensesTheBarStartsWithTheSavings() {
             let breakdown = Overview.Breakdown(annualExpenses: 0, budget: .mock)
@@ -161,6 +177,24 @@ extension BaseSuite {
                 ]
             )
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(15)))
+        }
+
+        @Test
+        func expensesAboveTheIncomePutTheIncomeMarkInsideTheExpenses() throws {
+            let budget = try #require(Budget(income: 1000, investment: 300))
+            let breakdown = Overview.Breakdown(annualExpenses: 14400, budget: budget)
+
+            expectNoDifference(breakdown.available.amount, -500)
+            expectNoDifference(breakdown.incomeMark, (Decimal(12000) / 18000).doubleValue)
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(14400) / 18000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: (Decimal(14400) / 18000).doubleValue),
+                ]
+            )
+            expectNoDifference(breakdown.committedShareLabel, .percent(percent(150)))
+            expectNoDifference(breakdown.availableShareLabel, .percent(percent(50)))
         }
 
         @Test
@@ -224,6 +258,22 @@ extension BaseSuite {
                     .init(end: 1, part: .savings, start: (Decimal(12000) / 13200).doubleValue),
                 ]
             )
+            expectNoDifference(breakdown.incomeMark, (Decimal(10800) / 13200).doubleValue)
+        }
+
+        @Test
+        func withinTheIncomeTheBarHasNoIncomeMark() {
+            let breakdown = Overview.Breakdown(annualExpenses: 30600, budget: .mock)
+
+            expectNoDifference(breakdown.available.amount, 0)
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(30600) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: (Decimal(30600) / 36000).doubleValue),
+                ]
+            )
+            expectNoDifference(breakdown.incomeMark, nil)
         }
 
         @Test

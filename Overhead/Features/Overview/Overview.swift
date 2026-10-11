@@ -82,6 +82,11 @@ struct Overview {
             budget.income
         }
 
+        var incomeMark: Double? {
+            guard isOverBudget else { return nil }
+            return (annualIncome / annualCommitted).doubleValue
+        }
+
         var isFullyCommitted: Bool {
             annualCommitted == annualIncome
         }
