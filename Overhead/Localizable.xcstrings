@@ -43,7 +43,7 @@
     "Active" : {
 
     },
-    "Add every fixed expense with its name and amount." : {
+    "Add every fixed expense with its amount and how often you pay it." : {
 
     },
     "Add Income" : {
@@ -194,6 +194,9 @@
 
     },
     "Savings" : {
+
+    },
+    "See how much of your income is left after expenses and savings." : {
 
     },
     "Settings" : {
