@@ -32,6 +32,7 @@ struct TabsView: View {
         }
         .task { await store.send(.expenses(.task)).finish() }
         .task { await store.send(.overview(.task)).finish() }
+        .task { await store.send(.settings(.task)).finish() }
     }
 }
 

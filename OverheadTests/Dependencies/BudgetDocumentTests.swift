@@ -52,6 +52,7 @@ extension BaseSuite {
         @Test
         func aProfileWithoutAnIncomeHasNoBudget() {
             expectNoDifference(Budget(data: [:]), nil)
+            expectNoDifference(Budget(data: [CurrencyField.currency: "EUR"]), nil)
         }
 
         @Test(

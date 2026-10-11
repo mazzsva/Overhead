@@ -20,6 +20,8 @@ extension BaseSuite.IntegrationSuite {
 
             try await profile(uid).setData(["monthlyIncomeInCents": 300_000])
             try await profile(uid).setData(["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": 300_000])
+            try await profile(uid).setData(["currency": "EUR"])
+            try await profile(uid).setData(["currency": "BRL", "monthlyIncomeInCents": 300_000])
             try await profile(uid).setData([:])
             try await profile(uid).delete()
         }
@@ -35,6 +37,9 @@ extension BaseSuite.IntegrationSuite {
                 ["monthlyIncomeInCents": 300_000, "monthlyInvestmentInCents": true],
                 ["monthlyIncomeInCents": 300_000, "defaultCurrency": "USD"],
                 ["monthlyInvestmentInCents": 45000],
+                ["currency": "GBP"],
+                ["currency": "usd"],
+                ["currency": 1],
             ] as [[String: any Sendable]])
         func theRulesRefuseAnInvalidProfile(data: [String: any Sendable]) async throws {
             let uid = try await FirebaseEmulators.signIn()

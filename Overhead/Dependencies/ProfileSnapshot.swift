@@ -11,3 +11,5 @@ enum ProfileSnapshot<Value: Equatable & Sendable>: Equatable, Sendable {
 }
 
 typealias BudgetSnapshot = ProfileSnapshot<Budget?>
+
+typealias CurrencySnapshot = ProfileSnapshot<Currency?>

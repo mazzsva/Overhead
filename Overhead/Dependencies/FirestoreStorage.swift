@@ -52,6 +52,10 @@ actor FirestoreStorage {
         }
     }
 
+    func currency(uid: String) async -> AsyncThrowingStream<CurrencySnapshot, any Error> {
+        await profile(uid: uid) { $0.flatMap(Currency.init(data:)) }
+    }
+
     func deleteProfile(uid: String) async throws {
         await waitForClearing()
         try await profileDocument(uid: uid).delete()
@@ -97,6 +101,11 @@ actor FirestoreStorage {
     func save(_ expense: Expense, uid: String) async throws {
         await waitForClearing()
         try await expensesCollection(uid: uid).document(expense.id.uuidString).setData(expense.documentData())
+    }
+
+    func saveCurrency(_ currency: Currency, uid: String) async throws {
+        await waitForClearing()
+        try await profileDocument(uid: uid).setData([CurrencyField.currency: currency.rawValue], merge: true)
     }
 
     func saveIncome(_ income: Decimal, removingInvestment: Bool, uid: String) async throws {

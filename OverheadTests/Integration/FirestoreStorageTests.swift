@@ -115,6 +115,30 @@ extension BaseSuite.IntegrationSuite {
         }
 
         @Test
+        func removingTheIncomeKeepsTheCurrencyAndDeletingTheProfileRemovesIt() async throws {
+            let uid = try await FirebaseEmulators.signIn()
+            let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
+            let currencies = Recording(await FirestoreStorage.shared.currency(uid: uid))
+            defer {
+                budgets.cancel()
+                currencies.cancel()
+            }
+            try await currencies.wait { $0 == [.known(nil)] }
+
+            try await FirestoreStorage.shared.saveCurrency(.eur, uid: uid)
+            try await currencies.wait { $0 == [.known(nil), .known(.eur)] }
+
+            try await seed(.mock, uid: uid)
+            try await budgets.wait { $0.last == .known(.mock) }
+            try await FirestoreStorage.shared.removeIncome(uid: uid)
+            try await budgets.wait { $0.last == .known(nil) }
+            expectNoDifference(currencies.values, [.known(nil), .known(.eur)])
+
+            try await FirestoreStorage.shared.deleteProfile(uid: uid)
+            try await currencies.wait { $0 == [.known(nil), .known(.eur), .known(nil)] }
+        }
+
+        @Test
         func theRulesRefuseAnotherUsersBudget() async throws {
             let owner = try await FirebaseEmulators.signIn()
             try await seed(.mock, uid: owner)

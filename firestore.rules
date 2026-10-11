@@ -7,7 +7,8 @@ service cloud.firestore {
     }
 
     function isValidProfile(data) {
-      return data.keys().hasOnly(['monthlyIncomeInCents', 'monthlyInvestmentInCents'])
+      return data.keys().hasOnly(['currency', 'monthlyIncomeInCents', 'monthlyInvestmentInCents'])
+        && (!('currency' in data) || data.currency in ['BRL', 'EUR', 'USD'])
         && (
           !('monthlyIncomeInCents' in data)
           || (data.monthlyIncomeInCents is int && data.monthlyIncomeInCents > 0)
