@@ -60,7 +60,7 @@ private struct WelcomeHighlight {
     static let all = [
         WelcomeHighlight(
             systemImage: "creditcard.fill",
-            text: "Add every fixed expense with its name and amount."
+            text: "Add every fixed expense and how often you pay it."
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",
