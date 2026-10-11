@@ -18,6 +18,7 @@ struct Expenses {
 
     @ObservableState
     struct State: Equatable {
+        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
         var hasFailedFirstLoad = false

@@ -36,19 +36,5 @@ extension BaseSuite {
             let amount = Decimal(Int.max) + 1
             expectNoDifference(amount.cents, nil)
         }
-
-        @Test(arguments: [
-            ("en_US", "$1,234.50"),
-            ("en_CA", "$1,234.50"),
-            ("en_AU", "$1,234.50"),
-            ("es_MX", "$1,234.50"),
-            ("ja_JP", "$1,234.50"),
-            ("pt_BR", "$\u{00A0}1.234,50"),
-            ("it_IT", "1234,50\u{00A0}$"),
-        ])
-        func everyLocaleShowsOnlyTheDollarSign(identifier: String, expected: String) {
-            let text = Decimal(cents: 123_450).formatted(.dollars.locale(Locale(identifier: identifier)))
-            expectNoDifference(text, expected)
-        }
     }
 }

@@ -20,7 +20,7 @@ struct InvestmentFormView: View {
                     TextField(
                         "Savings",
                         text: $store.investmentText,
-                        prompt: Text(Decimal.zero, format: .dollars.locale(store.locale))
+                        prompt: Text(Decimal.zero, format: .currency(store.currency).locale(store.locale))
                     )
                     .keyboardType(.decimalPad)
                     .focused($focus, equals: .investment)
@@ -45,7 +45,7 @@ struct InvestmentFormView: View {
                         Text("Enter a valid amount.")
                     } else if let share = store.share {
                         Text(
-                            "\(Text(share, format: .percent.precision(.fractionLength(0)))) of your \(Text(store.income, format: .dollars.locale(store.locale))) income."
+                            "\(Text(share, format: .percent.precision(.fractionLength(0)))) of your \(Text(store.income, format: .currency(store.currency).locale(store.locale))) income."
                         )
                     } else {
                         Text("The amount you save or invest each month.")

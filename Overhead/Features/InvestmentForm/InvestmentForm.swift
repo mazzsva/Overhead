@@ -32,6 +32,7 @@ struct InvestmentForm {
 
     @ObservableState
     struct State: Equatable {
+        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         var focus: Field?
         var income: Decimal

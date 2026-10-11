@@ -14,7 +14,7 @@ struct ExpenseDetailView: View {
     var body: some View {
         List {
             Section {
-                LabeledContent("Amount", value: store.expense.amount, format: .dollars)
+                LabeledContent("Amount", value: store.expense.amount, format: .currency(store.currency))
                 LabeledContent("Billing Cycle") {
                     Text(store.expense.billingCycle.title)
                 }

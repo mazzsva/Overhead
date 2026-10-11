@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ExpenseRowView: View {
+    let currency: Currency
     let expense: Expense
 
     var body: some View {
@@ -17,7 +18,7 @@ struct ExpenseRowView: View {
                 .lineLimit(1)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(expense.amount, format: .dollars)
+                Text(expense.amount, format: .currency(currency))
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
                 Text(expense.billingCycle.title)
@@ -32,6 +33,6 @@ struct ExpenseRowView: View {
 
 #Preview {
     List(Expense.mocks) { expense in
-        ExpenseRowView(expense: expense)
+        ExpenseRowView(currency: .usd, expense: expense)
     }
 }
