@@ -24,7 +24,7 @@ struct ExpenseFormView: View {
                     TextField(
                         "Amount",
                         text: $store.amountText,
-                        prompt: Text(Decimal.zero, format: .dollars.locale(store.locale))
+                        prompt: Text(Decimal.zero, format: .currency(store.currency).locale(store.locale))
                     )
                     .keyboardType(.decimalPad)
                 }

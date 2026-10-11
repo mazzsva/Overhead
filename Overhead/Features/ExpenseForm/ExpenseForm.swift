@@ -23,6 +23,7 @@ struct ExpenseForm {
         var amountText: String
         var billingCycle: BillingCycle
         @Presents var confirmationDialog: ConfirmationDialogState<ExpenseForm.Dialog>?
+        @SharedReader(.currency) var currency
         let expense: Expense?
         var focus: Field?
         var isActive: Bool

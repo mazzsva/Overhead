@@ -212,6 +212,7 @@ struct Overview {
     @ObservableState
     struct State: Equatable {
         var budgetStatus = BudgetStatus.loading
+        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
         var period = Period.month

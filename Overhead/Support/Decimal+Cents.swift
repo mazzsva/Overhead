@@ -32,9 +32,3 @@ extension Decimal {
         return result
     }
 }
-
-extension FormatStyle where Self == Decimal.FormatStyle.Currency {
-    static var dollars: Self {
-        .currency(code: "USD").presentation(.narrow)
-    }
-}

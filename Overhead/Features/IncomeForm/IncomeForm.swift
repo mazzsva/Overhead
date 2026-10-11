@@ -31,6 +31,7 @@ struct IncomeForm {
 
     @ObservableState
     struct State: Equatable {
+        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         var focus: Field?
         var incomeText: String
@@ -123,7 +124,9 @@ struct IncomeForm {
             case .saveButtonTapped:
                 guard let income = state.income else { return .none }
                 if let investment = state.investment, income < investment {
-                    state.destination = .alert(.confirmRemovingInvestment(investment, locale: state.locale))
+                    state.destination = .alert(
+                        .confirmRemovingInvestment(investment, currency: state.currency, locale: state.locale)
+                    )
                     return .none
                 }
                 return .send(.delegate(.didSubmit(income)))
@@ -153,7 +156,7 @@ extension AlertState where Action == IncomeForm.Alert {
         }
     }
 
-    static func confirmRemovingInvestment(_ investment: Decimal, locale: Locale) -> Self {
+    static func confirmRemovingInvestment(_ investment: Decimal, currency: Currency, locale: Locale) -> Self {
         AlertState {
             TextState("Remove Savings")
         } actions: {
@@ -165,7 +168,7 @@ extension AlertState where Action == IncomeForm.Alert {
             }
         } message: {
             TextState(
-                "Your savings of \(investment.formatted(.dollars.locale(locale))) are more than this income."
+                "Your savings of \(investment.formatted(.currency(currency).locale(locale))) are more than this income."
             )
         }
     }

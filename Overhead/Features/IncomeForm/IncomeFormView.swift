@@ -20,14 +20,14 @@ struct IncomeFormView: View {
                     TextField(
                         "Income",
                         text: $store.incomeText,
-                        prompt: Text(Decimal.zero, format: .dollars.locale(store.locale))
+                        prompt: Text(Decimal.zero, format: .currency(store.currency).locale(store.locale))
                     )
                     .keyboardType(.decimalPad)
                     .focused($focus, equals: .income)
                 } footer: {
                     if store.isBelowInvestment, let investment = store.investment {
                         Text(
-                            "Your savings of \(Text(investment, format: .dollars.locale(store.locale))) will be removed."
+                            "Your savings of \(Text(investment, format: .currency(store.currency).locale(store.locale))) will be removed."
                         )
                     } else if store.isIncomeInvalid {
                         Text("Enter a valid amount.")

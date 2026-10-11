@@ -22,6 +22,7 @@ struct ExpenseDetail {
 
     @ObservableState
     struct State: Equatable {
+        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expense: Expense
 
