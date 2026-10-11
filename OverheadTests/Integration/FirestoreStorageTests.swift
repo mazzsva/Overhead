@@ -69,7 +69,7 @@ extension BaseSuite.IntegrationSuite {
             try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
             try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock)] }
 
-            try await FirestoreStorage.shared.deleteBudget(uid: uid)
+            try await FirestoreStorage.shared.deleteProfile(uid: uid)
             try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock), .known(nil)] }
 
             let marker = try #require(Budget(income: 1, investment: nil))
@@ -88,7 +88,7 @@ extension BaseSuite.IntegrationSuite {
             try await budgets.wait { $0.last == .known(.mock) }
 
             try await Firestore.firestore().disableNetwork()
-            let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
+            let deletion = Task { try await FirestoreStorage.shared.deleteProfile(uid: uid) }
 
             try await budgets.wait { $0.last == .known(nil) }
             try await Firestore.firestore().enableNetwork()
@@ -107,7 +107,7 @@ extension BaseSuite.IntegrationSuite {
             try await budgets.wait { $0.last == .known(income) }
 
             try await Firestore.firestore().disableNetwork()
-            let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
+            let deletion = Task { try await FirestoreStorage.shared.deleteProfile(uid: uid) }
 
             try await budgets.wait { $0.last == .known(nil) }
             try await Firestore.firestore().enableNetwork()

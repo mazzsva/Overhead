@@ -30,7 +30,7 @@ extension BudgetClient: DependencyKey {
                 await FirestoreStorage.shared.budget(uid: uid)
             },
             delete: { uid in
-                try await FirestoreStorage.shared.deleteBudget(uid: uid)
+                try await FirestoreStorage.shared.deleteProfile(uid: uid)
             },
             removeInvestment: { uid in
                 try await FirestoreStorage.shared.removeInvestment(uid: uid)
@@ -61,11 +61,6 @@ extension BudgetClient: DependencyKey {
     static var testValue: BudgetClient {
         BudgetClient()
     }
-}
-
-enum BudgetSnapshot: Equatable, Sendable {
-    case known(Budget?)
-    case unknown
 }
 
 extension DependencyValues {
