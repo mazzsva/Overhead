@@ -91,6 +91,25 @@ extension BaseSuite {
         }
 
         @Test
+        func theAmountsVisibilityButtonHidesAndShowsTheAmounts() async {
+            let impacts = LockIsolated(0)
+            let store = TestStore(initialState: makeState()) {
+                Overview()
+            } withDependencies: {
+                $0.hapticsClient.impact = { impacts.withValue { $0 += 1 } }
+            }
+
+            await store.send(.amountsVisibilityButtonTapped) {
+                $0.$hidesAmounts.withLock { $0 = true }
+            }
+            await store.send(.amountsVisibilityButtonTapped) {
+                $0.$hidesAmounts.withLock { $0 = false }
+            }
+            await store.finish()
+            expectNoDifference(impacts.value, 2)
+        }
+
+        @Test
         func theBreakdownSplitsTheIncome() {
             let breakdown = Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock, period: .month)
 

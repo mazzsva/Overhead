@@ -215,6 +215,7 @@ struct Overview {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
+        @Shared(.hidesAmounts) var hidesAmounts
         var period = Period.month
         let user: User
 
@@ -251,6 +252,7 @@ struct Overview {
 
     enum Action {
         case addIncomeButtonTapped
+        case amountsVisibilityButtonTapped
         case budgetStreamFailed
         case budgetUpdated(BudgetSnapshot)
         case delegate(Delegate)
@@ -283,6 +285,10 @@ struct Overview {
                 guard state.destination == nil else { return .none }
                 state.destination = .incomeForm(IncomeForm.State(budget: state.budget))
                 return .none
+
+            case .amountsVisibilityButtonTapped:
+                state.$hidesAmounts.withLock { $0.toggle() }
+                return .run { _ in await hapticsClient.impact() }
 
             case .budgetStreamFailed:
                 guard state.budgetStatus == .loading else { return .none }

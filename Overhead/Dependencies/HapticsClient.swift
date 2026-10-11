@@ -11,6 +11,7 @@ import UIKit
 
 @DependencyClient
 struct HapticsClient: Sendable {
+    var impact: @Sendable () async -> Void
     var success: @Sendable () async -> Void
     var warning: @Sendable () async -> Void
 }
@@ -18,6 +19,9 @@ struct HapticsClient: Sendable {
 extension HapticsClient: DependencyKey {
     static var liveValue: HapticsClient {
         HapticsClient(
+            impact: {
+                await MainActor.run { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+            },
             success: {
                 await MainActor.run { UINotificationFeedbackGenerator().notificationOccurred(.success) }
             },
@@ -28,7 +32,7 @@ extension HapticsClient: DependencyKey {
     }
 
     static var previewValue: HapticsClient {
-        HapticsClient(success: {}, warning: {})
+        HapticsClient(impact: {}, success: {}, warning: {})
     }
 
     static var testValue: HapticsClient {
