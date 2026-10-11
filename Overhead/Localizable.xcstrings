@@ -16,10 +16,28 @@
     ">%@" : {
 
     },
+    "a day" : {
+
+    },
+    "a day, after tax" : {
+
+    },
     "a month" : {
 
     },
     "a month, after tax" : {
+
+    },
+    "a week" : {
+
+    },
+    "a week, after tax" : {
+
+    },
+    "a year" : {
+
+    },
+    "a year, after tax" : {
 
     },
     "Active" : {
@@ -62,6 +80,9 @@
 
     },
     "Continue" : {
+
+    },
+    "Day" : {
 
     },
     "Delete" : {
@@ -109,6 +130,9 @@
     "Keep Editing" : {
 
     },
+    "Month" : {
+
+    },
     "Monthly" : {
 
     },
@@ -137,6 +161,9 @@
 
     },
     "Overview" : {
+
+    },
+    "Period" : {
 
     },
     "Remove" : {
@@ -196,10 +223,16 @@
     "Version %@" : {
 
     },
+    "Week" : {
+
+    },
     "Weekly" : {
 
     },
     "Welcome to" : {
+
+    },
+    "Year" : {
 
     },
     "Yearly" : {
