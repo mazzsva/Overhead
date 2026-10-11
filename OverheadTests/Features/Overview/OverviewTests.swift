@@ -186,8 +186,13 @@ extension BaseSuite {
 
             expectNoDifference(breakdown.available.amount, -500)
             expectNoDifference(breakdown.incomeMark, (Decimal(12000) / 18000).doubleValue)
-            expectNoDifference(breakdown.segments.map(\.part), [.expenses, .savings])
-            expectNoDifference(breakdown.segments.first?.end, (Decimal(14400) / 18000).doubleValue)
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(14400) / 18000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: (Decimal(14400) / 18000).doubleValue),
+                ]
+            )
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(150)))
             expectNoDifference(breakdown.availableShareLabel, .percent(percent(50)))
         }
@@ -261,7 +266,13 @@ extension BaseSuite {
             let breakdown = Overview.Breakdown(annualExpenses: 30600, budget: .mock)
 
             expectNoDifference(breakdown.available.amount, 0)
-            expectNoDifference(breakdown.segments.map(\.part), [.expenses, .savings])
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(30600) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: (Decimal(30600) / 36000).doubleValue),
+                ]
+            )
             expectNoDifference(breakdown.incomeMark, nil)
         }
 
