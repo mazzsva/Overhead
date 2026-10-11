@@ -17,104 +17,213 @@ extension BaseSuite {
     @MainActor
     struct OverviewTests {
         @Test
-        func theMonthlyTotalAddsTheMonthlyAmountOfEachActiveExpense() {
-            var weekly = Expense.gym
-            weekly.billingCycle = .weekly
-            weekly.amount = 15
-            var yearly = Expense.rent
-            yearly.billingCycle = .yearly
-            yearly.amount = 1200
+        func theAnnualExpensesAddTheAnnualAmountOfEachActiveExpense() {
+            let state = makeState(expenses: [expense(15, .weekly, id: 10), expense(1200, .yearly, id: 11), .phonePlan])
 
-            let state = makeState(expenses: [weekly, yearly, .phonePlan])
-
-            expectNoDifference(state.monthlyTotal, 165)
+            expectNoDifference(state.annualExpenses, 1980)
         }
 
         @Test
-        func theMonthlyTotalIsRoundedToCents() {
-            var weekly = Expense.gym
-            weekly.billingCycle = .weekly
-            weekly.amount = 5
-
-            let state = makeState(expenses: [weekly])
-
-            expectNoDifference(state.monthlyTotal, Decimal(cents: 2167))
+        func theAnnualExpensesAreUnknownUntilTheExpensesLoad() {
+            expectNoDifference(makeState(expenses: nil).annualExpenses, nil)
         }
 
         @Test
-        func theMonthlyTotalIsUnknownWithoutExpenses() {
-            expectNoDifference(makeState(expenses: nil).monthlyTotal, nil)
-            expectNoDifference(makeState(expenses: []).monthlyTotal, 0)
-            expectNoDifference(makeState(expenses: [.phonePlan]).monthlyTotal, 0)
+        func withoutActiveExpensesTheAnnualExpensesAreZero() {
+            expectNoDifference(makeState(expenses: []).annualExpenses, 0)
+            expectNoDifference(makeState(expenses: [.phonePlan]).annualExpenses, 0)
         }
 
-        @Test
-        func theBreakdownNeedsTheBudgetAndTheExpenses() {
-            expectNoDifference(makeState(.loading, expenses: Expense.mocks).breakdown, nil)
-            expectNoDifference(makeState(.failed, expenses: Expense.mocks).breakdown, nil)
-            expectNoDifference(makeState(.loaded(nil), expenses: Expense.mocks).breakdown, nil)
-            expectNoDifference(makeState(.loaded(.mock), expenses: nil).breakdown, nil)
-        }
-
-        @Test
-        func theBreakdownSubtractsTheExpensesAndTheInvestmentFromTheIncome() {
-            let state = makeState(.loaded(.mock), expenses: Expense.mocks)
-
-            expectNoDifference(state.activeExpenseCount, 2)
-            let breakdown = state.breakdown
-            expectNoDifference(breakdown?.income, 3000)
-            expectNoDifference(breakdown?.expenses, .init(amount: Decimal(cents: -98_990), share: percent(33)))
-            expectNoDifference(breakdown?.investments, .init(amount: -450, share: percent(15)))
-            expectNoDifference(breakdown?.leftToSpend, .init(amount: Decimal(cents: 156_010), share: percent(52)))
-            expectNoDifference(breakdown?.isOverBudget, false)
+        @Test(
+            arguments: [
+                (Overview.BudgetStatus.failed, Overview.IncomeStatus.failed),
+                (.loaded(nil), .missing),
+                (.loading, .loading),
+                (.offline, .offline),
+            ]
+        )
+        func withoutABudgetTheContentShowsTheExpenses(
+            budgetStatus: Overview.BudgetStatus,
+            incomeStatus: Overview.IncomeStatus
+        ) {
             expectNoDifference(
-                breakdown?.chartSegments,
+                makeState(budgetStatus, expenses: Expense.mocks).content,
+                .expensesOnly(amount: Decimal(cents: 98_990), income: incomeStatus)
+            )
+        }
+
+        @Test
+        func aLoadedBudgetShowsTheSummary() {
+            expectNoDifference(
+                makeState(.loaded(.mock), expenses: Expense.mocks).content,
+                .summary(Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock))
+            )
+        }
+
+        @Test(arguments: [Overview.BudgetStatus.failed, .loaded(nil), .loaded(.mock), .loading, .offline])
+        func withoutExpensesTheContentIsUnavailable(budgetStatus: Overview.BudgetStatus) {
+            expectNoDifference(makeState(budgetStatus, expenses: nil).content, nil)
+        }
+
+        @Test
+        func theBreakdownSplitsTheIncome() {
+            let breakdown = Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock)
+
+            expectNoDifference(breakdown.income, 3000)
+            expectNoDifference(breakdown.expenses, .init(amount: Decimal(cents: 98_990), share: percent(33)))
+            expectNoDifference(breakdown.savings, .init(amount: 450, share: percent(15)))
+            expectNoDifference(breakdown.committed, .init(amount: Decimal(cents: 143_990), share: percent(48)))
+            expectNoDifference(breakdown.available, .init(amount: Decimal(cents: 156_010), share: percent(52)))
+            #expect(!breakdown.isOverBudget)
+        }
+
+        @Test
+        func tinyPartsShowAsLessThanOnePercent() throws {
+            let budget = try #require(Budget(income: 10000, investment: 5))
+            let breakdown = Overview.Breakdown(annualExpenses: 12, budget: budget)
+
+            #expect(breakdown.hasExpenses)
+            expectNoDifference(breakdown.expensesShareLabel, .lessThanOnePercent)
+            expectNoDifference(breakdown.savingsShareLabel, .lessThanOnePercent)
+            expectNoDifference(breakdown.committedShareLabel, .lessThanOnePercent)
+            expectNoDifference(breakdown.availableShareLabel, .moreThanNinetyNinePercent)
+        }
+
+        @Test
+        func withoutCostsTheIncomeIsAllAvailable() throws {
+            let budget = try #require(Budget(income: 3000, investment: nil))
+            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: budget)
+
+            #expect(!breakdown.hasExpenses)
+            expectNoDifference(breakdown.expensesShareLabel, .percent(0))
+            expectNoDifference(breakdown.availableShareLabel, .percent(1))
+            expectNoDifference(breakdown.segments, [.init(end: 1, part: .available, start: 0)])
+        }
+
+        @Test
+        func costsEqualToTheIncomeAreFullyCommitted() throws {
+            let budget = try #require(Budget(income: 3000, investment: nil))
+            let breakdown = Overview.Breakdown(annualExpenses: 36000, budget: budget)
+
+            #expect(breakdown.isFullyCommitted)
+            #expect(!breakdown.isOverBudget)
+            expectNoDifference(breakdown.committedShareLabel, .percent(1))
+            expectNoDifference(breakdown.availableShareLabel, .percent(0))
+        }
+
+        @Test
+        func roundedSharesThatReachTheWholeStillShowAFullyCommittedBudget() throws {
+            let budget = try #require(Budget(income: 1000, investment: 495))
+            let breakdown = Overview.Breakdown(annualExpenses: 6060, budget: budget)
+
+            expectNoDifference(breakdown.committed.share, percent(101))
+            #expect(breakdown.isFullyCommitted)
+            expectNoDifference(breakdown.committedShareLabel, .percent(1))
+        }
+
+        @Test
+        func roundedSharesThatStayAtTheWholeStillShowAnOverBudget() throws {
+            let budget = try #require(Budget(income: 1000, investment: nil))
+            let breakdown = Overview.Breakdown(annualExpenses: 12001, budget: budget)
+
+            expectNoDifference(breakdown.committed.share, 1)
+            #expect(breakdown.isOverBudget)
+            expectNoDifference(breakdown.committedShareLabel, .moreThanOneHundredPercent)
+            expectNoDifference(breakdown.availableShareLabel, .lessThanOnePercent)
+        }
+
+        @Test
+        func theBarKeepsTinyPartsVisible() {
+            let layout = BarLayout(
+                segments: [
+                    .init(end: 0.0078125, part: .expenses, start: 0),
+                    .init(end: 0.015625, part: .savings, start: 0.0078125),
+                    .init(end: 1, part: .available, start: 0.015625),
+                ],
+                width: 300
+            )
+
+            expectNoDifference(
+                layout.frames,
+                [.init(width: 6, x: 0), .init(width: 6, x: 9), .init(width: 279, x: 21)]
+            )
+        }
+
+        @Test
+        func withoutExpensesTheBarStartsWithTheSavings() {
+            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: .mock)
+
+            expectNoDifference(
+                breakdown.segments,
                 [
-                    .init(amount: Decimal(cents: 98_990), part: .expenses),
-                    .init(amount: 450, part: .investments),
-                    .init(amount: Decimal(cents: 156_010), part: .leftToSpend),
+                    .init(end: (Decimal(5400) / 36000).doubleValue, part: .savings, start: 0),
+                    .init(end: 1, part: .available, start: (Decimal(5400) / 36000).doubleValue),
                 ]
             )
-            expectNoDifference(breakdown?.chartUpperBound, 3000)
+            expectNoDifference(breakdown.committedShareLabel, .percent(percent(15)))
         }
 
         @Test
         func theSharesAlwaysAddUpToTheWhole() throws {
+            let budget = try #require(Budget(income: 3000, investment: Decimal(cents: 100_050)))
             let breakdown = Overview.Breakdown(
-                budget: try #require(Budget(income: 3000, investment: Decimal(cents: 100_050))),
-                monthlyTotal: Decimal(cents: 100_050)
-            )
+                annualExpenses: Decimal(cents: 1_200_600), budget: budget)
 
             expectNoDifference(breakdown.expenses.share, percent(33))
-            expectNoDifference(breakdown.investments?.share, percent(33))
-            expectNoDifference(breakdown.leftToSpend.share, percent(34))
+            expectNoDifference(breakdown.savings?.share, percent(33))
+            expectNoDifference(breakdown.available.share, percent(34))
+            expectNoDifference(breakdown.committed.share, percent(66))
         }
 
         @Test
-        func aBudgetWithoutInvestmentHasNoInvestmentLine() throws {
-            let budget = try #require(Budget(income: 3000, investment: nil))
-            let breakdown = Overview.Breakdown(budget: budget, monthlyTotal: 1000)
+        func theSegmentsSplitTheBarInOrder() {
+            let breakdown = Overview.Breakdown(annualExpenses: 9000, budget: .mock)
 
-            expectNoDifference(breakdown.investments, nil)
-            expectNoDifference(breakdown.leftToSpend, .init(amount: 2000, share: percent(67)))
             expectNoDifference(
-                breakdown.chartSegments,
-                [.init(amount: 1000, part: .expenses), .init(amount: 2000, part: .leftToSpend)]
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(9000) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(
+                        end: (Decimal(14400) / 36000).doubleValue,
+                        part: .savings,
+                        start: (Decimal(9000) / 36000).doubleValue
+                    ),
+                    .init(end: 1, part: .available, start: (Decimal(14400) / 36000).doubleValue),
+                ]
             )
         }
 
         @Test
-        func costsAboveTheIncomeFillTheChartWithoutANegativePart() throws {
-            let budget = try #require(Budget(income: 900, investment: 100))
-            let breakdown = Overview.Breakdown(budget: budget, monthlyTotal: 1000)
+        func aBudgetWithoutSavingsHasNoSavingsLine() throws {
+            let budget = try #require(Budget(income: 3000, investment: nil))
+            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget)
 
-            expectNoDifference(breakdown.leftToSpend.amount, -200)
+            expectNoDifference(breakdown.savings, nil)
+            expectNoDifference(breakdown.committed, .init(amount: 1000, share: percent(33)))
+            expectNoDifference(breakdown.available, .init(amount: 2000, share: percent(67)))
+            expectNoDifference(
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(12000) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .available, start: (Decimal(12000) / 36000).doubleValue),
+                ]
+            )
+        }
+
+        @Test
+        func costsAboveTheIncomeMakeTheAvailableAmountNegative() throws {
+            let budget = try #require(Budget(income: 900, investment: 100))
+            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget)
+
+            expectNoDifference(breakdown.available.amount, -200)
             #expect(breakdown.isOverBudget)
             expectNoDifference(
-                breakdown.chartSegments,
-                [.init(amount: 1000, part: .expenses), .init(amount: 100, part: .investments)]
+                breakdown.segments,
+                [
+                    .init(end: (Decimal(12000) / 13200).doubleValue, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: (Decimal(12000) / 13200).doubleValue),
+                ]
             )
-            expectNoDifference(breakdown.chartUpperBound, 1100)
         }
 
         @Test
@@ -285,12 +394,12 @@ extension BaseSuite {
         }
 
         @Test
-        func theExpensesRowAsksToShowTheExpenses() async {
+        func theExpensesTileAsksToShowTheExpenses() async {
             let store = TestStore(initialState: makeState()) {
                 Overview()
             }
 
-            await store.send(.expensesRowTapped)
+            await store.send(.expensesTileTapped)
             await store.receive(\.delegate.didSelectExpenses)
         }
 
@@ -306,39 +415,39 @@ extension BaseSuite {
         }
 
         @Test
-        func eachRowOpensItsOwnForm() async {
+        func eachTileOpensItsOwnForm() async {
             let store = TestStore(initialState: makeState(.loaded(.mock))) {
                 Overview()
             }
 
-            await store.send(.incomeRowTapped) {
+            await store.send(.incomeTileTapped) {
                 $0.destination = .incomeForm(IncomeForm.State(budget: .mock))
             }
             await store.send(.destination(.dismiss)) {
                 $0.destination = nil
             }
-            await store.send(.investmentsRowTapped) {
+            await store.send(.savingsTileTapped) {
                 $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 450))
             }
         }
 
         @Test
-        func theInvestmentsNeedAnIncome() async {
+        func theSavingsNeedAnIncome() async {
             let store = TestStore(initialState: makeState(.loaded(nil))) {
                 Overview()
             }
 
-            await store.send(.investmentsRowTapped)
+            await store.send(.savingsTileTapped)
         }
 
         @Test
-        func theInvestmentsRowWithoutInvestmentsOpensAnEmptyForm() async throws {
+        func theSavingsTileWithoutSavingsOpensAnEmptyForm() async throws {
             let budget = try #require(Budget(income: 3000, investment: nil))
             let store = TestStore(initialState: makeState(.loaded(budget))) {
                 Overview()
             }
 
-            await store.send(.investmentsRowTapped) {
+            await store.send(.savingsTileTapped) {
                 $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: nil))
             }
         }
@@ -349,10 +458,10 @@ extension BaseSuite {
                 Overview()
             }
 
-            await store.send(.incomeRowTapped) {
+            await store.send(.incomeTileTapped) {
                 $0.destination = .incomeForm(IncomeForm.State(budget: .mock))
             }
-            await store.send(.investmentsRowTapped)
+            await store.send(.savingsTileTapped)
             await store.send(.addIncomeButtonTapped)
         }
 
@@ -373,7 +482,7 @@ extension BaseSuite {
             await store.send(.destination(.dismiss)) {
                 $0.destination = nil
             }
-            await store.send(.investmentsRowTapped) {
+            await store.send(.savingsTileTapped) {
                 $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 600))
             }
             let promoted = try #require(Budget(income: 4000, investment: 600))
@@ -571,6 +680,17 @@ extension BaseSuite {
                 budgetStatus: budgetStatus,
                 expenses: SharedReader(value: expenses.map { IdentifiedArray(uniqueElements: $0) }),
                 user: .mock
+            )
+        }
+
+        private func expense(_ amount: Decimal, _ billingCycle: BillingCycle, id: Int) -> Expense {
+            Expense(
+                amount: amount,
+                billingCycle: billingCycle,
+                createdAt: Date(timeIntervalSince1970: 1_750_000_000),
+                id: UUID(id),
+                isActive: true,
+                name: billingCycle.rawValue
             )
         }
 
