@@ -79,7 +79,7 @@ struct ExpensesView: View {
         Button {
             store.send(.expenseCardTapped(expense.id))
         } label: {
-            ExpenseRowView(currency: store.currency, expense: expense)
+            ExpenseRowView(currency: store.currency, expense: expense, isHidden: store.hidesAmounts)
         }
         .tint(.primary)
     }
