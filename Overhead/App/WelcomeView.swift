@@ -63,6 +63,10 @@ private struct WelcomeHighlight {
             text: "Add every fixed expense and how often you pay it."
         ),
         WelcomeHighlight(
+            systemImage: "chart.bar.fill",
+            text: "See how much of your income is left after expenses and savings."
+        ),
+        WelcomeHighlight(
             systemImage: "apple.logo",
             text: "Sign in with Apple to keep every expense in your account."
         ),
