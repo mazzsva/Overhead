@@ -48,7 +48,7 @@ extension BudgetClient: DependencyKey {
         BudgetClient(
             budget: { _ in
                 AsyncThrowingStream { continuation in
-                    continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
+                    continuation.yield(.known(.mock))
                 }
             },
             delete: { _ in },
@@ -63,9 +63,9 @@ extension BudgetClient: DependencyKey {
     }
 }
 
-struct BudgetSnapshot: Equatable, Sendable {
-    var budget: Budget?
-    var isFromCache: Bool
+enum BudgetSnapshot: Equatable, Sendable {
+    case known(Budget?)
+    case unknown
 }
 
 extension DependencyValues {

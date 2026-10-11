@@ -157,14 +157,7 @@ struct Overview {
                 state.budgetStatus = .failed
                 return .none
 
-            case .budgetUpdated(let snapshot):
-                guard
-                    snapshot.budget != nil || !snapshot.isFromCache || state.budgetStatus.is(\.loaded)
-                else {
-                    state.budgetStatus = .offline
-                    return .none
-                }
-                let budget = snapshot.budget
+            case .budgetUpdated(.known(let budget)):
                 state.budgetStatus = .loaded(budget)
                 switch state.destination {
                 case .incomeForm:
@@ -178,6 +171,11 @@ struct Overview {
                 case nil:
                     break
                 }
+                return .none
+
+            case .budgetUpdated(.unknown):
+                guard !state.budgetStatus.is(\.loaded) else { return .none }
+                state.budgetStatus = .offline
                 return .none
 
             case .delegate:
