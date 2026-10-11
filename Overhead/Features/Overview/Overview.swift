@@ -24,46 +24,127 @@ struct Overview {
         }
 
         struct Segment: Equatable, Identifiable {
-            let amount: Decimal
+            let end: Double
             let part: BudgetPart
+            let start: Double
 
             var id: BudgetPart { part }
         }
 
-        let expenses: Line
-        let income: Decimal
-        let investments: Line?
-        let leftToSpend: Line
+        enum ShareLabel: Equatable {
+            case lessThanOnePercent
+            case moreThanNinetyNinePercent
+            case moreThanOneHundredPercent
+            case percent(Decimal)
+        }
 
-        init(budget: Budget, monthlyTotal: Decimal) {
-            let expenses = Line(amount: -monthlyTotal, share: (monthlyTotal / budget.income).rounded(scale: 2))
-            let investments = budget.investment.map {
-                Line(amount: -$0, share: ($0 / budget.income).rounded(scale: 2))
-            }
-            self.expenses = expenses
-            income = budget.income
-            self.investments = investments
-            leftToSpend = Line(
-                amount: budget.income + expenses.amount + (investments?.amount ?? 0),
-                share: 1 - expenses.share - (investments?.share ?? 0)
+        let annualExpenses: Decimal
+        let budget: Budget
+
+        var available: Line {
+            Line(
+                amount: income - expenses.amount - (savings?.amount ?? 0),
+                share: 1 - expenses.share - (savings?.share ?? 0)
             )
         }
 
-        var chartSegments: [Segment] {
-            [
-                Segment(amount: -expenses.amount, part: .expenses),
-                Segment(amount: -(investments?.amount ?? 0), part: .investments),
-                Segment(amount: leftToSpend.amount, part: .leftToSpend),
-            ]
-            .filter { $0.amount > 0 }
+        var availableShareLabel: ShareLabel {
+            shareLabel(available, annual: annualIncome - annualCommitted)
         }
 
-        var chartUpperBound: Decimal {
-            max(income, -expenses.amount - (investments?.amount ?? 0))
+        var committed: Line {
+            Line(
+                amount: expenses.amount + (savings?.amount ?? 0),
+                share: expenses.share + (savings?.share ?? 0)
+            )
+        }
+
+        var committedShareLabel: ShareLabel {
+            shareLabel(committed, annual: annualCommitted)
+        }
+
+        var expenses: Line {
+            Line(
+                amount: (annualExpenses / 12).rounded(scale: 2),
+                share: (annualExpenses / annualIncome).rounded(scale: 2)
+            )
+        }
+
+        var expensesShareLabel: ShareLabel {
+            shareLabel(expenses, annual: annualExpenses)
+        }
+
+        var hasExpenses: Bool {
+            annualExpenses > 0
+        }
+
+        var income: Decimal {
+            budget.income
+        }
+
+        var isFullyCommitted: Bool {
+            annualCommitted == annualIncome
         }
 
         var isOverBudget: Bool {
-            leftToSpend.amount < 0
+            annualCommitted > annualIncome
+        }
+
+        var savings: Line? {
+            budget.investment.map {
+                Line(amount: $0, share: ($0 * 12 / annualIncome).rounded(scale: 2))
+            }
+        }
+
+        var savingsShareLabel: ShareLabel? {
+            savings.map { shareLabel($0, annual: annualSavings) }
+        }
+
+        var segments: [Segment] {
+            let total = max(annualIncome, annualCommitted)
+            var segments: [Segment] = []
+            var cursor = Decimal.zero
+            func append(_ part: BudgetPart, upTo end: Decimal) {
+                guard end > cursor else { return }
+                segments.append(
+                    Segment(end: (end / total).doubleValue, part: part, start: (cursor / total).doubleValue)
+                )
+                cursor = end
+            }
+            append(.expenses, upTo: annualExpenses)
+            append(.savings, upTo: annualCommitted)
+            append(.available, upTo: annualIncome)
+            return segments
+        }
+
+        private var annualCommitted: Decimal {
+            annualExpenses + annualSavings
+        }
+
+        private var annualIncome: Decimal {
+            budget.income * 12
+        }
+
+        private var annualSavings: Decimal {
+            (budget.investment ?? 0) * 12
+        }
+
+        private func shareLabel(_ line: Line, annual: Decimal) -> ShareLabel {
+            let share = abs(line.share)
+            switch abs(annual) {
+            case 0:
+                return .percent(0)
+            case annualIncome:
+                return .percent(1)
+            case let annual where share == 0:
+                return annual > annualIncome ? .moreThanOneHundredPercent : .lessThanOnePercent
+            case let annual where annual < annualIncome && share >= 1:
+                return .moreThanNinetyNinePercent
+            case let annual where annual > annualIncome && share <= 1:
+                return .moreThanOneHundredPercent
+            default:
+                return .percent(share)
+            }
         }
     }
 
@@ -75,9 +156,9 @@ struct Overview {
     }
 
     enum BudgetPart: Hashable {
+        case available
         case expenses
-        case investments
-        case leftToSpend
+        case savings
     }
 
     @CasePathable
@@ -89,6 +170,20 @@ struct Overview {
         case offline
     }
 
+    @CasePathable
+    @dynamicMemberLookup
+    enum Content: Equatable {
+        case expensesOnly(amount: Decimal, income: IncomeStatus)
+        case summary(Breakdown)
+    }
+
+    enum IncomeStatus: Equatable {
+        case failed
+        case loading
+        case missing
+        case offline
+    }
+
     @ObservableState
     struct State: Equatable {
         var budgetStatus = BudgetStatus.loading
@@ -96,25 +191,34 @@ struct Overview {
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
         let user: User
 
-        var activeExpenseCount: Int {
-            (expenses ?? []).count(where: \.isActive)
-        }
-
-        var breakdown: Breakdown? {
-            guard let budget, let monthlyTotal else { return nil }
-            return Breakdown(budget: budget, monthlyTotal: monthlyTotal)
+        var annualExpenses: Decimal? {
+            expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.annualAmount } }
         }
 
         var budget: Budget? {
             budgetStatus.loaded ?? nil
         }
 
-        var isPresenting: Bool {
-            destination != nil
+        var content: Content? {
+            guard let annualExpenses else { return nil }
+            let incomeStatus: IncomeStatus
+            switch budgetStatus {
+            case .failed:
+                incomeStatus = .failed
+            case .loaded(let budget?):
+                return .summary(Breakdown(annualExpenses: annualExpenses, budget: budget))
+            case .loaded(nil):
+                incomeStatus = .missing
+            case .loading:
+                incomeStatus = .loading
+            case .offline:
+                incomeStatus = .offline
+            }
+            return .expensesOnly(amount: (annualExpenses / 12).rounded(scale: 2), income: incomeStatus)
         }
 
-        var monthlyTotal: Decimal? {
-            expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.monthlyAmount }.rounded(scale: 2) }
+        var isPresenting: Bool {
+            destination != nil
         }
     }
 
@@ -124,9 +228,9 @@ struct Overview {
         case budgetUpdated(BudgetSnapshot)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
-        case expensesRowTapped
-        case incomeRowTapped
-        case investmentsRowTapped
+        case expensesTileTapped
+        case incomeTileTapped
+        case savingsTileTapped
         case task
 
         @CasePathable
@@ -147,7 +251,7 @@ struct Overview {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .addIncomeButtonTapped, .incomeRowTapped:
+            case .addIncomeButtonTapped, .incomeTileTapped:
                 guard state.destination == nil else { return .none }
                 state.destination = .incomeForm(IncomeForm.State(budget: state.budget))
                 return .none
@@ -218,10 +322,10 @@ struct Overview {
             case .destination:
                 return .none
 
-            case .expensesRowTapped:
+            case .expensesTileTapped:
                 return .send(.delegate(.didSelectExpenses))
 
-            case .investmentsRowTapped:
+            case .savingsTileTapped:
                 guard state.destination == nil, let budget = state.budget else { return .none }
                 state.destination = .investmentForm(
                     InvestmentForm.State(income: budget.income, investment: budget.investment)

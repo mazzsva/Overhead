@@ -20,6 +20,14 @@ struct Expense: Equatable, Identifiable, Sendable {
 extension Expense {
     static let maximumNameLength = 100
 
+    var annualAmount: Decimal {
+        switch billingCycle {
+        case .weekly: amount * 52
+        case .monthly: amount * 12
+        case .yearly: amount
+        }
+    }
+
     var monthlyAmount: Decimal {
         switch billingCycle {
         case .weekly: amount * 52 / 12

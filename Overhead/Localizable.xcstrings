@@ -1,16 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ more than income" : {
+
+    },
+    "%@ of income" : {
+
+    },
     "%@ of your %@ income." : {
 
     },
-    "^[%lld expense](inflect: true)" : {
+    "<%@" : {
+
+    },
+    ">%@" : {
+
+    },
+    "a month" : {
+
+    },
+    "a month, after tax" : {
 
     },
     "Active" : {
-
-    },
-    "Add" : {
 
     },
     "Add every fixed expense with its name and amount." : {
@@ -19,7 +31,7 @@
     "Add Income" : {
 
     },
-    "Add your monthly income to see how much remains after expenses and savings." : {
+    "Add Savings" : {
 
     },
     "Amount" : {
@@ -34,10 +46,16 @@
     "Are you sure you want to sign out?" : {
 
     },
+    "Available" : {
+
+    },
     "Billing Cycle" : {
 
     },
     "Cancel" : {
+
+    },
+    "Committed" : {
 
     },
     "Connect to the internet to see your income." : {
@@ -79,6 +97,9 @@
     "Expenses" : {
 
     },
+    "Fully committed" : {
+
+    },
     "Inactive" : {
 
     },
@@ -86,9 +107,6 @@
 
     },
     "Keep Editing" : {
-
-    },
-    "Left to Spend" : {
 
     },
     "Monthly" : {
@@ -103,6 +121,12 @@
     "No Expenses" : {
 
     },
+    "No expenses yet" : {
+
+    },
+    "Optional" : {
+
+    },
     "Overhead" : {
       "shouldTranslate" : false
     },
@@ -110,9 +134,6 @@
 
     },
     "Overview" : {
-
-    },
-    "per month" : {
 
     },
     "Remove" : {
@@ -134,9 +155,6 @@
 
     },
     "Savings" : {
-
-    },
-    "See What Is Left to Spend" : {
 
     },
     "Settings" : {
@@ -203,9 +221,6 @@
 
     },
     "Your expense couldn't be saved." : {
-
-    },
-    "Your expenses couldn't be loaded." : {
 
     },
     "Your income and savings will be removed. Your expenses will stay." : {
