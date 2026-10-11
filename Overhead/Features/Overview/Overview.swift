@@ -40,10 +40,12 @@ struct Overview {
 
         let annualExpenses: Decimal
         let budget: Budget
+        let period: Period
 
         var available: Line {
-            Line(
-                amount: income - expenses.amount - (savings?.amount ?? 0),
+            let amount = income - expenses.amount - (savings?.amount ?? 0)
+            return Line(
+                amount: isOverBudget ? min(amount, 0) : max(amount, 0),
                 share: 1 - expenses.share - (savings?.share ?? 0)
             )
         }
@@ -65,7 +67,7 @@ struct Overview {
 
         var expenses: Line {
             Line(
-                amount: (annualExpenses / 12).rounded(scale: 2),
+                amount: period.amount(annual: annualExpenses),
                 share: (annualExpenses / annualIncome).rounded(scale: 2)
             )
         }
@@ -79,7 +81,7 @@ struct Overview {
         }
 
         var income: Decimal {
-            budget.income
+            period.amount(annual: annualIncome)
         }
 
         var incomeMark: Double? {
@@ -97,7 +99,7 @@ struct Overview {
 
         var savings: Line? {
             budget.investment.map {
-                Line(amount: $0, share: ($0 * 12 / annualIncome).rounded(scale: 2))
+                Line(amount: period.amount(annual: $0 * 12), share: ($0 * 12 / annualIncome).rounded(scale: 2))
             }
         }
 
@@ -189,11 +191,30 @@ struct Overview {
         case offline
     }
 
+    enum Period: CaseIterable, Sendable {
+        case day
+        case week
+        case month
+        case year
+
+        func amount(annual: Decimal) -> Decimal {
+            let amount =
+                switch self {
+                case .day: annual / 365
+                case .week: annual / 52
+                case .month: annual / 12
+                case .year: annual
+                }
+            return amount.rounded(scale: 2)
+        }
+    }
+
     @ObservableState
     struct State: Equatable {
         var budgetStatus = BudgetStatus.loading
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
+        var period = Period.month
         let user: User
 
         var annualExpenses: Decimal? {
@@ -211,7 +232,7 @@ struct Overview {
             case .failed:
                 incomeStatus = .failed
             case .loaded(let budget?):
-                return .summary(Breakdown(annualExpenses: annualExpenses, budget: budget))
+                return .summary(Breakdown(annualExpenses: annualExpenses, budget: budget, period: period))
             case .loaded(nil):
                 incomeStatus = .missing
             case .loading:
@@ -219,7 +240,7 @@ struct Overview {
             case .offline:
                 incomeStatus = .offline
             }
-            return .expensesOnly(amount: (annualExpenses / 12).rounded(scale: 2), income: incomeStatus)
+            return .expensesOnly(amount: period.amount(annual: annualExpenses), income: incomeStatus)
         }
 
         var isPresenting: Bool {
@@ -235,6 +256,7 @@ struct Overview {
         case destination(PresentationAction<Destination.Action>)
         case expensesTileTapped
         case incomeTileTapped
+        case periodPickerChanged(Period)
         case savingsTileTapped
         case task
 
@@ -329,6 +351,10 @@ struct Overview {
 
             case .expensesTileTapped:
                 return .send(.delegate(.didSelectExpenses))
+
+            case .periodPickerChanged(let period):
+                state.period = period
+                return .none
 
             case .savingsTileTapped:
                 guard state.destination == nil, let budget = state.budget else { return .none }

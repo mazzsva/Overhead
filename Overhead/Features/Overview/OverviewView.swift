@@ -52,7 +52,14 @@ struct OverviewView: View {
 
     private func dashboard(_ content: Overview.Content) -> some View {
         VStack(spacing: 12) {
-            HeroCard(content: content) {
+            Picker("Period", selection: $store.period.sending(\.periodPickerChanged)) {
+                ForEach(Overview.Period.allCases, id: \.self) { period in
+                    Text(period.title)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            HeroCard(content: content, period: store.period) {
                 store.send(.addIncomeButtonTapped)
             }
 
@@ -138,6 +145,35 @@ extension Overview.BudgetPart {
     }
 }
 
+extension Overview.Period {
+    fileprivate var afterTaxCaption: LocalizedStringResource {
+        switch self {
+        case .day: "a day, after tax"
+        case .week: "a week, after tax"
+        case .month: "a month, after tax"
+        case .year: "a year, after tax"
+        }
+    }
+
+    fileprivate var caption: LocalizedStringResource {
+        switch self {
+        case .day: "a day"
+        case .week: "a week"
+        case .month: "a month"
+        case .year: "a year"
+        }
+    }
+
+    fileprivate var title: LocalizedStringResource {
+        switch self {
+        case .day: "Day"
+        case .week: "Week"
+        case .month: "Month"
+        case .year: "Year"
+        }
+    }
+}
+
 private struct Amount: View {
     let value: Decimal
 
@@ -151,6 +187,7 @@ private struct Amount: View {
 
 private struct HeroCard: View {
     let content: Overview.Content
+    let period: Overview.Period
     let onAddIncome: () -> Void
 
     @ScaledMetric(relativeTo: .largeTitle) private var amountSize = 44
@@ -173,7 +210,7 @@ private struct HeroCard: View {
                     Amount(value: amount)
                         .font(.system(size: amountSize, weight: .bold, design: .rounded))
                         .foregroundStyle(amount == 0 ? .tertiary : .primary)
-                    Text("a month")
+                    Text(period.caption)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize()
@@ -411,7 +448,7 @@ private struct TileGrid: View {
             Tile(title: "Income", color: .gray) {
                 Amount(value: breakdown.income)
             } caption: {
-                Text("a month, after tax")
+                Text(breakdown.period.afterTaxCaption)
             }
         }
         .buttonStyle(TileButtonStyle())
