@@ -524,14 +524,14 @@ private struct Tile<Value: View, Caption: View>: View {
     @ViewBuilder let value: Value
     @ViewBuilder let caption: Caption
 
-    @ScaledMetric private var dotSize = 8
+    @ScaledMetric private var markerSize = 10
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Circle()
+                RoundedRectangle(cornerRadius: markerSize * 0.3, style: .continuous)
                     .fill(color)
-                    .frame(width: dotSize, height: dotSize)
+                    .frame(width: markerSize, height: markerSize)
                 Text(title)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
