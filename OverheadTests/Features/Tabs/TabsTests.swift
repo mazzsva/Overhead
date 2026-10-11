@@ -52,7 +52,7 @@ extension BaseSuite {
             }
 
             await store.send(.overview(.task))
-            budget.continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
+            budget.continuation.yield(.known(.mock))
             await store.receive(\.overview.budgetUpdated) {
                 $0.overview.budgetStatus = .loaded(.mock)
             }

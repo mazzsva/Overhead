@@ -24,20 +24,20 @@ extension BaseSuite.IntegrationSuite {
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
 
-            try await budgets.wait { $0.map(\.budget) == [nil] }
+            try await budgets.wait { $0 == [.known(nil)] }
         }
 
         @Test
-        func aMissingBudgetIsMarkedAsCachedWhileOffline() async throws {
+        func aMissingBudgetIsUnknownWhileOfflineBeforeAnySync() async throws {
             let uid = try await FirebaseEmulators.signIn()
             try await Firestore.firestore().disableNetwork()
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
 
-            try await budgets.wait { $0 == [BudgetSnapshot(budget: nil, isFromCache: true)] }
+            try await budgets.wait { $0 == [.unknown] }
 
             try await Firestore.firestore().enableNetwork()
-            try await budgets.wait { $0.last == BudgetSnapshot(budget: nil, isFromCache: false) }
+            try await budgets.wait { $0.last == .known(nil) }
         }
 
         @Test
@@ -45,22 +45,23 @@ extension BaseSuite.IntegrationSuite {
             let uid = try await FirebaseEmulators.signIn()
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
-            try await budgets.wait { $0.map(\.budget) == [nil] }
+            try await budgets.wait { $0 == [.known(nil)] }
 
             let income = try #require(Budget(income: 3000, investment: nil))
             try await FirestoreStorage.shared.saveIncome(3000, removingInvestment: false, uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, income] }
+            try await budgets.wait { $0 == [.known(nil), .known(income)] }
 
             try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, income, .mock] }
+            try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock)] }
 
             try await FirestoreStorage.shared.deleteBudget(uid: uid)
-            try await budgets.wait { $0.map(\.budget) == [nil, income, .mock, nil] }
+            try await budgets.wait { $0 == [.known(nil), .known(income), .known(.mock), .known(nil)] }
 
             let marker = try #require(Budget(income: 1, investment: nil))
             try await FirestoreStorage.shared.saveIncome(1, removingInvestment: false, uid: uid)
-            try await budgets.wait { $0.last?.budget == marker }
-            expectNoDifference(budgets.values.map(\.budget), [nil, income, .mock, nil, marker])
+            try await budgets.wait { $0.last == .known(marker) }
+            expectNoDifference(
+                budgets.values, [.known(nil), .known(income), .known(.mock), .known(nil), .known(marker)])
         }
 
         @Test
@@ -69,12 +70,12 @@ extension BaseSuite.IntegrationSuite {
             try await seed(.mock, uid: uid)
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
-            try await budgets.wait { $0.last == BudgetSnapshot(budget: .mock, isFromCache: false) }
+            try await budgets.wait { $0.last == .known(.mock) }
 
             try await Firestore.firestore().disableNetwork()
             let deletion = Task { try await FirestoreStorage.shared.deleteBudget(uid: uid) }
 
-            try await budgets.wait { $0.last == BudgetSnapshot(budget: nil, isFromCache: true) }
+            try await budgets.wait { $0.last == .known(nil) }
             try await Firestore.firestore().enableNetwork()
             try await deletion.value
         }
@@ -94,7 +95,7 @@ extension BaseSuite.IntegrationSuite {
             defer { budgets.cancel() }
             let failure = try await budgets.waitForFailure() as NSError
             expectNoDifference(failure.code, FirestoreErrorCode.permissionDenied.rawValue)
-            expectNoDifference(budgets.values.map(\.budget), [])
+            expectNoDifference(budgets.values, [])
         }
 
         @Test
@@ -102,23 +103,23 @@ extension BaseSuite.IntegrationSuite {
             let uid = try await FirebaseEmulators.signIn()
             let budgets = Recording(await FirestoreStorage.shared.budget(uid: uid))
             defer { budgets.cancel() }
-            try await budgets.wait { $0.map(\.budget) == [nil] }
+            try await budgets.wait { $0 == [.known(nil)] }
 
             try await FirestoreStorage.shared.saveIncome(3000, removingInvestment: false, uid: uid)
-            try await budgets.wait { $0.last?.budget == Budget(income: 3000, investment: nil) }
+            try await budgets.wait { $0.last == .known(Budget(income: 3000, investment: nil)) }
 
             try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
-            try await budgets.wait { $0.last?.budget == .mock }
+            try await budgets.wait { $0.last == .known(.mock) }
 
             try await FirestoreStorage.shared.saveIncome(3500, removingInvestment: false, uid: uid)
-            try await budgets.wait { $0.last?.budget == Budget(income: 3500, investment: 450) }
+            try await budgets.wait { $0.last == .known(Budget(income: 3500, investment: 450)) }
 
             try await FirestoreStorage.shared.removeInvestment(uid: uid)
-            try await budgets.wait { $0.last?.budget == Budget(income: 3500, investment: nil) }
+            try await budgets.wait { $0.last == .known(Budget(income: 3500, investment: nil)) }
 
             try await FirestoreStorage.shared.saveInvestment(450, uid: uid)
             try await FirestoreStorage.shared.saveIncome(400, removingInvestment: true, uid: uid)
-            try await budgets.wait { $0.last?.budget == Budget(income: 400, investment: nil) }
+            try await budgets.wait { $0.last == .known(Budget(income: 400, investment: nil)) }
         }
 
         @Test

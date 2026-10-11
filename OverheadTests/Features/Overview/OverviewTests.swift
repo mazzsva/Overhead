@@ -132,12 +132,12 @@ extension BaseSuite {
 
             let task = await store.send(.task)
 
-            budget.continuation.yield(BudgetSnapshot(budget: nil, isFromCache: false))
+            budget.continuation.yield(.known(nil))
             await store.receive(\.budgetUpdated) {
                 $0.budgetStatus = .loaded(nil)
             }
 
-            budget.continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
+            budget.continuation.yield(.known(.mock))
             await store.receive(\.budgetUpdated) {
                 $0.budgetStatus = .loaded(.mock)
             }
@@ -146,15 +146,15 @@ extension BaseSuite {
         }
 
         @Test
-        func aCachedMissingBudgetBeforeAnyLoadMeansOffline() async {
+        func anUnknownMissingBudgetBeforeAnyLoadMeansOffline() async {
             let store = TestStore(initialState: makeState()) {
                 Overview()
             }
 
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: true))) {
+            await store.send(.budgetUpdated(.unknown)) {
                 $0.budgetStatus = .offline
             }
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+            await store.send(.budgetUpdated(.known(nil))) {
                 $0.budgetStatus = .loaded(nil)
             }
         }
@@ -165,7 +165,7 @@ extension BaseSuite {
                 Overview()
             }
 
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: .mock, isFromCache: true))) {
+            await store.send(.budgetUpdated(.known(.mock))) {
                 $0.budgetStatus = .loaded(.mock)
             }
         }
@@ -176,9 +176,18 @@ extension BaseSuite {
                 Overview()
             }
 
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: true))) {
+            await store.send(.budgetUpdated(.known(nil))) {
                 $0.budgetStatus = .loaded(nil)
             }
+        }
+
+        @Test
+        func anUnknownMissingBudgetKeepsTheLoadedBudget() async {
+            let store = TestStore(initialState: makeState(.loaded(.mock))) {
+                Overview()
+            }
+
+            await store.send(.budgetUpdated(.unknown))
         }
 
         @Test
@@ -198,7 +207,7 @@ extension BaseSuite {
                         if attempt == 1 {
                             continuation.finish(throwing: BudgetFailure())
                         } else {
-                            continuation.yield(BudgetSnapshot(budget: .mock, isFromCache: false))
+                            continuation.yield(.known(.mock))
                             continuation.finish()
                         }
                     }
@@ -356,7 +365,7 @@ extension BaseSuite {
             }
 
             let raised = try #require(Budget(income: 3000, investment: 600))
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: raised, isFromCache: false))) {
+            await store.send(.budgetUpdated(.known(raised))) {
                 $0.budgetStatus = .loaded(raised)
                 $0.destination?.modify(\.incomeForm) { $0.investment = 600 }
             }
@@ -368,11 +377,11 @@ extension BaseSuite {
                 $0.destination = .investmentForm(InvestmentForm.State(income: 3000, investment: 600))
             }
             let promoted = try #require(Budget(income: 4000, investment: 600))
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: promoted, isFromCache: false))) {
+            await store.send(.budgetUpdated(.known(promoted))) {
                 $0.budgetStatus = .loaded(promoted)
                 $0.destination?.modify(\.investmentForm) { $0.income = 4000 }
             }
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+            await store.send(.budgetUpdated(.known(nil))) {
                 $0.budgetStatus = .loaded(nil)
                 $0.destination = nil
             }
@@ -386,7 +395,7 @@ extension BaseSuite {
                 Overview()
             }
 
-            await store.send(.budgetUpdated(BudgetSnapshot(budget: nil, isFromCache: false))) {
+            await store.send(.budgetUpdated(.known(nil))) {
                 $0.budgetStatus = .loaded(nil)
                 $0.destination?.modify(\.incomeForm) { $0.investment = nil }
             }
