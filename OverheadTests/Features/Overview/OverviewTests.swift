@@ -48,7 +48,7 @@ extension BaseSuite {
         ) {
             expectNoDifference(
                 makeState(budgetStatus, expenses: Expense.mocks).content,
-                .expensesOnly(amount: Decimal(cents: 98_990), income: incomeStatus)
+                .expensesOnly(amount: 990, income: incomeStatus)
             )
         }
 
@@ -56,7 +56,7 @@ extension BaseSuite {
         func aLoadedBudgetShowsTheSummary() {
             expectNoDifference(
                 makeState(.loaded(.mock), expenses: Expense.mocks).content,
-                .summary(Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock, period: .month))
+                .summary(Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month))
             )
         }
 
@@ -111,13 +111,13 @@ extension BaseSuite {
 
         @Test
         func theBreakdownSplitsTheIncome() {
-            let breakdown = Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month)
 
             expectNoDifference(breakdown.income, 3000)
-            expectNoDifference(breakdown.expenses, .init(amount: Decimal(cents: 98_990), share: percent(33)))
+            expectNoDifference(breakdown.expenses, .init(amount: 990, share: percent(33)))
             expectNoDifference(breakdown.savings, .init(amount: 450, share: percent(15)))
-            expectNoDifference(breakdown.committed, .init(amount: Decimal(cents: 143_990), share: percent(48)))
-            expectNoDifference(breakdown.available, .init(amount: Decimal(cents: 156_010), share: percent(52)))
+            expectNoDifference(breakdown.committed, .init(amount: 1440, share: percent(48)))
+            expectNoDifference(breakdown.available, .init(amount: 1560, share: percent(52)))
             #expect(!breakdown.isOverBudget)
         }
 
@@ -130,21 +130,21 @@ extension BaseSuite {
 
         @Test(
             arguments: [
-                (Overview.Period.day, Decimal(cents: 10_521), Decimal(cents: 3_860), Decimal(cents: 1_479)),
-                (.week, Decimal(cents: 73_846), Decimal(cents: 27_097), Decimal(cents: 10_385)),
-                (.month, Decimal(cents: 320_000), Decimal(cents: 117_422), Decimal(cents: 45_000)),
-                (.year, Decimal(cents: 3_840_000), Decimal(cents: 1_409_064), Decimal(cents: 540_000)),
+                (Overview.Period.day, 105, 39, 15),
+                (.week, 738, 271, 104),
+                (.month, 3200, 1174, 450),
+                (.year, 38400, 14091, 5400),
             ]
         )
         func eachPeriodRoundsEachPartOnceAndKeepsTheSum(
             period: Overview.Period,
-            income: Decimal,
-            expenses: Decimal,
-            savings: Decimal
+            income: Int,
+            expenses: Int,
+            savings: Int
         ) throws {
             let budget = try #require(Budget(income: 3200, investment: 450))
             let breakdown = Overview.Breakdown(
-                annualExpenses: Decimal(cents: 1_409_064), budget: budget, period: period)
+                annualExpenses: 14091, budget: budget, period: period)
 
             expectNoDifference(breakdown.income, income)
             expectNoDifference(breakdown.expenses.amount, expenses)
@@ -157,7 +157,7 @@ extension BaseSuite {
         func aBudgetDoesNotGoOverWhenOnlyTheRoundingDoes(period: Overview.Period) throws {
             let budget = try #require(Budget(income: 2000, investment: 1000))
             let breakdown = Overview.Breakdown(
-                annualExpenses: Decimal(cents: 1_199_940), budget: budget, period: period)
+                annualExpenses: 11999, budget: budget, period: period)
 
             #expect(!breakdown.isOverBudget)
             #expect(breakdown.available.amount >= 0)
@@ -260,8 +260,8 @@ extension BaseSuite {
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(5400) / 36000).doubleValue, part: .savings, start: 0),
-                    .init(end: 1, part: .available, start: (Decimal(5400) / 36000).doubleValue),
+                    .init(end: Double(5400) / 36000, part: .savings, start: 0),
+                    .init(end: 1, part: .available, start: Double(5400) / 36000),
                 ]
             )
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(15)))
@@ -273,12 +273,12 @@ extension BaseSuite {
             let breakdown = Overview.Breakdown(annualExpenses: 14400, budget: budget, period: .month)
 
             expectNoDifference(breakdown.available.amount, -500)
-            expectNoDifference(breakdown.incomeMark, (Decimal(12000) / 18000).doubleValue)
+            expectNoDifference(breakdown.incomeMark, Double(12000) / 18000)
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(14400) / 18000).doubleValue, part: .expenses, start: 0),
-                    .init(end: 1, part: .savings, start: (Decimal(14400) / 18000).doubleValue),
+                    .init(end: Double(14400) / 18000, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: Double(14400) / 18000),
                 ]
             )
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(150)))
@@ -287,8 +287,8 @@ extension BaseSuite {
 
         @Test(arguments: Overview.Period.allCases)
         func theSharesAndTheBarDoNotDependOnThePeriod(period: Overview.Period) {
-            let month = Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock, period: .month)
-            let breakdown = Overview.Breakdown(annualExpenses: Decimal(cents: 1_187_880), budget: .mock, period: period)
+            let month = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: period)
 
             expectNoDifference(breakdown.expenses.share, month.expenses.share)
             expectNoDifference(breakdown.savings?.share, month.savings?.share)
@@ -298,9 +298,9 @@ extension BaseSuite {
 
         @Test
         func theSharesAlwaysAddUpToTheWhole() throws {
-            let budget = try #require(Budget(income: 3000, investment: Decimal(cents: 100_050)))
+            let budget = try #require(Budget(income: 3000, investment: 1001))
             let breakdown = Overview.Breakdown(
-                annualExpenses: Decimal(cents: 1_200_600), budget: budget, period: .month)
+                annualExpenses: 12006, budget: budget, period: .month)
 
             expectNoDifference(breakdown.expenses.share, percent(33))
             expectNoDifference(breakdown.savings?.share, percent(33))
@@ -315,13 +315,13 @@ extension BaseSuite {
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(9000) / 36000).doubleValue, part: .expenses, start: 0),
+                    .init(end: Double(9000) / 36000, part: .expenses, start: 0),
                     .init(
-                        end: (Decimal(14400) / 36000).doubleValue,
+                        end: Double(14400) / 36000,
                         part: .savings,
-                        start: (Decimal(9000) / 36000).doubleValue
+                        start: Double(9000) / 36000
                     ),
-                    .init(end: 1, part: .available, start: (Decimal(14400) / 36000).doubleValue),
+                    .init(end: 1, part: .available, start: Double(14400) / 36000),
                 ]
             )
         }
@@ -337,8 +337,8 @@ extension BaseSuite {
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(12000) / 36000).doubleValue, part: .expenses, start: 0),
-                    .init(end: 1, part: .available, start: (Decimal(12000) / 36000).doubleValue),
+                    .init(end: Double(12000) / 36000, part: .expenses, start: 0),
+                    .init(end: 1, part: .available, start: Double(12000) / 36000),
                 ]
             )
         }
@@ -353,11 +353,11 @@ extension BaseSuite {
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(12000) / 13200).doubleValue, part: .expenses, start: 0),
-                    .init(end: 1, part: .savings, start: (Decimal(12000) / 13200).doubleValue),
+                    .init(end: Double(12000) / 13200, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: Double(12000) / 13200),
                 ]
             )
-            expectNoDifference(breakdown.incomeMark, (Decimal(10800) / 13200).doubleValue)
+            expectNoDifference(breakdown.incomeMark, Double(10800) / 13200)
         }
 
         @Test
@@ -368,8 +368,8 @@ extension BaseSuite {
             expectNoDifference(
                 breakdown.segments,
                 [
-                    .init(end: (Decimal(30600) / 36000).doubleValue, part: .expenses, start: 0),
-                    .init(end: 1, part: .savings, start: (Decimal(30600) / 36000).doubleValue),
+                    .init(end: Double(30600) / 36000, part: .expenses, start: 0),
+                    .init(end: 1, part: .savings, start: Double(30600) / 36000),
                 ]
             )
             expectNoDifference(breakdown.incomeMark, nil)
@@ -832,7 +832,7 @@ extension BaseSuite {
             )
         }
 
-        private func expense(_ amount: Decimal, _ billingCycle: BillingCycle, id: Int) -> Expense {
+        private func expense(_ amount: Amount, _ billingCycle: BillingCycle, id: Int) -> Expense {
             Expense(
                 amount: amount,
                 billingCycle: billingCycle,
@@ -850,8 +850,8 @@ extension BaseSuite {
         private enum Call: Hashable {
             case removeIncome(uid: String)
             case removeInvestment(uid: String)
-            case saveIncome(Decimal, removingInvestment: Bool, uid: String)
-            case saveInvestment(Decimal, uid: String)
+            case saveIncome(Amount, removingInvestment: Bool, uid: String)
+            case saveInvestment(Amount, uid: String)
             case success
             case warning
         }

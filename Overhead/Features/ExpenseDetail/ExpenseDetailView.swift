@@ -15,7 +15,8 @@ struct ExpenseDetailView: View {
         List {
             Section {
                 LabeledContent("Amount") {
-                    AmountText(value: store.expense.amount, currency: store.currency, isHidden: store.hidesAmounts)
+                    AmountText(
+                        value: store.expense.amount.value, currency: store.currency, isHidden: store.hidesAmounts)
                 }
                 LabeledContent("Billing Cycle") {
                     Text(store.expense.billingCycle.title)

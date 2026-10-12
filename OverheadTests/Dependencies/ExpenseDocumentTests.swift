@@ -16,11 +16,11 @@ extension BaseSuite {
     @Suite
     struct ExpenseDocumentTests {
         @Test
-        func anExpenseRoundTripsThroughItsDocument() throws {
-            let data = try Expense.gym.documentData()
+        func anExpenseRoundTripsThroughItsDocument() {
+            let data = Expense.gym.documentData()
 
-            expectNoDifference(data.keys.sorted(), ["amountInCents", "billingCycle", "createdAt", "isActive", "name"])
-            expectNoDifference(data["amountInCents"] as? Int, 3990)
+            expectNoDifference(data.keys.sorted(), ["amount", "billingCycle", "createdAt", "isActive", "name"])
+            expectNoDifference(data["amount"] as? Int, 40)
             expectNoDifference(Expense(documentID: Expense.gym.id.uuidString, data: data), .gym)
         }
 
@@ -32,24 +32,24 @@ extension BaseSuite {
             Timestamp(seconds: -1, nanoseconds: 999_999_000),
         ])
         func aStoredCreationDateRoundTripsExactly(createdAt: Timestamp) throws {
-            var data = try Expense.gym.documentData()
+            var data = Expense.gym.documentData()
             data["createdAt"] = createdAt
 
             let expense = try #require(Expense(documentID: Expense.gym.id.uuidString, data: data))
 
-            expectNoDifference(try expense.documentData()["createdAt"] as? Timestamp, createdAt)
+            expectNoDifference(expense.documentData()["createdAt"] as? Timestamp, createdAt)
         }
 
         @Test(arguments: [-1, 0, 1_751_000_000, 2_200_000_000, 4_102_444_800])
         func everyStoredMicrosecondRoundTripsExactly(seconds: Int64) throws {
-            var data = try Expense.gym.documentData()
+            var data = Expense.gym.documentData()
             for microsecond in 0 ..< 1_000_000 {
                 let createdAt = Timestamp(seconds: seconds, nanoseconds: Int32(microsecond) * 1000)
                 data["createdAt"] = createdAt
 
                 let expense = try #require(Expense(documentID: Expense.gym.id.uuidString, data: data))
 
-                guard try expense.documentData()["createdAt"] as? Timestamp == createdAt else {
+                guard expense.documentData()["createdAt"] as? Timestamp == createdAt else {
                     Issue.record("The creation date \(createdAt) changed after a round trip.")
                     return
                 }
@@ -73,13 +73,13 @@ extension BaseSuite {
                 name: Expense.gym.name
             )
 
-            expectNoDifference(try expense.documentData()["createdAt"] as? Timestamp, expected)
+            expectNoDifference(expense.documentData()["createdAt"] as? Timestamp, expected)
         }
 
         @Test
-        func aDocumentWithoutCentsIsSkipped() throws {
-            var data = try Expense.gym.documentData()
-            data["amountMinorUnits"] = data.removeValue(forKey: "amountInCents")
+        func aDocumentWithoutAnAmountIsSkipped() {
+            var data = Expense.gym.documentData()
+            data["amountInCents"] = data.removeValue(forKey: "amount")
 
             var expense: Expense?
             withKnownIssue {
@@ -88,18 +88,16 @@ extension BaseSuite {
             expectNoDifference(expense, nil)
         }
 
-        @Test
-        func anAmountWithMoreThanTwoDecimalPlacesIsNotSaved() throws {
-            var expense = Expense.gym
-            expense.amount = try #require(Decimal(string: "39.901"))
+        @Test(arguments: [0, -1, 1_000_000_000, 39.9, "40"] as [any Sendable])
+        func aDocumentWithAnInvalidAmountIsSkipped(amount: any Sendable) {
+            var data = Expense.gym.documentData()
+            data["amount"] = amount
 
-            var result: Result<[String: Any], any Error> = .success([:])
+            var expense: Expense?
             withKnownIssue {
-                result = Result { try expense.documentData() }
+                expense = Expense(documentID: Expense.gym.id.uuidString, data: data)
             }
-            #expect(throws: (any Error).self) {
-                try result.get()
-            }
+            expectNoDifference(expense, nil)
         }
     }
 }

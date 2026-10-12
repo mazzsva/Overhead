@@ -19,7 +19,7 @@ struct ExpenseRowView: View {
                 .lineLimit(1)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                AmountText(value: expense.amount, currency: currency, isHidden: isHidden)
+                AmountText(value: expense.amount.value, currency: currency, isHidden: isHidden)
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
                 Text(expense.billingCycle.title)

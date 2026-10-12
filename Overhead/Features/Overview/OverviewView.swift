@@ -201,15 +201,15 @@ extension Overview.Period {
     }
 }
 
-private struct Amount: View {
-    let value: Decimal
+private struct AmountLabel: View {
+    let value: Int
     let currency: Currency
     let isHidden: Bool
 
     var body: some View {
         AmountText(value: value, currency: currency, isHidden: isHidden)
             .monospacedDigit()
-            .contentTransition(.numericText(value: value.doubleValue))
+            .contentTransition(.numericText(value: Double(value)))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
     }
@@ -240,7 +240,7 @@ private struct HeroCard: View {
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
                     : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
                 amountLayout {
-                    Amount(value: amount, currency: currency, isHidden: isHidingAmounts)
+                    AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
                         .font(.system(size: amountSize, weight: .bold, design: .rounded))
                         .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
                         .animation(reduceMotion ? nil : .snappy, value: content.summary)
@@ -263,7 +263,7 @@ private struct HeroCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 24, style: .continuous))
     }
 
-    private var amount: Decimal {
+    private var amount: Int {
         switch content {
         case .expensesOnly(let amount, _): amount
         case .summary(let breakdown): breakdown.committed.amount
@@ -478,7 +478,7 @@ private struct TileGrid: View {
             title: isOverBudget ? "Over Budget" : "Available",
             color: isOverBudget ? .red : Overview.BudgetPart.available.color
         ) {
-            Amount(value: abs(breakdown.available.amount), currency: currency, isHidden: isHidingAmounts)
+            AmountLabel(value: abs(breakdown.available.amount), currency: currency, isHidden: isHidingAmounts)
                 .foregroundStyle(isOverBudget ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
         } caption: {
             if isOverBudget {
@@ -494,7 +494,7 @@ private struct TileGrid: View {
     private var expensesTile: some View {
         Button(action: onExpenses) {
             Tile(title: "Expenses", color: Overview.BudgetPart.expenses.color) {
-                Amount(value: breakdown.expenses.amount, currency: currency, isHidden: isHidingAmounts)
+                AmountLabel(value: breakdown.expenses.amount, currency: currency, isHidden: isHidingAmounts)
             } caption: {
                 if breakdown.hasExpenses {
                     Text("\(breakdown.expensesShareLabel.text) of income")
@@ -509,7 +509,7 @@ private struct TileGrid: View {
     private var incomeTile: some View {
         Button(action: onIncome) {
             Tile(title: "Income", color: .gray) {
-                Amount(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
+                AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
             } caption: {
                 Text(breakdown.period.afterTaxCaption)
             }
@@ -521,7 +521,7 @@ private struct TileGrid: View {
         Button(action: onSavings) {
             if let savings = breakdown.savings, let share = breakdown.savingsShareLabel {
                 Tile(title: "Savings", color: Overview.BudgetPart.savings.color) {
-                    Amount(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
+                    AmountLabel(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
                 } caption: {
                     Text("\(share.text) of income")
                 }

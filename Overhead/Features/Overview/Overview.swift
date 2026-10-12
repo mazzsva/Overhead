@@ -19,7 +19,7 @@ struct Overview {
 
     struct Breakdown: Equatable {
         struct Line: Equatable {
-            let amount: Decimal
+            let amount: Int
             let share: Decimal
         }
 
@@ -38,7 +38,7 @@ struct Overview {
             case percent(Decimal)
         }
 
-        let annualExpenses: Decimal
+        let annualExpenses: Int
         let budget: Budget
         let period: Period
 
@@ -68,7 +68,7 @@ struct Overview {
         var expenses: Line {
             Line(
                 amount: period.amount(annual: annualExpenses),
-                share: (annualExpenses / annualIncome).rounded(scale: 2)
+                share: (Decimal(annualExpenses) / Decimal(annualIncome)).rounded(scale: 2)
             )
         }
 
@@ -80,13 +80,13 @@ struct Overview {
             annualExpenses > 0
         }
 
-        var income: Decimal {
+        var income: Int {
             period.amount(annual: annualIncome)
         }
 
         var incomeMark: Double? {
             guard isOverBudget else { return nil }
-            return (annualIncome / annualCommitted).doubleValue
+            return Double(annualIncome) / Double(annualCommitted)
         }
 
         var isFullyCommitted: Bool {
@@ -99,7 +99,10 @@ struct Overview {
 
         var savings: Line? {
             budget.investment.map {
-                Line(amount: period.amount(annual: $0 * 12), share: ($0 * 12 / annualIncome).rounded(scale: 2))
+                Line(
+                    amount: period.amount(annual: $0.value * 12),
+                    share: (Decimal($0.value * 12) / Decimal(annualIncome)).rounded(scale: 2)
+                )
             }
         }
 
@@ -110,11 +113,11 @@ struct Overview {
         var segments: [Segment] {
             let total = max(annualIncome, annualCommitted)
             var segments: [Segment] = []
-            var cursor = Decimal.zero
-            func append(_ part: BudgetPart, upTo end: Decimal) {
+            var cursor = 0
+            func append(_ part: BudgetPart, upTo end: Int) {
                 guard end > cursor else { return }
                 segments.append(
-                    Segment(end: (end / total).doubleValue, part: part, start: (cursor / total).doubleValue)
+                    Segment(end: Double(end) / Double(total), part: part, start: Double(cursor) / Double(total))
                 )
                 cursor = end
             }
@@ -124,19 +127,19 @@ struct Overview {
             return segments
         }
 
-        private var annualCommitted: Decimal {
+        private var annualCommitted: Int {
             annualExpenses + annualSavings
         }
 
-        private var annualIncome: Decimal {
-            budget.income * 12
+        private var annualIncome: Int {
+            budget.income.value * 12
         }
 
-        private var annualSavings: Decimal {
-            (budget.investment ?? 0) * 12
+        private var annualSavings: Int {
+            (budget.investment?.value ?? 0) * 12
         }
 
-        private func shareLabel(_ line: Line, annual: Decimal) -> ShareLabel {
+        private func shareLabel(_ line: Line, annual: Int) -> ShareLabel {
             let share = abs(line.share)
             switch abs(annual) {
             case 0:
@@ -180,7 +183,7 @@ struct Overview {
     @CasePathable
     @dynamicMemberLookup
     enum Content: Equatable {
-        case expensesOnly(amount: Decimal, income: IncomeStatus)
+        case expensesOnly(amount: Int, income: IncomeStatus)
         case summary(Breakdown)
     }
 
@@ -197,15 +200,15 @@ struct Overview {
         case month
         case year
 
-        func amount(annual: Decimal) -> Decimal {
-            let amount =
+        func amount(annual: Int) -> Int {
+            let periods =
                 switch self {
-                case .day: annual / 365
-                case .week: annual / 52
-                case .month: annual / 12
-                case .year: annual
+                case .day: 365
+                case .week: 52
+                case .month: 12
+                case .year: 1
                 }
-            return amount.rounded(scale: 2)
+            return (annual + periods / 2) / periods
         }
     }
 
@@ -219,7 +222,7 @@ struct Overview {
         var period = Period.month
         let user: User
 
-        var annualExpenses: Decimal? {
+        var annualExpenses: Int? {
             expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.annualAmount } }
         }
 
@@ -391,7 +394,7 @@ struct Overview {
         }
     }
 
-    private func save(income: Decimal, removingInvestment: Bool, uid: String) -> Effect<Action> {
+    private func save(income: Amount, removingInvestment: Bool, uid: String) -> Effect<Action> {
         .merge(
             .run { _ in await hapticsClient.success() },
             changeBudget(.saveIncome) {

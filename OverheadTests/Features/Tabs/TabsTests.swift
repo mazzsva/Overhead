@@ -26,7 +26,7 @@ extension BaseSuite {
             await store.send(.expenses(.expensesUpdated(Expense.mocks))) {
                 $0.expenses.$expenses.withLock { $0 = IdentifiedArray(uniqueElements: Expense.mocks) }
             }
-            expectNoDifference(store.state.overview.annualExpenses, Decimal(cents: 1_187_880))
+            expectNoDifference(store.state.overview.annualExpenses, 11880)
 
             var pausedRent = Expense.rent
             pausedRent.isActive = false
@@ -35,7 +35,7 @@ extension BaseSuite {
                     $0 = IdentifiedArray(uniqueElements: [pausedRent, .gym, .phonePlan])
                 }
             }
-            expectNoDifference(store.state.overview.annualExpenses, Decimal(cents: 47_880))
+            expectNoDifference(store.state.overview.annualExpenses, 480)
         }
 
         @Test

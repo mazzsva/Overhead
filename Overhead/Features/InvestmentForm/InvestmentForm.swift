@@ -29,7 +29,7 @@ struct InvestmentForm {
     }
 
     struct ShareOption: Equatable, Identifiable {
-        let amount: Decimal
+        let amount: Amount?
         let percent: Int
 
         var id: Int { percent }
@@ -42,16 +42,16 @@ struct InvestmentForm {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         var focus: Field? = .investment
-        var income: Decimal
-        let initialInvestment: Decimal?
+        var income: Amount
+        let initialInvestment: Amount?
         var investmentText: String
         let locale: Locale
 
-        init(income: Decimal, investment: Decimal?) {
+        init(income: Amount, investment: Amount?) {
             @Dependency(\.locale) var locale
             self.income = income
             initialInvestment = investment
-            investmentText = investment?.amountText(locale: locale) ?? ""
+            investmentText = investment?.text(locale: locale) ?? ""
             self.locale = locale
         }
 
@@ -61,23 +61,23 @@ struct InvestmentForm {
         }
 
         var hasChanges: Bool {
-            investment != initialInvestment || isInvestmentInvalid
+            investment != initialInvestment || investmentInput.isInvalid
         }
 
-        var investment: Decimal? {
-            Decimal(amountText: investmentText, locale: locale)
+        var investment: Amount? {
+            investmentInput.amount
+        }
+
+        var investmentInput: AmountInput {
+            AmountInput(text: investmentText, locale: locale)
         }
 
         var isEditing: Bool {
             initialInvestment != nil
         }
 
-        var isInvestmentInvalid: Bool {
-            !investmentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && investment == nil
-        }
-
         var isInvestmentRefused: Bool {
-            exceedsIncome || (isInvestmentInvalid && Decimal(amountText: investmentText + "1", locale: locale) == nil)
+            exceedsIncome || investmentInput == .refused
         }
 
         var isSubmittable: Bool {
@@ -91,12 +91,12 @@ struct InvestmentForm {
 
         var share: Decimal? {
             guard isSubmittable, let investment else { return nil }
-            return investment / income
+            return Decimal(investment.value) / Decimal(income.value)
         }
 
         var shareOptions: [ShareOption] {
             InvestmentForm.shares.map {
-                ShareOption(amount: (income * Decimal($0) / 100).rounded(scale: 2), percent: $0)
+                ShareOption(amount: Amount(value: (income.value * $0 + 50) / 100), percent: $0)
             }
         }
     }
@@ -113,7 +113,7 @@ struct InvestmentForm {
         @CasePathable
         enum Delegate {
             case didRemove
-            case didSubmit(Decimal)
+            case didSubmit(Amount)
         }
     }
 
@@ -153,9 +153,10 @@ struct InvestmentForm {
                 return .send(.delegate(.didSubmit(investment)))
 
             case .shareButtonTapped(let percent):
-                guard let option = state.shareOptions.first(where: { $0.percent == percent }), option.amount > 0
-                else { return .none }
-                state.investmentText = option.amount.amountText(locale: state.locale)
+                guard let amount = state.shareOptions.first(where: { $0.percent == percent })?.amount else {
+                    return .none
+                }
+                state.investmentText = amount.text(locale: state.locale)
                 return .none
             }
         }

@@ -394,7 +394,7 @@ extension BaseSuite {
         func creatingAnExpenseSavesItAndClosesTheForm() async {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
-                amount: Decimal(cents: 1299),
+                amount: 13,
                 billingCycle: .monthly,
                 createdAt: now,
                 id: UUID(0),
@@ -427,9 +427,9 @@ extension BaseSuite {
                         $0.destination?.modify(\.createExpense) { $0.name = "  Phone Plan  " }
                     }
                     await store.send(
-                        .destination(.presented(.createExpense(.binding(.set(\.amountText, "12.99")))))
+                        .destination(.presented(.createExpense(.binding(.set(\.amountText, "13")))))
                     ) {
-                        $0.destination?.modify(\.createExpense) { $0.amountText = "12.99" }
+                        $0.destination?.modify(\.createExpense) { $0.amountText = "13" }
                     }
                     await store.send(.destination(.presented(.createExpense(.saveButtonTapped))))
                     await store.receive(\.destination.presented.createExpense.delegate.didSubmit) {

@@ -9,7 +9,7 @@ import Dependencies
 import Foundation
 
 struct Expense: Equatable, Identifiable, Sendable {
-    var amount: Decimal
+    var amount: Amount
     var billingCycle: BillingCycle
     let createdAt: Date
     let id: UUID
@@ -20,25 +20,17 @@ struct Expense: Equatable, Identifiable, Sendable {
 extension Expense {
     static let maximumNameLength = 100
 
-    var annualAmount: Decimal {
+    var annualAmount: Int {
         switch billingCycle {
-        case .weekly: amount * 52
-        case .monthly: amount * 12
-        case .yearly: amount
-        }
-    }
-
-    var monthlyAmount: Decimal {
-        switch billingCycle {
-        case .weekly: amount * 52 / 12
-        case .monthly: amount
-        case .yearly: amount / 12
+        case .weekly: amount.value * 52
+        case .monthly: amount.value * 12
+        case .yearly: amount.value
         }
     }
 
     static func listOrder(_ lhs: Expense, _ rhs: Expense) -> Bool {
-        if lhs.monthlyAmount != rhs.monthlyAmount {
-            return lhs.monthlyAmount > rhs.monthlyAmount
+        if lhs.annualAmount != rhs.annualAmount {
+            return lhs.annualAmount > rhs.annualAmount
         }
         switch lhs.name.localizedStandardCompare(rhs.name) {
         case .orderedAscending:
@@ -66,7 +58,7 @@ extension Expense {
     )
 
     static let gym = Expense(
-        amount: Decimal(cents: 3990),
+        amount: 40,
         billingCycle: .monthly,
         createdAt: Date(timeIntervalSince1970: 1_749_000_000),
         id: UUID(1),
@@ -75,7 +67,7 @@ extension Expense {
     )
 
     static let phonePlan = Expense(
-        amount: Decimal(cents: 1299),
+        amount: 13,
         billingCycle: .monthly,
         createdAt: Date(timeIntervalSince1970: 1_748_000_000),
         id: UUID(2),

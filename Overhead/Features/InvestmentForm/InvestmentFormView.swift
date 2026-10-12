@@ -76,7 +76,7 @@ struct InvestmentFormView: View {
                     .foregroundStyle(.red)
             } else if let share = store.share {
                 Text(
-                    "\(Text(share, format: .percent.precision(.fractionLength(0)))) of your \(Text(store.income, format: .currency(store.currency).locale(store.locale))) income."
+                    "\(Text(share, format: .percent.precision(.fractionLength(0)))) of your \(Text(store.income.value, format: .currency(store.currency).locale(store.locale))) income."
                 )
                 .foregroundStyle(.secondary)
                 .contentTransition(reduceMotion ? .opacity : .numericText(value: share.doubleValue))
@@ -115,7 +115,7 @@ struct InvestmentFormView: View {
 }
 
 private struct ShareButton: View {
-    let amount: Decimal
+    let amount: Amount?
     let currency: Currency
     let isSelected: Bool
     let locale: Locale
@@ -137,7 +137,7 @@ private struct ShareButton: View {
                 if dynamicTypeSize.isAccessibilitySize {
                     Spacer(minLength: 8)
                 }
-                Text(amount, format: .currency(currency).locale(locale))
+                Text(amount?.value ?? 0, format: .currency(currency).locale(locale))
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
@@ -147,9 +147,9 @@ private struct ShareButton: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(ShareButtonStyle(isSelected: isSelected))
-        .disabled(amount <= 0)
+        .disabled(amount == nil)
         .accessibilityLabel(Text("Save \(Text(share, format: .percent)) of income"))
-        .accessibilityValue(Text(amount, format: .currency(currency).locale(locale)))
+        .accessibilityValue(Text(amount?.value ?? 0, format: .currency(currency).locale(locale)))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

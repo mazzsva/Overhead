@@ -108,19 +108,18 @@ actor FirestoreStorage {
         try await profileDocument(uid: uid).setData([CurrencyField.currency: currency.rawValue], merge: true)
     }
 
-    func saveIncome(_ income: Decimal, removingInvestment: Bool, uid: String) async throws {
+    func saveIncome(_ income: Amount, removingInvestment: Bool, uid: String) async throws {
         await waitForClearing()
-        var data: [String: Any] = [BudgetField.income: try BudgetField.cents(of: income)]
+        var data: [String: Any] = [BudgetField.income: income.value]
         if removingInvestment {
             data[BudgetField.investment] = FieldValue.delete()
         }
         try await profileDocument(uid: uid).setData(data, merge: true)
     }
 
-    func saveInvestment(_ investment: Decimal, uid: String) async throws {
+    func saveInvestment(_ investment: Amount, uid: String) async throws {
         await waitForClearing()
-        try await profileDocument(uid: uid)
-            .setData([BudgetField.investment: try BudgetField.cents(of: investment)], merge: true)
+        try await profileDocument(uid: uid).setData([BudgetField.investment: investment.value], merge: true)
     }
 
     private func isProfileCached(uid: String) async -> Bool {
