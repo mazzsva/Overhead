@@ -103,7 +103,7 @@ extension BaseSuite.IntegrationSuite {
                 ("amount", -1),
                 ("amount", 39.9),
                 ("amount", 1_000_000_000),
-                ("billingCycle", "daily"),
+                ("billingCycle", "weekly"),
                 ("createdAt", "2026-10-04"),
                 ("isActive", "yes"),
                 ("name", ""),
@@ -123,7 +123,7 @@ extension BaseSuite.IntegrationSuite {
         @Test(
             arguments: [
                 ("amount", 0),
-                ("billingCycle", "daily"),
+                ("billingCycle", "weekly"),
                 ("isActive", "yes"),
                 ("name", ""),
                 ("currency", "USD"),

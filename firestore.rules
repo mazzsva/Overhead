@@ -31,7 +31,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['amount', 'billingCycle', 'createdAt', 'isActive', 'name'])
         && data.keys().hasAll(['amount', 'billingCycle', 'createdAt', 'isActive', 'name'])
         && isAmount(data.amount)
-        && data.billingCycle in ['weekly', 'monthly', 'yearly']
+        && data.billingCycle in ['monthly', 'yearly']
         && data.createdAt is timestamp
         && data.isActive is bool
         && data.name is string
