@@ -8,7 +8,6 @@
 import Foundation
 
 enum BillingCycle: String, CaseIterable, Sendable {
-    case weekly
     case monthly
     case yearly
 }
@@ -16,7 +15,6 @@ enum BillingCycle: String, CaseIterable, Sendable {
 extension BillingCycle {
     var title: LocalizedStringResource {
         switch self {
-        case .weekly: "Weekly"
         case .monthly: "Monthly"
         case .yearly: "Yearly"
         }

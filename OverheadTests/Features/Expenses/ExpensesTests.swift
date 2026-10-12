@@ -18,9 +18,8 @@ extension BaseSuite {
     struct ExpensesTests {
         @Test
         func expensesAreSortedFromTheHighestMonthlyAmount() async {
-            var weekly = Expense.gym
-            weekly.billingCycle = .weekly
-            weekly.amount = 15
+            var gym = Expense.gym
+            gym.amount = 65
             var yearly = Expense.rent
             yearly.billingCycle = .yearly
             yearly.amount = 1200
@@ -39,12 +38,12 @@ extension BaseSuite {
                 Expenses()
             }
 
-            await store.send(.expensesUpdated([inactive, yearly, weekly, sameAmount])) {
+            await store.send(.expensesUpdated([inactive, yearly, gym, sameAmount])) {
                 $0.$expenses.withLock {
-                    $0 = IdentifiedArray(uniqueElements: [inactive, sameAmount, yearly, weekly])
+                    $0 = IdentifiedArray(uniqueElements: [inactive, sameAmount, yearly, gym])
                 }
             }
-            expectNoDifference(store.state.activeExpenses, [sameAmount, yearly, weekly])
+            expectNoDifference(store.state.activeExpenses, [sameAmount, yearly, gym])
             expectNoDifference(store.state.inactiveExpenses, [inactive])
         }
 

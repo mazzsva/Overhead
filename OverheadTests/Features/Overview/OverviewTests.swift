@@ -18,7 +18,7 @@ extension BaseSuite {
     struct OverviewTests {
         @Test
         func theAnnualExpensesAddTheAnnualAmountOfEachActiveExpense() {
-            let state = makeState(expenses: [expense(15, .weekly, id: 10), expense(1200, .yearly, id: 11), .phonePlan])
+            let state = makeState(expenses: [expense(65, .monthly, id: 10), expense(1200, .yearly, id: 11), .phonePlan])
 
             expectNoDifference(state.annualExpenses, 1980)
         }
@@ -67,7 +67,7 @@ extension BaseSuite {
 
         @Test
         func withoutIncomeTheContentShowsTheExpensesForThePeriod() {
-            var state = makeState(.loaded(nil), expenses: [expense(25, .weekly, id: 10)])
+            var state = makeState(.loaded(nil), expenses: [expense(1300, .yearly, id: 10)])
             state.period = .week
 
             expectNoDifference(state.content, .expensesOnly(amount: 25, income: .missing))
