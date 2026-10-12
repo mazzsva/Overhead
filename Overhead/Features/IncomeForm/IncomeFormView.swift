@@ -12,40 +12,38 @@ struct IncomeFormView: View {
     @Bindable var store: StoreOf<IncomeForm>
 
     @FocusState private var focus: IncomeForm.Field?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField(
-                        "Income",
-                        text: $store.incomeText,
-                        prompt: Text(Decimal.zero, format: .currency(store.currency).locale(store.locale))
-                    )
-                    .keyboardType(.decimalPad)
-                    .focused($focus, equals: .income)
-                } footer: {
-                    if store.isBelowInvestment, let investment = store.investment {
-                        Text(
-                            "Your savings of \(Text(investment, format: .currency(store.currency).locale(store.locale))) will be removed."
-                        )
-                    } else if store.isIncomeInvalid {
-                        Text("Enter a valid amount.")
-                    } else {
-                        Text("Your monthly pay after tax.")
-                    }
-                }
+            AmountEntry(
+                glow: Gradient(stops: [
+                    .init(color: .orange, location: 0),
+                    .init(color: .clear, location: 0.3),
+                    .init(color: .green, location: 0.5),
+                    .init(color: .clear, location: 0.7),
+                    .init(color: .blue, location: 1),
+                ])
+            ) {
+                AmountField(
+                    title: "Income",
+                    text: $store.incomeText,
+                    currency: store.currency,
+                    locale: store.locale,
+                    isRefused: store.isIncomeRefused,
+                    focus: $focus,
+                    field: .income
+                )
+                caption
+            } accessory: {
                 if store.isEditing {
-                    Section {
-                        Button("Remove Income", role: .destructive) {
-                            store.send(.removeButtonTapped)
-                        }
+                    Button("Remove Income", role: .destructive) {
+                        store.send(.removeButtonTapped)
                     }
+                    .buttonStyle(.borderless)
+                    .frame(minHeight: 44)
                 }
             }
-            .listSectionSpacing(.compact)
-            .scrollContentBackground(.hidden)
-            .groupedBackground()
             .navigationTitle("Income")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -71,6 +69,32 @@ struct IncomeFormView: View {
             .bind($store.focus, to: $focus)
             .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         }
+        .environment(\.locale, store.locale)
+    }
+
+    private var caption: some View {
+        Group {
+            if store.isBelowInvestment, let investment = store.investment {
+                Label {
+                    Text(
+                        "Your savings of \(Text(investment, format: .currency(store.currency).locale(store.locale))) will be removed."
+                    )
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            } else if store.isIncomeRefused {
+                Text("Enter a valid amount.")
+                    .foregroundStyle(.red)
+            } else {
+                Text("Your monthly pay after tax.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.callout)
+        .multilineTextAlignment(.center)
+        .animation(reduceMotion ? nil : .snappy, value: store.isBelowInvestment)
+        .animation(reduceMotion ? nil : .snappy, value: store.isIncomeRefused)
     }
 }
 

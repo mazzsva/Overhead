@@ -28,9 +28,20 @@ extension BaseSuite {
         }
 
         @Test
-        func anExistingIncomeStartsFormattedAndWithoutTheKeyboard() {
+        func onlyTextThatCannotBecomeValidIsRefused() {
+            var state = IncomeForm.State(budget: nil)
+            state.incomeText = "0."
+            #expect(state.isIncomeInvalid)
+            #expect(!state.isIncomeRefused)
+
+            state.incomeText = "1..2"
+            #expect(state.isIncomeRefused)
+        }
+
+        @Test
+        func anExistingIncomeStartsFormattedAndFocused() {
             let english = IncomeForm.State(budget: .mock)
-            expectNoDifference(english.focus, nil)
+            expectNoDifference(english.focus, .income)
             expectNoDifference(english.incomeText, "3000.00")
             expectNoDifference(english.investment, 450)
             #expect(english.isEditing)

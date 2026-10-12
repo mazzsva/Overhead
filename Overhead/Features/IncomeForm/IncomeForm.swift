@@ -33,7 +33,7 @@ struct IncomeForm {
     struct State: Equatable {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
-        var focus: Field?
+        var focus: Field? = .income
         var incomeText: String
         let initialIncome: Decimal?
         var investment: Decimal?
@@ -41,7 +41,6 @@ struct IncomeForm {
 
         init(budget: Budget?) {
             @Dependency(\.locale) var locale
-            focus = budget == nil ? .income : nil
             incomeText = budget?.income.amountText(locale: locale) ?? ""
             initialIncome = budget?.income
             investment = budget?.investment
@@ -67,6 +66,10 @@ struct IncomeForm {
 
         var isIncomeInvalid: Bool {
             !incomeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && income == nil
+        }
+
+        var isIncomeRefused: Bool {
+            isIncomeInvalid && Decimal(amountText: incomeText + "1", locale: locale) == nil
         }
     }
 
