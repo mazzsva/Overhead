@@ -63,11 +63,22 @@ struct OverviewView: View {
 
     private func dashboard(_ content: Overview.Content) -> some View {
         VStack(spacing: 12) {
+            Picker(
+                "Period",
+                selection: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? .fade : .value)
+            ) {
+                ForEach(Overview.Period.allCases, id: \.self) { period in
+                    Text(period.title)
+                }
+            }
+            .pickerStyle(.segmented)
+            .sensoryFeedback(.selection, trigger: store.period)
+
             HeroCard(
                 content: content,
                 currency: store.currency,
                 isHidingAmounts: store.hidesAmounts,
-                period: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? .fade : .value)
+                period: store.period
             )
 
             TileGrid(
@@ -208,34 +219,19 @@ private struct HeroCard: View {
     let content: Overview.Content
     let currency: Currency
     let isHidingAmounts: Bool
-    @Binding var period: Overview.Period
+    let period: Overview.Period
 
     @ScaledMetric(relativeTo: .largeTitle) private var amountSize = 48
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            Menu {
-                Picker("Period", selection: $period) {
-                    ForEach(Overview.Period.allCases, id: \.self) { period in
-                        Text(period.title)
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(period.costsTitle)
-                        .contentTransition(.interpolate)
-                    Image(systemName: "chevron.down")
-                        .imageScale(.small)
-                        .fontWeight(.bold)
-                        .accessibilityHidden(true)
-                }
+            Text(period.costsTitle)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .contentShape(.rect)
-            }
-            .tint(.secondary)
-            .sensoryFeedback(.selection, trigger: period)
+                .foregroundStyle(.secondary)
+                .contentTransition(.interpolate)
+                .accessibilityHidden(true)
 
             AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
                 .font(.system(size: amountSize, weight: .bold, design: .rounded))
