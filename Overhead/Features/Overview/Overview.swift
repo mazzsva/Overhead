@@ -23,14 +23,6 @@ struct Overview {
             let share: Decimal
         }
 
-        struct Segment: Equatable, Identifiable {
-            let end: Double
-            let part: BudgetPart
-            let start: Double
-
-            var id: BudgetPart { part }
-        }
-
         enum ShareLabel: Equatable {
             case lessThanOnePercent
             case moreThanNinetyNinePercent
@@ -84,15 +76,6 @@ struct Overview {
             period.amount(annual: annualIncome)
         }
 
-        var incomeMark: Double? {
-            guard isOverBudget else { return nil }
-            return Double(annualIncome) / Double(annualCommitted)
-        }
-
-        var isFullyCommitted: Bool {
-            annualCommitted == annualIncome
-        }
-
         var isOverBudget: Bool {
             annualCommitted > annualIncome
         }
@@ -108,23 +91,6 @@ struct Overview {
 
         var savingsShareLabel: ShareLabel? {
             savings.map { shareLabel($0, annual: annualSavings) }
-        }
-
-        var segments: [Segment] {
-            let total = max(annualIncome, annualCommitted)
-            var segments: [Segment] = []
-            var cursor = 0
-            func append(_ part: BudgetPart, upTo end: Int) {
-                guard end > cursor else { return }
-                segments.append(
-                    Segment(end: Double(end) / Double(total), part: part, start: Double(cursor) / Double(total))
-                )
-                cursor = end
-            }
-            append(.expenses, upTo: annualExpenses)
-            append(.savings, upTo: annualCommitted)
-            append(.available, upTo: annualIncome)
-            return segments
         }
 
         private var annualCommitted: Int {
@@ -163,12 +129,6 @@ struct Overview {
         case removeInvestments
         case saveIncome
         case saveInvestments
-    }
-
-    enum BudgetPart: Hashable {
-        case available
-        case expenses
-        case savings
     }
 
     @CasePathable
@@ -222,6 +182,10 @@ struct Overview {
         var period = Period.month
         let user: User
 
+        var activeExpenseCount: Int? {
+            expenses.map { $0.filter(\.isActive).count }
+        }
+
         var annualExpenses: Int? {
             expenses.map { $0.filter(\.isActive).reduce(0) { $0 + $1.annualAmount } }
         }
@@ -254,7 +218,6 @@ struct Overview {
     }
 
     enum Action {
-        case addIncomeButtonTapped
         case amountsVisibilityButtonTapped
         case budgetStreamFailed
         case budgetUpdated(BudgetSnapshot)
@@ -284,7 +247,7 @@ struct Overview {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .addIncomeButtonTapped, .incomeTileTapped:
+            case .incomeTileTapped:
                 guard state.destination == nil else { return .none }
                 state.destination = .incomeForm(IncomeForm.State(budget: state.budget))
                 return .none

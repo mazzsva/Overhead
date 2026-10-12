@@ -45,7 +45,7 @@ struct OverviewView: View {
                         store.hidesAmounts ? "Show Amounts" : "Hide Amounts",
                         systemImage: store.hidesAmounts ? "eye.slash" : "eye"
                     ) {
-                        store.send(.amountsVisibilityButtonTapped, animation: reduceMotion ? nil : .snappy)
+                        store.send(.amountsVisibilityButtonTapped, animation: reduceMotion ? nil : .value)
                     }
                     .contentTransition(.symbolEffect(.replace))
                 }
@@ -63,84 +63,34 @@ struct OverviewView: View {
 
     private func dashboard(_ content: Overview.Content) -> some View {
         VStack(spacing: 12) {
-            Picker(
-                "Period",
-                selection: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? nil : .snappy)
-            ) {
-                ForEach(Overview.Period.allCases, id: \.self) { period in
-                    Text(period.title)
-                }
-            }
-            .pickerStyle(.segmented)
-            .sensoryFeedback(.selection, trigger: store.period)
-
             HeroCard(
                 content: content,
                 currency: store.currency,
                 isHidingAmounts: store.hidesAmounts,
-                period: store.period
-            ) {
-                store.send(.addIncomeButtonTapped)
-            }
+                period: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? .fade : .value)
+            )
 
-            if let breakdown = content.summary {
-                TileGrid(
-                    breakdown: breakdown,
-                    currency: store.currency,
-                    isHidingAmounts: store.hidesAmounts,
-                    onExpenses: { store.send(.expensesTileTapped) },
-                    onIncome: { store.send(.incomeTileTapped) },
-                    onSavings: { store.send(.savingsTileTapped) }
-                )
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
-            }
+            TileGrid(
+                content: content,
+                currency: store.currency,
+                expenseCount: store.activeExpenseCount ?? 0,
+                isHidingAmounts: store.hidesAmounts,
+                onExpenses: { store.send(.expensesTileTapped) },
+                onIncome: { store.send(.incomeTileTapped) },
+                onSavings: { store.send(.savingsTileTapped) }
+            )
         }
         .padding(.horizontal)
-        .animation(
-            reduceMotion ? .easeInOut(duration: 0.25) : .spring(duration: 0.5).delay(0.25),
-            value: content.expensesOnly?.income == .missing
-        )
+        .animation(reduceMotion ? .fade : .structure, value: content.summary == nil)
     }
 }
 
-struct BarLayout: Equatable {
-    struct Frame: Equatable {
-        let width: Double
-        let x: Double
-    }
-
-    static let minimumWidth = 6.0
-
-    let frames: [Frame]
-    let markX: Double?
-
-    init(incomeMark: Double?, segments: [Overview.Breakdown.Segment], width: Double) {
-        let gaps = segments.indices.map { Self.gap(before: $0, in: segments) }
-        let usable = max(width - gaps.reduce(0, +), 0)
-        var widths = segments.map { max(($0.end - $0.start) * usable, Self.minimumWidth) }
-        let excess = widths.reduce(0, +) - usable
-        if excess > 0, let widest = widths.indices.max(by: { widths[$0] < widths[$1] }) {
-            widths[widest] = max(widths[widest] - excess, Self.minimumWidth)
-        }
-        var x = 0.0
-        let frames = widths.indices.map { index in
-            x += gaps[index]
-            defer { x += widths[index] }
-            return Frame(width: widths[index], x: x)
-        }
-        self.frames = frames
-        markX = incomeMark.flatMap { mark in
-            guard let index = segments.firstIndex(where: { $0.end >= mark }) else { return nil }
-            let segment = segments[index]
-            guard segment.end > segment.start else { return frames[index].x }
-            return frames[index].x + (mark - segment.start) / (segment.end - segment.start) * frames[index].width
-        }
-    }
-
-    static func gap(before index: Int, in segments: [Overview.Breakdown.Segment]) -> Double {
-        guard index > 0 else { return 0 }
-        return segments[index - 1].part.isCommitted == segments[index].part.isCommitted ? 3 : 6
-    }
+extension Animation {
+    fileprivate static let fade = Animation.easeInOut(duration: 0.25)
+    fileprivate static let glow = Animation.smooth(duration: 0.8)
+    fileprivate static let press = Animation.snappy(duration: 0.2)
+    fileprivate static let structure = Animation.spring(duration: 0.5, bounce: 0.1).delay(0.25)
+    fileprivate static let value = Animation.snappy(duration: 0.4)
 }
 
 extension Overview.Breakdown.ShareLabel {
@@ -158,36 +108,59 @@ extension Overview.Breakdown.ShareLabel {
     }
 }
 
-extension Overview.BudgetPart {
-    var isCommitted: Bool {
-        self != .available
+extension Color {
+    fileprivate static let overIncome = Color(
+        UIColor {
+            $0.userInterfaceStyle == .dark
+                ? UIColor(red: 1, green: 0.412, blue: 0.38, alpha: 1)
+                : UIColor(red: 0.843, green: 0, blue: 0.082, alpha: 1)
+        }
+    )
+}
+
+extension Gradient {
+    fileprivate static var available: Gradient {
+        Gradient(colors: [.green.mix(with: .white, by: 0.25), .green])
     }
 
-    fileprivate var color: Color {
-        switch self {
-        case .available: .green
-        case .expenses: .orange
-        case .savings: .blue
-        }
+    fileprivate static var expenses: Gradient {
+        Gradient(colors: [.orange.mix(with: .yellow, by: 0.3), .orange])
+    }
+
+    fileprivate static var overIncome: Gradient {
+        Gradient(colors: [.red, .red])
+    }
+
+    fileprivate static var savings: Gradient {
+        Gradient(colors: [.cyan, .blue])
     }
 }
 
 extension Overview.Period {
-    fileprivate var afterTaxCaption: LocalizedStringResource {
+    fileprivate var costsTitle: LocalizedStringResource {
         switch self {
-        case .day: "a day, after tax"
-        case .week: "a week, after tax"
-        case .month: "a month, after tax"
-        case .year: "a year, after tax"
+        case .day: "Daily Costs"
+        case .week: "Weekly Costs"
+        case .month: "Monthly Costs"
+        case .year: "Yearly Costs"
         }
     }
 
-    fileprivate var caption: LocalizedStringResource {
+    fileprivate var expensesAndSavingsCaption: LocalizedStringResource {
         switch self {
-        case .day: "a day"
-        case .week: "a week"
-        case .month: "a month"
-        case .year: "a year"
+        case .day: "Expenses and savings, a day"
+        case .week: "Expenses and savings, a week"
+        case .month: "Expenses and savings, a month"
+        case .year: "Expenses and savings, a year"
+        }
+    }
+
+    fileprivate var expensesCaption: LocalizedStringResource {
+        switch self {
+        case .day: "Expenses, a day"
+        case .week: "Expenses, a week"
+        case .month: "Expenses, a month"
+        case .year: "Expenses, a year"
         }
     }
 
@@ -215,52 +188,78 @@ private struct AmountLabel: View {
     }
 }
 
+private struct Marker: View {
+    let color: Color
+    var isOutlined = false
+
+    @ScaledMetric private var size = 10
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+        ZStack {
+            shape.fill(isOutlined ? .clear : color)
+            shape.strokeBorder(isOutlined ? color : .clear, lineWidth: 1.5)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 private struct HeroCard: View {
     let content: Overview.Content
     let currency: Currency
     let isHidingAmounts: Bool
-    let period: Overview.Period
-    let onAddIncome: () -> Void
+    @Binding var period: Overview.Period
 
-    @ScaledMetric(relativeTo: .largeTitle) private var amountSize = 44
-    @ScaledMetric private var barHeight = 44
-    @ScaledMetric(relativeTo: .caption2) private var barSpacing = 20
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var amountSize = 48
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Committed")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                let amountLayout =
-                    dynamicTypeSize >= .xxLarge
-                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
-                    : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6))
-                amountLayout {
-                    AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
-                        .font(.system(size: amountSize, weight: .bold, design: .rounded))
-                        .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
-                        .animation(reduceMotion ? nil : .snappy, value: content.summary)
-                    Text(period.caption)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize()
+        VStack(spacing: 0) {
+            Menu {
+                Picker("Period", selection: $period) {
+                    ForEach(Overview.Period.allCases, id: \.self) { period in
+                        Text(period.title)
+                    }
                 }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(period.costsTitle)
+                        .contentTransition(.interpolate)
+                    Image(systemName: "chevron.down")
+                        .imageScale(.small)
+                        .fontWeight(.bold)
+                        .accessibilityHidden(true)
+                }
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .contentShape(.rect)
             }
-            .redacted(reason: isLoadingIncome ? .placeholder : [])
-            .accessibilityElement(children: .combine)
-            .accessibilityValue(shareOfIncome)
+            .tint(.secondary)
+            .sensoryFeedback(.selection, trigger: period)
 
-            barSlot
-                .frame(height: min(barHeight, 64))
-                .padding(.top, barSpacing)
+            AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
+                .font(.system(size: amountSize, weight: .bold, design: .rounded))
+                .kerning(-0.8)
+                .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
+                .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
+                .padding(.top, 2)
+                .accessibilityLabel(Text(period.costsTitle))
+                .accessibilityValue(amountValue)
+
+            Text(caption)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 24, style: .continuous))
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 22)
+        .background {
+            HeroBackground(glow: glow)
+                .animation(reduceMotion ? .fade : .glow, value: glow)
+        }
+        .animation(reduceMotion ? .fade : .value, value: content.summary)
     }
 
     private var amount: Int {
@@ -270,174 +269,94 @@ private struct HeroCard: View {
         }
     }
 
-    @ViewBuilder
-    private var barSlot: some View {
-        ZStack {
-            switch content {
-            case .expensesOnly(_, .missing):
-                Button(action: onAddIncome) {
-                    Label("Add Income", systemImage: "plus")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .buttonStyle(ProminentTrackButtonStyle())
-                .transition(.opacity.animation(.easeOut(duration: 0.15)))
-            case .expensesOnly(_, .failed):
-                Track(message: "Your income couldn't be loaded.")
-                    .transition(.opacity)
-            case .expensesOnly(_, .loading):
-                Track(message: nil)
-                    .transition(.opacity)
-            case .expensesOnly(_, .offline):
-                Track(message: "Connect to the internet to see your income.")
-                    .transition(.opacity)
-            case .summary(let breakdown):
-                SegmentedBar(incomeMark: breakdown.incomeMark, segments: breakdown.segments)
-                    .transition(reduceMotion ? .opacity : AnyTransition(.reveal))
-            }
+    private var amountValue: Text {
+        let amount = isHidingAmounts ? Text("Hidden") : Text(amount, format: .currency(currency))
+        guard let breakdown = content.summary else { return amount }
+        return Text("\(amount), \(breakdown.committedShareLabel.text) of income")
+    }
+
+    private var caption: LocalizedStringResource {
+        content.summary?.savings == nil ? period.expensesCaption : period.expensesAndSavingsCaption
+    }
+
+    private var glow: HeroBackground.Glow {
+        guard let breakdown = content.summary else {
+            return HeroBackground.Glow(available: 0, expenses: amount > 0 ? 1 : 0, savings: 0)
         }
-    }
-
-    private var isLoadingIncome: Bool {
-        content.expensesOnly?.income == .loading
-    }
-
-    private var shareOfIncome: Text {
-        guard let breakdown = content.summary else { return Text(verbatim: "") }
-        return Text("\(breakdown.committedShareLabel.text) of income")
+        return HeroBackground.Glow(
+            available: breakdown.isOverBudget ? 0 : breakdown.available.share.doubleValue,
+            expenses: breakdown.expenses.share.doubleValue,
+            savings: breakdown.savings?.share.doubleValue ?? 0
+        )
     }
 }
 
-private struct ProminentTrackButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(.white)
-            .background(.tint, in: .rect(cornerRadius: 12, style: .continuous))
-            .contentShape(.rect(cornerRadius: 12, style: .continuous))
-            .opacity(configuration.isPressed ? 0.7 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.snappy(duration: 0.2), value: configuration.isPressed)
+private struct HeroBackground: View {
+    struct Glow: Equatable {
+        let available: Double
+        let expenses: Double
+        let savings: Double
     }
-}
 
-private struct Track: View {
-    let message: LocalizedStringResource?
+    let glow: Glow
 
-    var body: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(.quaternary)
-            .overlay {
-                if let message {
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 12)
-                }
-            }
-    }
-}
-
-private struct SegmentedBar: View {
-    let incomeMark: Double?
-    let segments: [Overview.Breakdown.Segment]
-
-    @ScaledMetric private var markOverhang = 4
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { proxy in
-            let layout = BarLayout(incomeMark: incomeMark, segments: segments, width: proxy.size.width)
-            ZStack(alignment: .leading) {
-                ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: leadingRadius(at: index),
-                        bottomLeadingRadius: leadingRadius(at: index),
-                        bottomTrailingRadius: trailingRadius(at: index),
-                        topTrailingRadius: trailingRadius(at: index),
-                        style: .continuous
-                    )
-                    .fill(segment.part.color)
-                    .frame(width: layout.frames[index].width)
-                    .offset(x: layout.frames[index].x)
-                }
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
-            .mask(alignment: .leading) {
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .frame(width: layout.markX ?? proxy.size.width)
-                    Rectangle()
-                        .opacity(colorScheme == .dark ? 0.5 : 0.35)
-                }
-            }
-            .overlay(alignment: .topLeading) {
-                if let markX = layout.markX {
-                    IncomeMark(height: proxy.size.height + markOverhang * 2, width: proxy.size.width, x: markX)
-                        .offset(y: -markOverhang)
-                        .transition(.opacity)
-                }
-            }
-        }
-        .animation(reduceMotion ? nil : .snappy, value: segments)
-        .animation(reduceMotion ? nil : .snappy, value: incomeMark)
-        .accessibilityHidden(true)
-    }
-
-    private func leadingRadius(at index: Int) -> Double {
-        BarLayout.gap(before: index, in: segments) == 3 ? 4 : 12
-    }
-
-    private func trailingRadius(at index: Int) -> Double {
-        index + 1 < segments.count && BarLayout.gap(before: index + 1, in: segments) == 3 ? 4 : 12
-    }
-}
-
-private struct IncomeMark: View {
-    let height: Double
-    let width: Double
-    let x: Double
-
-    var body: some View {
-        Capsule()
-            .fill(.primary)
-            .frame(width: 3, height: height)
-            .padding(.horizontal, 2)
-            .background(Color(.secondarySystemGroupedBackground), in: .capsule)
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        let isDark = colorScheme == .dark
+        shape
+            .fill(
+                LinearGradient(
+                    colors: isDark
+                        ? [Color(white: 0.17), Color(white: 0.12), Color(white: 0.1)]
+                        : [
+                            .white, Color(red: 0.97, green: 0.97, blue: 0.98),
+                            Color(red: 0.93, green: 0.93, blue: 0.95),
+                        ],
+                    startPoint: UnitPoint(x: 0.35, y: 0),
+                    endPoint: UnitPoint(x: 0.65, y: 1)
+                )
+            )
             .overlay(alignment: .top) {
-                Text("Income")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .fixedSize()
-                    .alignmentGuide(.top) { $0[.bottom] + 4 }
-                    .alignmentGuide(HorizontalAlignment.center) { x < width / 2 ? $0[.leading] - 4 : $0[.trailing] + 4 }
+                ZStack {
+                    Ellipse()
+                        .fill(Color.orange.opacity(opacity(for: glow.expenses)))
+                        .frame(width: 240, height: 180)
+                        .offset(x: -150)
+                    Ellipse()
+                        .fill(Color.green.opacity(opacity(for: glow.available)))
+                        .frame(width: 200, height: 190)
+                        .offset(y: -60)
+                    Ellipse()
+                        .fill(Color.blue.opacity(opacity(for: glow.savings)))
+                        .frame(width: 260, height: 190)
+                        .offset(x: 150)
+                }
+                .offset(y: -110)
+                .blur(radius: 36)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
-            .offset(x: x - 3.5)
+            .clipShape(shape)
+            .overlay {
+                shape.strokeBorder(.primary.opacity(isDark ? 0.1 : 0.06), lineWidth: 0.5)
+            }
+            .shadow(color: .black.opacity(isDark ? 0 : 0.06), radius: 15, y: 10)
     }
-}
 
-private struct RevealTransition: Transition {
-    func body(content: Content, phase: TransitionPhase) -> some View {
-        content.mask(alignment: .leading) {
-            Rectangle()
-                .padding(.horizontal, -8)
-                .padding(.vertical, -100)
-                .scaleEffect(x: phase.isIdentity ? 1 : 0, anchor: .leading)
-        }
+    private func opacity(for share: Double) -> Double {
+        guard share > 0 else { return 0 }
+        return (0.06 + 0.16 * min(share, 1)) * (colorScheme == .dark ? 1.15 : 1)
     }
-}
-
-extension Transition where Self == RevealTransition {
-    fileprivate static var reveal: Self { RevealTransition() }
 }
 
 private struct TileGrid: View {
-    let breakdown: Overview.Breakdown
+    private static let placeholderAmount = 1000
+
+    let content: Overview.Content
     let currency: Currency
+    let expenseCount: Int
     let isHidingAmounts: Bool
     let onExpenses: () -> Void
     let onIncome: () -> Void
@@ -447,119 +366,233 @@ private struct TileGrid: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: 12) {
-                    incomeTile
+        let row =
+            dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
+        VStack(spacing: 12) {
+            row {
+                Button(action: onExpenses) {
                     expensesTile
-                    savingsTile
-                    availableTile
                 }
-            } else {
-                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-                    GridRow {
-                        incomeTile
-                        expensesTile
-                    }
-                    GridRow {
+                .buttonStyle(TileButtonStyle())
+
+                if hasBudgetTiles {
+                    Button(action: onSavings) {
                         savingsTile
-                        availableTile
                     }
+                    .buttonStyle(TileButtonStyle())
+                    .disabled(content.summary == nil)
+                    .transition(insertion)
+                } else {
+                    incomeTile
+                        .transition(.opacity)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
+
+            if hasBudgetTiles {
+                row {
+                    availableTile
+                    incomeTile
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .transition(insertion)
+            }
         }
-        .animation(reduceMotion ? nil : .snappy, value: breakdown)
     }
 
     private var availableTile: some View {
-        let isOverBudget = breakdown.isOverBudget
-        let share = breakdown.availableShareLabel.text
+        let breakdown = content.summary
+        let isOverBudget = breakdown?.isOverBudget ?? false
         return Tile(
-            title: isOverBudget ? "Over Budget" : "Available",
-            color: isOverBudget ? .red : Overview.BudgetPart.available.color
+            title: isOverBudget ? "Over Income" : "Available",
+            marker: Marker(color: isOverBudget ? .red : .green)
         ) {
-            AmountLabel(value: abs(breakdown.available.amount), currency: currency, isHidden: isHidingAmounts)
-                .foregroundStyle(isOverBudget ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
+            AmountLabel(
+                value: breakdown.map { abs($0.available.amount) } ?? Self.placeholderAmount,
+                currency: currency,
+                isHidden: isHidingAmounts
+            )
+            .foregroundStyle(isOverBudget ? Color.overIncome : .primary)
         } caption: {
-            if isOverBudget {
-                Text("\(share) more than income")
-            } else if breakdown.isFullyCommitted {
-                Text("Fully committed")
-            } else {
-                Text("\(share) of income")
-            }
+            ShareBar(
+                share: abs(breakdown?.available.share ?? 0),
+                label: breakdown?.availableShareLabel ?? .percent(0),
+                gradient: isOverBudget ? .overIncome : .available
+            )
+        }
+        .redacted(reason: breakdown == nil ? .placeholder : [])
+        .animation(reduceMotion ? .fade : .value, value: breakdown)
+    }
+
+    private var expensesAmount: Int {
+        switch content {
+        case .expensesOnly(let amount, _): amount
+        case .summary(let breakdown): breakdown.expenses.amount
         }
     }
 
     private var expensesTile: some View {
-        Button(action: onExpenses) {
-            Tile(title: "Expenses", color: Overview.BudgetPart.expenses.color) {
-                AmountLabel(value: breakdown.expenses.amount, currency: currency, isHidden: isHidingAmounts)
-            } caption: {
-                if breakdown.hasExpenses {
-                    Text("\(breakdown.expensesShareLabel.text) of income")
-                } else {
-                    Text("No expenses yet")
-                }
+        Tile(title: "Expenses", marker: Marker(color: .orange)) {
+            if expenseCount > 0 {
+                AmountLabel(value: expensesAmount, currency: currency, isHidden: isHidingAmounts)
+            } else {
+                Text("Add Expense")
+                    .foregroundStyle(.tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        } caption: {
+            if let breakdown = content.summary, breakdown.hasExpenses {
+                ShareBar(share: breakdown.expenses.share, label: breakdown.expensesShareLabel, gradient: .expenses)
+            } else if expenseCount > 0 {
+                Text("^[\(expenseCount) expense](inflect: true)")
+            } else {
+                Text("No expenses yet")
             }
         }
-        .buttonStyle(TileButtonStyle())
+        .animation(reduceMotion ? .fade : .value, value: content.summary)
+    }
+
+    private var hasBudgetTiles: Bool {
+        content.summary != nil || content.expensesOnly?.income == .loading
     }
 
     private var incomeTile: some View {
         Button(action: onIncome) {
-            Tile(title: "Income", color: .gray) {
-                AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
+            Tile(title: "Income", marker: Marker(color: .primary, isOutlined: true)) {
+                switch content {
+                case .summary(let breakdown):
+                    AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
+                case .expensesOnly(_, .missing):
+                    Text("Add Income")
+                        .foregroundStyle(.tint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                case .expensesOnly(_, .loading):
+                    AmountLabel(value: Self.placeholderAmount, currency: currency, isHidden: false)
+                case .expensesOnly(_, .failed):
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                case .expensesOnly(_, .offline):
+                    Image(systemName: "wifi.slash")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
             } caption: {
-                Text(breakdown.period.afterTaxCaption)
+                switch content.expensesOnly?.income {
+                case .failed:
+                    Text("Your income couldn't be loaded.")
+                case .missing:
+                    Text("To see what is available")
+                case .offline:
+                    Text("Connect to the internet to see your income.")
+                case .loading, nil:
+                    Text("After tax")
+                }
             }
+            .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
         }
         .buttonStyle(TileButtonStyle())
+        .disabled(!canEditIncome)
+    }
+
+    private var canEditIncome: Bool {
+        content.summary != nil || content.expensesOnly?.income == .missing
+    }
+
+    private var insertion: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
+                removal: .opacity
+            )
     }
 
     private var savingsTile: some View {
-        Button(action: onSavings) {
-            if let savings = breakdown.savings, let share = breakdown.savingsShareLabel {
-                Tile(title: "Savings", color: Overview.BudgetPart.savings.color) {
+        Tile(title: "Savings", marker: Marker(color: .blue)) {
+            ZStack(alignment: .leading) {
+                if content.summary == nil {
+                    AmountLabel(value: Self.placeholderAmount, currency: currency, isHidden: false)
+                } else if let savings = content.summary?.savings {
                     AmountLabel(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
-                } caption: {
-                    Text("\(share.text) of income")
-                }
-            } else {
-                Tile(title: "Savings", color: Overview.BudgetPart.savings.color) {
+                        .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
+                } else {
                     Text("Add Savings")
                         .foregroundStyle(.tint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
-                } caption: {
-                    Text("Optional")
+                        .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
                 }
             }
+        } caption: {
+            if let savings = content.summary?.savings, let label = content.summary?.savingsShareLabel {
+                ShareBar(share: savings.share, label: label, gradient: .savings)
+            } else {
+                Text("Optional")
+            }
         }
-        .buttonStyle(TileButtonStyle())
+        .redacted(reason: content.summary == nil ? .placeholder : [])
+        .animation(reduceMotion ? .fade : .value, value: content.summary?.savings)
+    }
+}
+
+private struct ShareBar: View {
+    let share: Decimal
+    let label: Overview.Breakdown.ShareLabel
+    let gradient: Gradient
+
+    @ScaledMetric(relativeTo: .footnote) private var height = 6
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Capsule()
+                .fill(Color(.tertiarySystemFill))
+                .overlay(alignment: .leading) {
+                    GeometryReader { proxy in
+                        Capsule()
+                            .fill(LinearGradient(gradient: gradient, startPoint: .leading, endPoint: .trailing))
+                            .frame(width: filledWidth(of: proxy.size.width))
+                    }
+                }
+                .clipShape(.capsule)
+                .frame(height: height)
+                .accessibilityHidden(true)
+
+            label.text
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .accessibilityLabel(Text("\(label.text) of income"))
+        }
+        .padding(.top, 4)
+    }
+
+    private func filledWidth(of width: CGFloat) -> CGFloat {
+        let fraction = min(max(share.doubleValue, 0), 1)
+        return fraction > 0 ? max(width * fraction, height) : 0
     }
 }
 
 private struct Tile<Value: View, Caption: View>: View {
     let title: LocalizedStringResource
-    let color: Color
+    let marker: Marker
     @ViewBuilder let value: Value
     @ViewBuilder let caption: Caption
 
-    @ScaledMetric private var markerSize = 10
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: markerSize * 0.3, style: .continuous)
-                    .fill(color)
-                    .frame(width: markerSize, height: markerSize)
+                marker
                 Text(title)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.interpolate)
             }
             .font(.subheadline)
-            Spacer(minLength: 16)
+            .unredacted()
             VStack(alignment: .leading, spacing: 2) {
                 value
                     .font(.system(.title2, design: .rounded, weight: .semibold))
@@ -569,20 +602,25 @@ private struct Tile<Value: View, Caption: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
 
 private struct TileButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(.primary)
             .contentShape(.rect(cornerRadius: 22, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.snappy(duration: 0.2), value: configuration.isPressed)
+            .brightness(configuration.isPressed ? (colorScheme == .dark ? 0.04 : -0.03) : 0)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.press, value: configuration.isPressed)
     }
 }
 
