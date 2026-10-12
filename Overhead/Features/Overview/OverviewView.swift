@@ -201,17 +201,13 @@ private struct AmountLabel: View {
 
 private struct Marker: View {
     let color: Color
-    var isOutlined = false
 
     @ScaledMetric private var size = 10
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-        ZStack {
-            shape.fill(isOutlined ? .clear : color)
-            shape.strokeBorder(isOutlined ? color : .clear, lineWidth: 1.5)
-        }
-        .frame(width: size, height: size)
+        RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+            .fill(color)
+            .frame(width: size, height: size)
     }
 }
 
@@ -457,7 +453,7 @@ private struct TileGrid: View {
 
     private var incomeTile: some View {
         Button(action: onIncome) {
-            Tile(title: "Income", marker: Marker(color: .primary, isOutlined: true)) {
+            Tile(title: "Income", marker: Marker(color: .gray)) {
                 switch content {
                 case .summary(let breakdown):
                     AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
