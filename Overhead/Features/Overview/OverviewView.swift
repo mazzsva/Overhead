@@ -202,14 +202,14 @@ extension Overview.Period {
 }
 
 private struct AmountLabel: View {
-    let value: Decimal
+    let value: Int
     let currency: Currency
     let isHidden: Bool
 
     var body: some View {
         AmountText(value: value, currency: currency, isHidden: isHidden)
             .monospacedDigit()
-            .contentTransition(.numericText(value: value.doubleValue))
+            .contentTransition(.numericText(value: Double(value)))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
     }
@@ -263,7 +263,7 @@ private struct HeroCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 24, style: .continuous))
     }
 
-    private var amount: Decimal {
+    private var amount: Int {
         switch content {
         case .expensesOnly(let amount, _): amount
         case .summary(let breakdown): breakdown.committed.amount

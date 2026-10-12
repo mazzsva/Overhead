@@ -77,7 +77,7 @@ struct IncomeFormView: View {
             if store.isBelowInvestment, let investment = store.investment {
                 Label {
                     Text(
-                        "Your savings of \(Text(investment, format: .currency(store.currency).locale(store.locale))) will be removed."
+                        "Your savings of \(Text(investment.value, format: .currency(store.currency).locale(store.locale))) will be removed."
                     )
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")

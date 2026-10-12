@@ -17,8 +17,8 @@ enum Currency: String, CaseIterable, Sendable {
     }
 }
 
-extension FormatStyle where Self == Decimal.FormatStyle.Currency {
+extension FormatStyle where Self == IntegerFormatStyle<Int>.Currency {
     static func currency(_ currency: Currency) -> Self {
-        .currency(code: currency.rawValue).presentation(.narrow)
+        .currency(code: currency.rawValue).presentation(.narrow).precision(.fractionLength(0))
     }
 }

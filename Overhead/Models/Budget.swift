@@ -8,18 +8,17 @@
 import Foundation
 
 struct Budget: Equatable, Sendable {
-    let income: Decimal
-    let investment: Decimal?
+    let income: Amount
+    let investment: Amount?
 
-    init?(income: Decimal, investment: Decimal?) {
-        guard income > 0, income.cents != nil else { return nil }
+    init?(income: Amount, investment: Amount?) {
         if let investment {
-            guard investment > 0, investment <= income, investment.cents != nil else { return nil }
+            guard investment <= income else { return nil }
         }
         self.init(validIncome: income, investment: investment)
     }
 
-    private init(validIncome income: Decimal, investment: Decimal?) {
+    private init(validIncome income: Amount, investment: Amount?) {
         self.income = income
         self.investment = investment
     }

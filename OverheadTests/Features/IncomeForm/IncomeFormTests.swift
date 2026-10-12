@@ -30,11 +30,14 @@ extension BaseSuite {
         @Test
         func onlyTextThatCannotBecomeValidIsRefused() {
             var state = IncomeForm.State(budget: nil)
-            state.incomeText = "0."
-            #expect(state.isIncomeInvalid)
+            state.incomeText = "0"
+            #expect(state.incomeInput.isInvalid)
             #expect(!state.isIncomeRefused)
 
-            state.incomeText = "1..2"
+            state.incomeText = "1.2"
+            #expect(state.isIncomeRefused)
+
+            state.incomeText = "1000000000"
             #expect(state.isIncomeRefused)
         }
 
@@ -42,7 +45,7 @@ extension BaseSuite {
         func anExistingIncomeStartsFormattedAndFocused() {
             let english = IncomeForm.State(budget: .mock)
             expectNoDifference(english.focus, .income)
-            expectNoDifference(english.incomeText, "3000.00")
+            expectNoDifference(english.incomeText, "3000")
             expectNoDifference(english.investment, 450)
             #expect(english.isEditing)
 
@@ -51,16 +54,16 @@ extension BaseSuite {
             } operation: {
                 IncomeForm.State(budget: .mock)
             }
-            expectNoDifference(italian.incomeText, "3000,00")
+            expectNoDifference(italian.incomeText, "3000")
         }
 
-        @Test(arguments: ["0", "-10", "12abc", "1e3", "12.345"])
+        @Test(arguments: ["0", "-10", "12abc", "1e3", "12.5", "1000000000"])
         func anInvalidIncomeIsRefused(text: String) {
             var state = IncomeForm.State(budget: nil)
             state.incomeText = text
 
             expectNoDifference(state.income, nil)
-            #expect(state.isIncomeInvalid)
+            #expect(state.incomeInput.isInvalid)
         }
 
         @Test
@@ -69,10 +72,10 @@ extension BaseSuite {
             state.incomeText = "  "
 
             expectNoDifference(state.income, nil)
-            #expect(!state.isIncomeInvalid)
+            #expect(!state.incomeInput.isInvalid)
 
-            state.incomeText = " 3,000.50 "
-            expectNoDifference(state.income, Decimal(cents: 300_050))
+            state.incomeText = " 3,500 "
+            expectNoDifference(state.income, 3500)
         }
 
         @Test
@@ -82,10 +85,10 @@ extension BaseSuite {
             state.incomeText = "3000"
             #expect(!state.hasChanges)
 
-            state.incomeText = "3,000.00 "
+            state.incomeText = "3,000 "
             #expect(!state.hasChanges)
 
-            state.incomeText = "3000.01"
+            state.incomeText = "3001"
             #expect(state.hasChanges)
 
             state.incomeText = "abc"
@@ -136,7 +139,7 @@ extension BaseSuite {
                             TextState("Cancel")
                         }
                     } message: {
-                        TextState("Your savings of $450.00 are more than this income.")
+                        TextState("Your savings of $450 are more than this income.")
                     })
             }
             await store.send(.destination(.presented(.alert(.confirmRemovingInvestment)))) {

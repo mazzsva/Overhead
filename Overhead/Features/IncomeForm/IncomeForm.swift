@@ -35,24 +35,28 @@ struct IncomeForm {
         @Presents var destination: Destination.State?
         var focus: Field? = .income
         var incomeText: String
-        let initialIncome: Decimal?
-        var investment: Decimal?
+        let initialIncome: Amount?
+        var investment: Amount?
         let locale: Locale
 
         init(budget: Budget?) {
             @Dependency(\.locale) var locale
-            incomeText = budget?.income.amountText(locale: locale) ?? ""
+            incomeText = budget?.income.text(locale: locale) ?? ""
             initialIncome = budget?.income
             investment = budget?.investment
             self.locale = locale
         }
 
         var hasChanges: Bool {
-            income != initialIncome || isIncomeInvalid
+            income != initialIncome || incomeInput.isInvalid
         }
 
-        var income: Decimal? {
-            Decimal(amountText: incomeText, locale: locale)
+        var income: Amount? {
+            incomeInput.amount
+        }
+
+        var incomeInput: AmountInput {
+            AmountInput(text: incomeText, locale: locale)
         }
 
         var isBelowInvestment: Bool {
@@ -64,12 +68,8 @@ struct IncomeForm {
             initialIncome != nil
         }
 
-        var isIncomeInvalid: Bool {
-            !incomeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && income == nil
-        }
-
         var isIncomeRefused: Bool {
-            isIncomeInvalid && Decimal(amountText: incomeText + "1", locale: locale) == nil
+            incomeInput == .refused
         }
     }
 
@@ -84,8 +84,8 @@ struct IncomeForm {
         @CasePathable
         enum Delegate {
             case didRemove
-            case didSubmit(Decimal)
-            case didSubmitRemovingInvestment(Decimal)
+            case didSubmit(Amount)
+            case didSubmitRemovingInvestment(Amount)
         }
     }
 
@@ -159,7 +159,7 @@ extension AlertState where Action == IncomeForm.Alert {
         }
     }
 
-    static func confirmRemovingInvestment(_ investment: Decimal, currency: Currency, locale: Locale) -> Self {
+    static func confirmRemovingInvestment(_ investment: Amount, currency: Currency, locale: Locale) -> Self {
         AlertState {
             TextState("Remove Savings")
         } actions: {
@@ -171,7 +171,7 @@ extension AlertState where Action == IncomeForm.Alert {
             }
         } message: {
             TextState(
-                "Your savings of \(investment.formatted(.currency(currency).locale(locale))) are more than this income."
+                "Your savings of \(investment.value.formatted(.currency(currency).locale(locale))) are more than this income."
             )
         }
     }

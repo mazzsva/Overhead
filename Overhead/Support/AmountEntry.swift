@@ -71,7 +71,7 @@ struct AmountField<Field: Hashable & Sendable>: View {
                     .font(font)
                     .kerning(-1.1)
                     .multilineTextAlignment(.center)
-                    .keyboardType(.decimalPad)
+                    .keyboardType(.numberPad)
                     .foregroundStyle(.clear)
                     .tint(.clear)
                     .focused(focus, equals: field)

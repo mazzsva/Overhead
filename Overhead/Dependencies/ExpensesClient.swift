@@ -75,7 +75,7 @@ extension DependencyValues {
 extension Expense {
     init?(documentID: String, data: [String: Any]) {
         guard
-            let amountInCents = data["amountInCents"] as? Int,
+            let amount = (data["amount"] as? Int).flatMap(Amount.init(value:)),
             let billingCycle = (data["billingCycle"] as? String).flatMap(BillingCycle.init(rawValue:)),
             let createdAt = data["createdAt"] as? Timestamp,
             let id = UUID(uuidString: documentID),
@@ -87,7 +87,7 @@ extension Expense {
             return nil
         }
         self.init(
-            amount: Decimal(cents: amountInCents),
+            amount: amount,
             billingCycle: billingCycle,
             createdAt: createdAt.dateValue(),
             id: id,
@@ -96,13 +96,9 @@ extension Expense {
         )
     }
 
-    func documentData() throws -> [String: Any] {
-        guard let amountInCents = amount.cents else {
-            reportIssue("Expense \(id) has an amount that cents cannot represent.")
-            throw InexactAmountError()
-        }
-        return [
-            "amountInCents": amountInCents,
+    func documentData() -> [String: Any] {
+        [
+            "amount": amount.value,
             "billingCycle": billingCycle.rawValue,
             "createdAt": Timestamp(roundingToMicroseconds: createdAt),
             "isActive": isActive,
@@ -121,7 +117,5 @@ extension Timestamp {
         )
     }
 }
-
-private struct InexactAmountError: Error {}
 
 private let logger = Logger(category: "ExpensesClient")

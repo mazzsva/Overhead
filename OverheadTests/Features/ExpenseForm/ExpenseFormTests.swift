@@ -23,7 +23,7 @@ extension BaseSuite {
             #expect(state.isCreating)
             #expect(!state.isSubmittable)
 
-            state.amountText = "12.50"
+            state.amountText = "12"
             state.name = "   \n  "
             #expect(!state.isSubmittable)
 
@@ -33,7 +33,7 @@ extension BaseSuite {
             state.amountText = "0"
             #expect(!state.isSubmittable)
 
-            state.amountText = "-12.50"
+            state.amountText = "-12"
             #expect(!state.isSubmittable)
         }
 
@@ -67,19 +67,32 @@ extension BaseSuite {
                 expectNoDifference(state.amount, nil)
             }
 
-            state.amountText = " 1,200.50 "
-            expectNoDifference(state.amount, Decimal(cents: 120_050))
+            state.amountText = " 1,200 "
+            expectNoDifference(state.amount, 1200)
         }
 
         @Test
-        func theAmountCannotHaveMoreThanTwoDecimalPlaces() {
+        func theAmountIsAWholeNumber() {
             var state = ExpenseForm.State()
 
-            state.amountText = "12.345"
-            expectNoDifference(state.amount, nil)
+            for text in ["12.5", "12.0", "12.", ".5"] {
+                state.amountText = text
+                expectNoDifference(state.amount, nil)
+            }
 
-            state.amountText = "12.34"
-            expectNoDifference(state.amount, Decimal(cents: 1234))
+            state.amountText = "12"
+            expectNoDifference(state.amount, 12)
+        }
+
+        @Test
+        func theAmountIsAtMostTheLimit() {
+            var state = ExpenseForm.State()
+
+            state.amountText = "999999999"
+            expectNoDifference(state.amount, 999_999_999)
+
+            state.amountText = "1000000000"
+            expectNoDifference(state.amount, nil)
         }
 
         @Test
@@ -90,24 +103,24 @@ extension BaseSuite {
                 ExpenseForm.State()
             }
 
-            state.amountText = "1.200,50"
-            expectNoDifference(state.amount, Decimal(cents: 120_050))
+            state.amountText = "1.200"
+            expectNoDifference(state.amount, 1200)
 
-            state.amountText = "1,200.50"
+            state.amountText = "1,200"
             expectNoDifference(state.amount, nil)
         }
 
         @Test
         func theFormStartsFromTheFormattedAmount() {
             let english = ExpenseForm.State(expense: .gym)
-            expectNoDifference(english.amountText, "39.90")
+            expectNoDifference(english.amountText, "40")
 
             let italian = withDependencies {
                 $0.locale = Locale(identifier: "it_IT")
             } operation: {
                 ExpenseForm.State(expense: .rent)
             }
-            expectNoDifference(italian.amountText, "950,00")
+            expectNoDifference(italian.amountText, "950")
         }
 
         // The form gives the expense an identity, so the save does not wait for the server
@@ -115,7 +128,7 @@ extension BaseSuite {
         func creatingAnExpenseGeneratesItsIdentityAndDate() async {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
             let created = Expense(
-                amount: Decimal(cents: 1299),
+                amount: 13,
                 billingCycle: .monthly,
                 createdAt: now,
                 id: UUID(0),
@@ -133,8 +146,8 @@ extension BaseSuite {
             await store.send(.binding(.set(\.name, "  Phone Plan  "))) {
                 $0.name = "  Phone Plan  "
             }
-            await store.send(.binding(.set(\.amountText, "12.99"))) {
-                $0.amountText = "12.99"
+            await store.send(.binding(.set(\.amountText, "13"))) {
+                $0.amountText = "13"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, created)
@@ -238,7 +251,7 @@ extension BaseSuite {
             #expect(!state.hasChanges)
             state.amountText = "abc"
             #expect(state.hasChanges)
-            state.amountText = "950.00"
+            state.amountText = " 950 "
 
             state.billingCycle = .yearly
             #expect(state.hasChanges)

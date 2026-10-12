@@ -32,7 +32,7 @@ struct ExpenseForm {
 
         init(expense: Expense? = nil) {
             @Dependency(\.locale) var locale
-            amountText = expense?.amount.amountText(locale: locale) ?? ""
+            amountText = expense?.amount.text(locale: locale) ?? ""
             billingCycle = expense?.billingCycle ?? .monthly
             self.expense = expense
             focus = expense == nil ? .name : nil
@@ -41,14 +41,17 @@ struct ExpenseForm {
             name = expense?.name ?? ""
         }
 
-        var amount: Decimal? {
-            Decimal(amountText: amountText, locale: locale)
+        var amount: Amount? {
+            amountInput.amount
+        }
+
+        var amountInput: AmountInput {
+            AmountInput(text: amountText, locale: locale)
         }
 
         var hasChanges: Bool {
-            let isAmountInvalid = !amountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount == nil
-            return amount != expense?.amount
-                || isAmountInvalid
+            amount != expense?.amount
+                || amountInput.isInvalid
                 || billingCycle != (expense?.billingCycle ?? .monthly)
                 || isActive != (expense?.isActive ?? true)
                 || name.trimmingCharacters(in: .whitespacesAndNewlines) != (expense?.name ?? "")

@@ -24,9 +24,9 @@ struct ExpenseFormView: View {
                     TextField(
                         "Amount",
                         text: $store.amountText,
-                        prompt: Text(Decimal.zero, format: .currency(store.currency).locale(store.locale))
+                        prompt: Text(0, format: .currency(store.currency).locale(store.locale))
                     )
-                    .keyboardType(.decimalPad)
+                    .keyboardType(.numberPad)
                 }
                 Section("Billing Cycle") {
                     Picker("Billing Cycle", selection: $store.billingCycle) {

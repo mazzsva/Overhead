@@ -20,8 +20,8 @@ struct BudgetClient: Sendable {
     var delete: @Sendable (_ uid: String) async throws -> Void
     var removeIncome: @Sendable (_ uid: String) async throws -> Void
     var removeInvestment: @Sendable (_ uid: String) async throws -> Void
-    var saveIncome: @Sendable (_ income: Decimal, _ removingInvestment: Bool, _ uid: String) async throws -> Void
-    var saveInvestment: @Sendable (_ investment: Decimal, _ uid: String) async throws -> Void
+    var saveIncome: @Sendable (_ income: Amount, _ removingInvestment: Bool, _ uid: String) async throws -> Void
+    var saveInvestment: @Sendable (_ investment: Amount, _ uid: String) async throws -> Void
 }
 
 extension BudgetClient: DependencyKey {
@@ -76,30 +76,19 @@ extension DependencyValues {
 }
 
 enum BudgetField {
-    static let income = "monthlyIncomeInCents"
-    static let investment = "monthlyInvestmentInCents"
-
-    static func cents(of amount: Decimal) throws -> Int {
-        guard let cents = amount.cents else {
-            reportIssue("The budget has an amount that cents cannot represent.")
-            throw InexactAmountError()
-        }
-        return cents
-    }
+    static let income = "monthlyIncome"
+    static let investment = "monthlyInvestment"
 }
 
 extension Budget {
     init?(data: [String: Any]) {
         guard data[BudgetField.income] != nil || data[BudgetField.investment] != nil else { return nil }
         let investmentValue = data[BudgetField.investment]
-        let investmentInCents = investmentValue as? Int
+        let investment = (investmentValue as? Int).flatMap(Amount.init(value:))
         guard
-            let incomeInCents = data[BudgetField.income] as? Int,
-            investmentValue == nil || investmentInCents != nil,
-            let budget = Budget(
-                income: Decimal(cents: incomeInCents),
-                investment: investmentInCents.map(Decimal.init(cents:))
-            )
+            let income = (data[BudgetField.income] as? Int).flatMap(Amount.init(value:)),
+            investmentValue == nil || investment != nil,
+            let budget = Budget(income: income, investment: investment)
         else {
             logger.error("Skipping a budget document that failed to decode.")
             reportIssue("Skipping a budget document that failed to decode.")
@@ -108,7 +97,5 @@ extension Budget {
         self = budget
     }
 }
-
-private struct InexactAmountError: Error {}
 
 private let logger = Logger(category: "BudgetClient")

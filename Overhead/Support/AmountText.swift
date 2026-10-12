@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AmountText: View {
-    let value: Decimal
+    let value: Int
     let currency: Currency
     let isHidden: Bool
 
@@ -28,5 +28,5 @@ struct AmountText: View {
         .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
     }
 
-    private static let placeholder = Decimal(cents: 888_888)
+    private static let placeholder = 8_888
 }

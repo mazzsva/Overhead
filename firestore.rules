@@ -2,33 +2,35 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAmount(value) {
+      return value is int && value > 0 && value <= 999999999;
+    }
+
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
 
     function isValidProfile(data) {
-      return data.keys().hasOnly(['currency', 'monthlyIncomeInCents', 'monthlyInvestmentInCents'])
+      return data.keys().hasOnly(['currency', 'monthlyIncome', 'monthlyInvestment'])
         && (!('currency' in data) || data.currency in ['BRL', 'EUR', 'USD'])
         && (
-          !('monthlyIncomeInCents' in data)
-          || (data.monthlyIncomeInCents is int && data.monthlyIncomeInCents > 0)
+          !('monthlyIncome' in data)
+          || isAmount(data.monthlyIncome)
         )
         && (
-          !('monthlyInvestmentInCents' in data)
+          !('monthlyInvestment' in data)
           || (
-            'monthlyIncomeInCents' in data
-            && data.monthlyInvestmentInCents is int
-            && data.monthlyInvestmentInCents > 0
-            && data.monthlyInvestmentInCents <= data.monthlyIncomeInCents
+            'monthlyIncome' in data
+            && isAmount(data.monthlyInvestment)
+            && data.monthlyInvestment <= data.monthlyIncome
           )
         );
     }
 
     function isValidExpense(data) {
-      return data.keys().hasOnly(['amountInCents', 'billingCycle', 'createdAt', 'isActive', 'name'])
-        && data.keys().hasAll(['amountInCents', 'billingCycle', 'createdAt', 'isActive', 'name'])
-        && data.amountInCents is int
-        && data.amountInCents > 0
+      return data.keys().hasOnly(['amount', 'billingCycle', 'createdAt', 'isActive', 'name'])
+        && data.keys().hasAll(['amount', 'billingCycle', 'createdAt', 'isActive', 'name'])
+        && isAmount(data.amount)
         && data.billingCycle in ['weekly', 'monthly', 'yearly']
         && data.createdAt is timestamp
         && data.isActive is bool
