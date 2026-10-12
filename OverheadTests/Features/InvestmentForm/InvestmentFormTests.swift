@@ -29,9 +29,9 @@ extension BaseSuite {
         }
 
         @Test
-        func anExistingInvestmentStartsFormattedAndWithoutTheKeyboard() {
+        func anExistingInvestmentStartsFormattedAndFocused() {
             let english = InvestmentForm.State(income: 3000, investment: 450)
-            expectNoDifference(english.focus, nil)
+            expectNoDifference(english.focus, .investment)
             expectNoDifference(english.investmentText, "450.00")
             #expect(english.isEditing)
             expectNoDifference(english.share, Decimal(string: "0.15"))
@@ -82,6 +82,40 @@ extension BaseSuite {
             await store.send(.shareButtonTapped(20)) {
                 $0.investmentText = "246.91"
             }
+        }
+
+        @Test
+        func theInvestmentSelectsTheMatchingShare() {
+            var state = InvestmentForm.State(income: 3200, investment: nil)
+            expectNoDifference(state.selectedSharePercent, nil)
+
+            state.investmentText = "480"
+            expectNoDifference(state.selectedSharePercent, 15)
+
+            state.investmentText = "481"
+            expectNoDifference(state.selectedSharePercent, nil)
+        }
+
+        @Test
+        func aRoundedShareIsStillSelected() {
+            var state = InvestmentForm.State(income: Decimal(cents: 1030), investment: nil)
+            state.investmentText = "1.55"
+
+            expectNoDifference(state.selectedSharePercent, 15)
+        }
+
+        @Test
+        func onlyTextThatCannotBecomeValidIsRefused() {
+            var state = InvestmentForm.State(income: 3200, investment: nil)
+            state.investmentText = "0"
+            #expect(state.isInvestmentInvalid)
+            #expect(!state.isInvestmentRefused)
+
+            state.investmentText = "1..2"
+            #expect(state.isInvestmentRefused)
+
+            state.investmentText = "4000"
+            #expect(state.isInvestmentRefused)
         }
 
         @Test

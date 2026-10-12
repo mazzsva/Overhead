@@ -28,13 +28,20 @@ struct InvestmentForm {
         case investment
     }
 
+    struct ShareOption: Equatable, Identifiable {
+        let amount: Decimal
+        let percent: Int
+
+        var id: Int { percent }
+    }
+
     static let shares = [10, 15, 20]
 
     @ObservableState
     struct State: Equatable {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
-        var focus: Field?
+        var focus: Field? = .investment
         var income: Decimal
         let initialInvestment: Decimal?
         var investmentText: String
@@ -42,7 +49,6 @@ struct InvestmentForm {
 
         init(income: Decimal, investment: Decimal?) {
             @Dependency(\.locale) var locale
-            focus = investment == nil ? .investment : nil
             self.income = income
             initialInvestment = investment
             investmentText = investment?.amountText(locale: locale) ?? ""
@@ -70,13 +76,28 @@ struct InvestmentForm {
             !investmentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && investment == nil
         }
 
+        var isInvestmentRefused: Bool {
+            exceedsIncome || (isInvestmentInvalid && Decimal(amountText: investmentText + "1", locale: locale) == nil)
+        }
+
         var isSubmittable: Bool {
             investment != nil && !exceedsIncome
+        }
+
+        var selectedSharePercent: Int? {
+            guard let investment else { return nil }
+            return shareOptions.first { $0.amount == investment }?.percent
         }
 
         var share: Decimal? {
             guard isSubmittable, let investment else { return nil }
             return investment / income
+        }
+
+        var shareOptions: [ShareOption] {
+            InvestmentForm.shares.map {
+                ShareOption(amount: (income * Decimal($0) / 100).rounded(scale: 2), percent: $0)
+            }
         }
     }
 
@@ -132,9 +153,9 @@ struct InvestmentForm {
                 return .send(.delegate(.didSubmit(investment)))
 
             case .shareButtonTapped(let percent):
-                let investment = (state.income * Decimal(percent) / 100).rounded(scale: 2)
-                guard investment > 0 else { return .none }
-                state.investmentText = investment.amountText(locale: state.locale)
+                guard let option = state.shareOptions.first(where: { $0.percent == percent }), option.amount > 0
+                else { return .none }
+                state.investmentText = option.amount.amountText(locale: state.locale)
                 return .none
             }
         }
