@@ -469,6 +469,15 @@ extension BaseSuite {
             }
         }
 
+        @Test(arguments: [Overview.BudgetStatus.failed, .loading, .offline])
+        func theIncomeTileWaitsForTheBudget(budgetStatus: Overview.BudgetStatus) async {
+            let store = TestStore(initialState: makeState(budgetStatus)) {
+                Overview()
+            }
+
+            await store.send(.incomeTileTapped)
+        }
+
         @Test
         func eachTileOpensItsOwnForm() async {
             let store = TestStore(initialState: makeState(.loaded(.mock))) {

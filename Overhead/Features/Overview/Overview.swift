@@ -248,8 +248,8 @@ struct Overview {
         Reduce { state, action in
             switch action {
             case .incomeTileTapped:
-                guard state.destination == nil else { return .none }
-                state.destination = .incomeForm(IncomeForm.State(budget: state.budget))
+                guard state.destination == nil, case .loaded(let budget) = state.budgetStatus else { return .none }
+                state.destination = .incomeForm(IncomeForm.State(budget: budget))
                 return .none
 
             case .amountsVisibilityButtonTapped:
