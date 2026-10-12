@@ -22,7 +22,6 @@ extension Expense {
 
     var annualAmount: Int {
         switch billingCycle {
-        case .weekly: amount.value * 52
         case .monthly: amount.value * 12
         case .yearly: amount.value
         }
