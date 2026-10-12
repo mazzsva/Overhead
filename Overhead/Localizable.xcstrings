@@ -1,13 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ more than income" : {
-
-    },
     "%@ of income" : {
 
     },
     "%@ of your %@ income." : {
+
+    },
+    "%@, %@ of income" : {
+
+    },
+    "^[%lld expense](inflect: true)" : {
 
     },
     "<%@" : {
@@ -16,40 +19,22 @@
     ">%@" : {
 
     },
-    "a day" : {
-
-    },
-    "a day, after tax" : {
-
-    },
-    "a month" : {
-
-    },
-    "a month, after tax" : {
-
-    },
-    "a week" : {
-
-    },
-    "a week, after tax" : {
-
-    },
-    "a year" : {
-
-    },
-    "a year, after tax" : {
-
-    },
     "Active" : {
 
     },
     "Add every fixed expense with its amount and how often you pay it." : {
 
     },
+    "Add Expense" : {
+
+    },
     "Add Income" : {
 
     },
     "Add Savings" : {
+
+    },
+    "After tax" : {
 
     },
     "Amount" : {
@@ -73,9 +58,6 @@
     "Cancel" : {
 
     },
-    "Committed" : {
-
-    },
     "Connect to the internet to see your income." : {
 
     },
@@ -83,6 +65,9 @@
 
     },
     "Currency" : {
+
+    },
+    "Daily Costs" : {
 
     },
     "Day" : {
@@ -121,7 +106,28 @@
     "Expenses" : {
 
     },
-    "Fully committed" : {
+    "Expenses and savings, a day" : {
+
+    },
+    "Expenses and savings, a month" : {
+
+    },
+    "Expenses and savings, a week" : {
+
+    },
+    "Expenses and savings, a year" : {
+
+    },
+    "Expenses, a day" : {
+
+    },
+    "Expenses, a month" : {
+
+    },
+    "Expenses, a week" : {
+
+    },
+    "Expenses, a year" : {
 
     },
     "Hidden" : {
@@ -145,6 +151,9 @@
     "Monthly" : {
 
     },
+    "Monthly Costs" : {
+
+    },
     "Name" : {
 
     },
@@ -160,7 +169,7 @@
     "Optional" : {
 
     },
-    "Over Budget" : {
+    "Over Income" : {
 
     },
     "Overhead" : {
@@ -229,6 +238,9 @@
     "The amount you save or invest each month." : {
 
     },
+    "To see what is available" : {
+
+    },
     "Unable to Load Expenses" : {
 
     },
@@ -241,6 +253,9 @@
     "Week" : {
 
     },
+    "Weekly Costs" : {
+
+    },
     "Welcome to" : {
 
     },
@@ -248,6 +263,9 @@
 
     },
     "Yearly" : {
+
+    },
+    "Yearly Costs" : {
 
     },
     "You couldn't be signed in." : {
