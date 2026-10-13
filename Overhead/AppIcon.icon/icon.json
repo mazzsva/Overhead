@@ -1,0 +1,145 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "srgb:0.16471,0.22745,0.36078,1.00000",
+      "srgb:0.03922,0.06667,0.13333,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:1.00000,0.66886,0.22916,1.00000",
+              "srgb:1.00000,0.51298,0.04157,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 1
+              }
+            }
+          },
+          "glass" : true,
+          "image-name" : "Plate.svg",
+          "name" : "Expenses",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -141.72
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.05
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:0.33116,0.83176,0.45942,1.00000",
+              "srgb:0.18848,0.72872,0.32732,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 1
+              }
+            }
+          },
+          "glass" : true,
+          "image-name" : "Plate.svg",
+          "name" : "Available",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -16.72
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.26
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:0.23885,0.59272,0.97779,1.00000",
+              "srgb:0.04333,0.41570,0.89325,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 1
+              }
+            }
+          },
+          "glass" : true,
+          "image-name" : "Plate.svg",
+          "name" : "Savings",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              108.28
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.32
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "iOS"
+    ]
+  }
+}
