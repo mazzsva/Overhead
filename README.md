@@ -1,6 +1,6 @@
 # Overhead
 
-A vocabulary app for iOS that never loses a word.
+Expense tracker in SwiftUI, TCA, Firestore, and Swift Charts.
 
 <img src="https://github.com/user-attachments/assets/28ce5ec8-3945-4bb9-84c2-1fc7a53645e4" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/c4140c3d-24bc-459e-8d50-6440c17ccb20" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/42c3037b-10ab-4204-aec1-811261fd6bc9" alt="An entry detail screen, with the term and its definition" width="32%">
 
