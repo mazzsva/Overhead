@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 
-destination="${DESTINATION:-platform=iOS Simulator,name=iPhone Air}"
+destination="${DESTINATION:-platform=iOS Simulator,name=iPhone 18 Pro}"
 command=(
     env TEST_RUNNER_FIREBASE_EMULATORS=1
     xcodebuild test
