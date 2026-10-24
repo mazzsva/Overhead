@@ -14,22 +14,21 @@ Expense tracker in SwiftUI, TCA, Firestore, and Swift Charts.
   <tr><td><b>Backend</b></td><td>Firebase</td></tr>
   <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
-  <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
 </table>
 
-## Engineering
+## Quality
+
+- **Tests:** 86 [Swift Testing](https://github.com/swiftlang/swift-testing) tests cover every reducer, and none touch the network.
+- **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
+- **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
+- **Localization:** Every string the app shows is ready for translation.
+
+## Engineering decisions
+
+**Live sync.** The expenses and the budget each have one source of truth: a live Firestore listener backed by its local cache, so changes appear at once on every device and never wait for the network.
 
 **One reducer tree.** Every screen pairs a reducer with a view of the same name, and the app holds them in a single tree instead of scattering state across views. Navigation is a property on that state, not a flag a view owns, so the whole navigation graph can be inspected and tested from one place.
 
 **No view touches Firebase.** Every effect crosses a client that has a live implementation and a preview one, so previews render with no network and any effect can be swapped out under test.
 
-**Offline reads and writes.** The entry list has one source of truth: a live Firestore listener backed by its local cache. Reads keep working when the connection drops, writes queue on-device, and both sync the moment it returns.
-
 **Account deletion.** Deleting an account reauthenticates the user with Apple, revokes the Apple token, then deletes the account and its Firestore data.
-
-## Quality
-
-- **Tests:** 86 tests cover every reducer, and none touch the network.
-- **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
-- **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
-- **Localization:** Every string the app shows is ready for translation.
