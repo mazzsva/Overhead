@@ -71,17 +71,10 @@ struct OpenEntry<Field: Hashable & Sendable>: View {
             } else {
                 display
                     .foregroundStyle(foregroundStyle)
-                    .contentTransition(reduceMotion ? .opacity : .numericText())
-                    .animation(reduceMotion ? nil : .typing, value: text)
+                    .contentTransition(.opacity)
+                    .animation(.typing, value: text)
                     .animation(.fade, value: isRefused)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .asymmetric(
-                                insertion: AnyTransition(.blurReplace(.downUp)),
-                                removal: AnyTransition(.blurReplace(.upUp))
-                            )
-                    )
+                    .transition(.opacity)
             }
         }
         .animation(.typing(reducingMotion: reduceMotion), value: isPlaceholder)
