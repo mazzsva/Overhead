@@ -291,7 +291,6 @@ extension BaseSuite {
         func editingAnExpenseChangesItsDetails() async {
             var edited = Expense.rent
             edited.billingCycle = .yearly
-            edited.isActive = false
 
             let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
                 ExpenseForm()
@@ -300,8 +299,21 @@ extension BaseSuite {
             await store.send(.binding(.set(\.billingCycle, .yearly))) {
                 $0.billingCycle = .yearly
             }
-            await store.send(.binding(.set(\.isActive, false))) {
-                $0.isActive = false
+            await store.send(.saveButtonTapped)
+            await store.receive(\.delegate.didSubmit, edited)
+        }
+
+        @Test
+        func editingAnExpenseKeepsItsStatus() async {
+            var edited = Expense.phonePlan
+            edited.billingCycle = .yearly
+
+            let store = TestStore(initialState: ExpenseForm.State(expense: .phonePlan)) {
+                ExpenseForm()
+            }
+
+            await store.send(.binding(.set(\.billingCycle, .yearly))) {
+                $0.billingCycle = .yearly
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, edited)

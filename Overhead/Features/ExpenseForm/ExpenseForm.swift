@@ -26,7 +26,6 @@ struct ExpenseForm {
         var billingCycle: BillingCycle
         let expense: Expense?
         var focus: Field?
-        var isActive: Bool
         var name: NameField.State
         var step = Step.name
 
@@ -35,8 +34,11 @@ struct ExpenseForm {
             billingCycle = expense?.billingCycle ?? .monthly
             self.expense = expense
             focus = .name
-            isActive = expense?.isActive ?? true
             name = NameField.State(expense?.name)
+        }
+
+        var isActive: Bool {
+            expense?.isActive ?? true
         }
 
         var isCreating: Bool {

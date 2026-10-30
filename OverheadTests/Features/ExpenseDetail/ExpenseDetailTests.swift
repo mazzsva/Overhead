@@ -29,6 +29,31 @@ extension BaseSuite {
             }
         }
 
+        @Test
+        func theActiveToggleTellsTheParent() async {
+            let store = TestStore(
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .rent))
+            ) {
+                ExpenseDetail()
+            }
+            var inactive = Expense.rent
+            inactive.isActive = false
+
+            await store.send(.activeToggleChanged(false))
+            await store.receive(\.delegate.didUpdate, inactive)
+        }
+
+        @Test
+        func theActiveToggleIgnoresTheCurrentStatus() async {
+            let store = TestStore(
+                initialState: ExpenseDetail.State(expense: SharedReader(value: .rent))
+            ) {
+                ExpenseDetail()
+            }
+
+            await store.send(.activeToggleChanged(true))
+        }
+
         // The detail closes the form itself, and Expenses receives the expense to save
         @Test
         func savingTheEditedExpenseClosesTheFormAndTellsTheParent() async {

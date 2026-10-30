@@ -480,7 +480,9 @@ extension BaseSuite {
 
                 await store.send(
                     .path(.element(id: detailID, action: .delegate(.didUpdate(updated))))
-                )
+                ) {
+                    $0.$expenses.withLock { $0?[id: updated.id] = updated }
+                }
                 await store.finish()
             }
         }

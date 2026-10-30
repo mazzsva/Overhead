@@ -11,34 +11,26 @@ import SwiftUI
 struct ExpenseDetailView: View {
     @Bindable var store: StoreOf<ExpenseDetail>
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        List {
-            Section {
-                LabeledContent("Amount") {
-                    AmountText(
-                        value: store.expense.amount.value, currency: store.currency, isHidden: store.hidesAmounts)
-                }
-                LabeledContent("Billing Cycle") {
-                    Text(store.expense.billingCycle.title)
-                }
-                LabeledContent("Status") {
-                    if store.expense.isActive {
-                        Text("Active")
-                    } else {
-                        Text("Inactive")
-                    }
-                }
-            }
-            Section {
-                Button("Delete Expense", role: .destructive) {
+        let expense = store.expense
+        ScrollView {
+            VStack(spacing: 12) {
+                hero(expense)
+                activeToggle
+                DestructiveButton(title: "Delete Expense") {
                     store.send(.deleteButtonTapped)
                 }
+                .padding(.top, 12)
             }
+            .padding(.horizontal)
+            .animation(.value(reducingMotion: reduceMotion), value: expense)
         }
-        .listSectionSpacing(.compact)
-        .scrollContentBackground(.hidden)
+        .contentMargins(.top, 8, for: .scrollContent)
+        .contentMargins(.bottom, 24, for: .scrollContent)
         .groupedBackground()
-        .navigationTitle(store.expense.name.value)
+        .navigationTitle(expense.name.value)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -52,6 +44,42 @@ struct ExpenseDetailView: View {
             item: $store.scope(state: \.destination?.editExpense, action: \.destination.editExpense)
         ) { formStore in
             ExpenseFormView(store: formStore)
+        }
+    }
+
+    private func hero(_ expense: Expense) -> some View {
+        let counterpart = expense.billingCycle.counterpart
+        let amount = Text(expense.amount.value, format: .currency(store.currency))
+        return HeroCard(
+            title: expense.billingCycle.costTitle,
+            glow: .accent(.expense(isActive: expense.isActive)),
+            accessibilityValue: store.hidesAmounts ? Text("Hidden") : amount
+        ) {
+            AmountLabel(value: expense.amount.value, currency: store.currency, isHidden: store.hidesAmounts)
+                .foregroundStyle(expense.isActive ? .primary : .secondary)
+        } caption: {
+            if store.hidesAmounts {
+                Text(expense.billingCycle.recurrence)
+            } else {
+                counterpart.rate(
+                    Text(
+                        expense.billingCycle.amount(expense.amount, in: counterpart), format: .currency(store.currency))
+                )
+            }
+        }
+    }
+
+    private var activeToggle: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Active", isOn: $store.expense.isActive.sending(\.activeToggleChanged))
+                .tint(Accent.expenses.fill)
+                .padding(.horizontal, 16)
+                .frame(minHeight: 52)
+                .cardBackground(.control)
+            Text("Inactive expenses don't count toward your costs.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
         }
     }
 }
