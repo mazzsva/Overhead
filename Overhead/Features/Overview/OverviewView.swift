@@ -218,29 +218,24 @@ private struct TileGrid: View {
             : AnyLayout(HStackLayout(spacing: 12))
         VStack(spacing: 12) {
             row {
+                incomeTile
+
                 Button(action: onExpenses) {
                     expensesTile
                 }
                 .buttonStyle(.pressable(.tile))
-
-                if hasBudgetTiles {
-                    Button(action: onSavings) {
-                        savingsTile
-                    }
-                    .buttonStyle(.pressable(.tile))
-                    .disabled(content.summary == nil)
-                    .transition(insertion)
-                } else {
-                    incomeTile
-                        .transition(.opacity)
-                }
             }
             .fixedSize(horizontal: false, vertical: true)
 
             if hasBudgetTiles {
                 row {
+                    Button(action: onSavings) {
+                        savingsTile
+                    }
+                    .buttonStyle(.pressable(.tile))
+                    .disabled(content.summary == nil)
+
                     availableTile
-                    incomeTile
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .transition(insertion)
