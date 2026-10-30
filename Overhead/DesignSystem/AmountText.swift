@@ -13,20 +13,29 @@ struct AmountText: View {
     let isHidden: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var height: CGFloat = 0
 
     var body: some View {
         Group {
             if isHidden {
                 Text(Self.placeholder, format: .currency(currency))
                     .privacySensitive()
-                    .redacted(reason: .privacy)
+                    .blur(radius: height * Self.blurRatio)
+                    .allowsHitTesting(false)
                     .accessibilityLabel(Text("Hidden"))
             } else {
                 Text(value, format: .currency(currency))
             }
         }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            height = $0
+        }
         .transition(.replace(reducingMotion: reduceMotion))
     }
+
+    private static let blurRatio: CGFloat = 0.3
 
     private static let placeholder = 8_888
 }
