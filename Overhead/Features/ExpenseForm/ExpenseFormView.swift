@@ -19,11 +19,11 @@ struct ExpenseFormView: View {
             title: title,
             accent: .expense(isActive: store.isActive),
             cancellation: store.step == .name ? .cancel : .back,
-            confirmation: store.step == .name ? .next : .save,
+            confirmation: .button(store.step == .name ? "Continue" : "Save"),
             canConfirm: store.step == .name ? store.name.value != nil : store.isSubmittable,
             locale: store.amount.locale,
             onCancellation: { store.send(store.step == .name ? .dismissButtonTapped : .backButtonTapped) },
-            onConfirmation: { store.send(store.step == .name ? .nextButtonTapped : .saveButtonTapped) }
+            onConfirmation: { store.send(store.step == .name ? .continueButtonTapped : .saveButtonTapped) }
         ) {
             ZStack {
                 NameFieldView(
