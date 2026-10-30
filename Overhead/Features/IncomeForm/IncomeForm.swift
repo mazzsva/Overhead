@@ -18,11 +18,6 @@ struct IncomeForm {
     @Reducer
     enum Destination {
         case alert(AlertState<IncomeForm.Alert>)
-        case confirmationDialog(ConfirmationDialogState<IncomeForm.Dialog>)
-    }
-
-    enum Dialog: Equatable {
-        case confirmDiscard
     }
 
     enum Field: Hashable {
@@ -31,45 +26,27 @@ struct IncomeForm {
 
     @ObservableState
     struct State: Equatable {
-        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         var focus: Field? = .income
-        var incomeText: String
-        let initialIncome: Amount?
+        var income: AmountField.State
         var investment: Amount?
-        let locale: Locale
 
         init(budget: Budget?) {
-            @Dependency(\.locale) var locale
-            incomeText = budget?.income.text(locale: locale) ?? ""
-            initialIncome = budget?.income
+            income = AmountField.State(budget?.income)
             investment = budget?.investment
-            self.locale = locale
-        }
-
-        var hasChanges: Bool {
-            income != initialIncome || incomeInput.isInvalid
-        }
-
-        var income: Amount? {
-            incomeInput.amount
-        }
-
-        var incomeInput: AmountInput {
-            AmountInput(text: incomeText, locale: locale)
         }
 
         var isBelowInvestment: Bool {
-            guard let income, let investment else { return false }
+            guard let income = income.value, let investment else { return false }
             return income < investment
         }
 
         var isEditing: Bool {
-            initialIncome != nil
+            income.initial != nil
         }
 
-        var isIncomeRefused: Bool {
-            incomeInput == .refused
+        var isSubmittable: Bool {
+            income.value != nil
         }
     }
 
@@ -78,6 +55,7 @@ struct IncomeForm {
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case dismissButtonTapped
+        case income(AmountField.Action)
         case removeButtonTapped
         case saveButtonTapped
 
@@ -93,6 +71,9 @@ struct IncomeForm {
 
     var body: some Reducer<State, Action> {
         BindingReducer()
+        Scope(state: \.income, action: \.income) {
+            AmountField()
+        }
         Reduce { state, action in
             switch action {
             case .binding:
@@ -105,18 +86,16 @@ struct IncomeForm {
                 return .send(.delegate(.didRemove))
 
             case .destination(.presented(.alert(.confirmRemovingInvestment))):
-                guard let income = state.income else { return .none }
+                guard let income = state.income.value else { return .none }
                 return .send(.delegate(.didSubmitRemovingInvestment(income)))
-
-            case .destination(.presented(.confirmationDialog(.confirmDiscard))):
-                return .run { _ in await dismiss() }
 
             case .destination:
                 return .none
 
             case .dismissButtonTapped:
-                guard state.hasChanges else { return .run { _ in await dismiss() } }
-                state.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
+                return .run { _ in await dismiss() }
+
+            case .income:
                 return .none
 
             case .removeButtonTapped:
@@ -125,10 +104,11 @@ struct IncomeForm {
                 return .none
 
             case .saveButtonTapped:
-                guard let income = state.income else { return .none }
+                guard let income = state.income.value else { return .none }
                 if let investment = state.investment, income < investment {
                     state.destination = .alert(
-                        .confirmRemovingInvestment(investment, currency: state.currency, locale: state.locale)
+                        .confirmRemovingInvestment(
+                            investment, currency: state.income.currency, locale: state.income.locale)
                     )
                     return .none
                 }

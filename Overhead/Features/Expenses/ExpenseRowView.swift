@@ -14,12 +14,16 @@ struct ExpenseRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(expense.name)
-                .foregroundStyle(expense.isActive ? .primary : .secondary)
-                .lineLimit(1)
+            HStack(spacing: 8) {
+                Marker(color: Accent.expense(isActive: expense.isActive).color)
+                Text(expense.name.value)
+                    .foregroundStyle(expense.isActive ? .primary : .secondary)
+                    .lineLimit(1)
+            }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 AmountText(value: expense.amount.value, currency: currency, isHidden: isHidden)
+                    .font(.system(.body, design: .rounded, weight: .semibold))
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
                 Text(expense.billingCycle.title)

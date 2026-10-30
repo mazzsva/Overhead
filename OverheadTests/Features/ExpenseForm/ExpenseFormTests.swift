@@ -23,39 +23,70 @@ extension BaseSuite {
             #expect(state.isCreating)
             #expect(!state.isSubmittable)
 
-            state.amountText = "12"
-            state.name = "   \n  "
+            state.amount.text = "12"
+            state.name.text = "   \n  "
             #expect(!state.isSubmittable)
 
-            state.name = "Gym"
+            state.name.text = "Gym"
             #expect(state.isSubmittable)
 
-            state.amountText = "0"
+            state.amount.text = "0"
             #expect(!state.isSubmittable)
 
-            state.amountText = "-12"
+            state.amount.text = "-12"
             #expect(!state.isSubmittable)
         }
 
         @Test
         func theNameCannotBeLongerThanTheLimit() {
             var state = ExpenseForm.State()
-            state.amountText = "12"
+            state.amount.text = "12"
 
-            state.name = String(repeating: "a", count: Expense.maximumNameLength)
+            state.name.text = String(repeating: "a", count: ExpenseName.maximumLength)
             #expect(state.isSubmittable)
 
-            state.name = String(repeating: "a", count: Expense.maximumNameLength + 1)
+            state.name.text = String(repeating: "a", count: ExpenseName.maximumLength + 1)
             #expect(!state.isSubmittable)
 
-            state.name = "  " + String(repeating: "a", count: Expense.maximumNameLength) + "  "
+            state.name.text = "  " + String(repeating: "a", count: ExpenseName.maximumLength) + "  "
             #expect(state.isSubmittable)
 
-            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 4)
+            state.name.text = String(repeating: "👍🏽", count: ExpenseName.maximumLength / 4)
             #expect(state.isSubmittable)
 
-            state.name = String(repeating: "👍🏽", count: Expense.maximumNameLength / 4 + 1)
+            state.name.text = String(repeating: "👍🏽", count: ExpenseName.maximumLength / 4 + 1)
             #expect(!state.isSubmittable)
+        }
+
+        @Test
+        func onlyANameOverTheLimitIsTooLong() {
+            var state = ExpenseForm.State()
+            expectNoDifference(state.name.input, .empty)
+
+            state.name.text = "  " + String(repeating: "a", count: ExpenseName.maximumLength) + "  "
+            expectNoDifference(state.name.value?.value, String(repeating: "a", count: ExpenseName.maximumLength))
+
+            state.name.text = String(repeating: "a", count: ExpenseName.maximumLength + 1)
+            expectNoDifference(state.name.input, .tooLong)
+            #expect(state.name.input.isInvalid)
+
+            state.name.text = "   "
+            expectNoDifference(state.name.input, .empty)
+            #expect(!state.name.input.isInvalid)
+        }
+
+        @Test
+        func aBillingCycleButtonSelectsTheCycle() async {
+            let store = TestStore(initialState: ExpenseForm.State()) {
+                ExpenseForm()
+            }
+
+            await store.send(.billingCycleButtonTapped(.yearly)) {
+                $0.billingCycle = .yearly
+            }
+            await store.send(.billingCycleButtonTapped(.monthly)) {
+                $0.billingCycle = .monthly
+            }
         }
 
         @Test
@@ -63,12 +94,12 @@ extension BaseSuite {
             var state = ExpenseForm.State()
 
             for text in ["12abc", "12,50", "1e3x", "1e3", ""] {
-                state.amountText = text
-                expectNoDifference(state.amount, nil)
+                state.amount.text = text
+                expectNoDifference(state.amount.value, nil)
             }
 
-            state.amountText = " 1,200 "
-            expectNoDifference(state.amount, 1200)
+            state.amount.text = " 1,200 "
+            expectNoDifference(state.amount.value, 1200)
         }
 
         @Test
@@ -76,23 +107,23 @@ extension BaseSuite {
             var state = ExpenseForm.State()
 
             for text in ["12.5", "12.0", "12.", ".5"] {
-                state.amountText = text
-                expectNoDifference(state.amount, nil)
+                state.amount.text = text
+                expectNoDifference(state.amount.value, nil)
             }
 
-            state.amountText = "12"
-            expectNoDifference(state.amount, 12)
+            state.amount.text = "12"
+            expectNoDifference(state.amount.value, 12)
         }
 
         @Test
         func theAmountIsAtMostTheLimit() {
             var state = ExpenseForm.State()
 
-            state.amountText = "999999999"
-            expectNoDifference(state.amount, 999_999_999)
+            state.amount.text = "999999999"
+            expectNoDifference(state.amount.value, 999_999_999)
 
-            state.amountText = "1000000000"
-            expectNoDifference(state.amount, nil)
+            state.amount.text = "1000000000"
+            expectNoDifference(state.amount.value, nil)
         }
 
         @Test
@@ -103,24 +134,24 @@ extension BaseSuite {
                 ExpenseForm.State()
             }
 
-            state.amountText = "1.200"
-            expectNoDifference(state.amount, 1200)
+            state.amount.text = "1.200"
+            expectNoDifference(state.amount.value, 1200)
 
-            state.amountText = "1,200"
-            expectNoDifference(state.amount, nil)
+            state.amount.text = "1,200"
+            expectNoDifference(state.amount.value, nil)
         }
 
         @Test
         func theFormStartsFromTheFormattedAmount() {
             let english = ExpenseForm.State(expense: .gym)
-            expectNoDifference(english.amountText, "40")
+            expectNoDifference(english.amount.text, "40")
 
             let italian = withDependencies {
                 $0.locale = Locale(identifier: "it_IT")
             } operation: {
                 ExpenseForm.State(expense: .rent)
             }
-            expectNoDifference(italian.amountText, "950")
+            expectNoDifference(italian.amount.text, "950")
         }
 
         // The form gives the expense an identity, so the save does not wait for the server
@@ -143,11 +174,11 @@ extension BaseSuite {
                 $0.uuid = .incrementing
             }
 
-            await store.send(.binding(.set(\.name, "  Phone Plan  "))) {
-                $0.name = "  Phone Plan  "
+            await store.send(.name(.binding(.set(\.text, "  Phone Plan  ")))) {
+                $0.name.text = "  Phone Plan  "
             }
-            await store.send(.binding(.set(\.amountText, "13"))) {
-                $0.amountText = "13"
+            await store.send(.amount(.binding(.set(\.text, "13")))) {
+                $0.amount.text = "13"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, created)
@@ -163,8 +194,8 @@ extension BaseSuite {
                 ExpenseForm()
             }
 
-            await store.send(.binding(.set(\.amountText, "1,000"))) {
-                $0.amountText = "1,000"
+            await store.send(.amount(.binding(.set(\.text, "1,000")))) {
+                $0.amount.text = "1,000"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, edited)
@@ -177,19 +208,76 @@ extension BaseSuite {
                 ExpenseForm()
             }
 
-            await store.send(.binding(.set(\.amountText, "12"))) {
-                $0.amountText = "12"
+            await store.send(.amount(.binding(.set(\.text, "12")))) {
+                $0.amount.text = "12"
             }
-            await store.send(.binding(.set(\.name, "   "))) {
-                $0.name = "   "
+            await store.send(.name(.binding(.set(\.text, "   ")))) {
+                $0.name.text = "   "
             }
             await store.send(.saveButtonTapped)
         }
 
         @Test
-        func onlyANewExpenseFocusesTheName() {
-            expectNoDifference(ExpenseForm.State().focus, .name)
-            expectNoDifference(ExpenseForm.State(expense: .rent).focus, nil)
+        func everyFormStartsOnTheName() {
+            let new = ExpenseForm.State()
+            expectNoDifference(new.step, .name)
+            expectNoDifference(new.focus, .name)
+
+            let existing = ExpenseForm.State(expense: .rent)
+            expectNoDifference(existing.step, .name)
+            expectNoDifference(existing.focus, .name)
+        }
+
+        @Test
+        func theNextButtonMovesToTheAmountOnlyWithAValidName() async {
+            let store = TestStore(initialState: ExpenseForm.State()) {
+                ExpenseForm()
+            }
+
+            await store.send(.nextButtonTapped)
+            await store.send(
+                .name(.binding(.set(\.text, String(repeating: "a", count: ExpenseName.maximumLength + 1))))
+            ) {
+                $0.name.text = String(repeating: "a", count: ExpenseName.maximumLength + 1)
+            }
+            await store.send(.nextButtonTapped)
+            await store.send(.name(.binding(.set(\.text, "Netflix")))) {
+                $0.name.text = "Netflix"
+            }
+            await store.send(.nextButtonTapped) {
+                $0.focus = .amount
+                $0.step = .amount
+            }
+            await store.send(.nextButtonTapped)
+        }
+
+        @Test
+        func submittingTheNameMovesToTheAmount() async {
+            let store = TestStore(initialState: ExpenseForm.State(expense: .gym)) {
+                ExpenseForm()
+            }
+
+            await store.send(.nameFieldSubmitted) {
+                $0.focus = .amount
+                $0.step = .amount
+            }
+        }
+
+        @Test
+        func theBackButtonReturnsToTheName() async {
+            let store = TestStore(initialState: ExpenseForm.State(expense: .gym)) {
+                ExpenseForm()
+            }
+
+            await store.send(.backButtonTapped)
+            await store.send(.nextButtonTapped) {
+                $0.focus = .amount
+                $0.step = .amount
+            }
+            await store.send(.backButtonTapped) {
+                $0.focus = .name
+                $0.step = .name
+            }
         }
 
         @Test
@@ -235,41 +323,7 @@ extension BaseSuite {
         }
 
         @Test
-        func everyFieldCountsAsAChange() {
-            var state = ExpenseForm.State(expense: .rent)
-            #expect(!state.hasChanges)
-
-            state.name = "Office"
-            #expect(state.hasChanges)
-            state.name = " \(Expense.rent.name) "
-            #expect(!state.hasChanges)
-            state.name = Expense.rent.name
-
-            state.amountText = "1000"
-            #expect(state.hasChanges)
-            state.amountText = "950"
-            #expect(!state.hasChanges)
-            state.amountText = "abc"
-            #expect(state.hasChanges)
-            state.amountText = " 950 "
-
-            state.billingCycle = .yearly
-            #expect(state.hasChanges)
-            state.billingCycle = .monthly
-
-            state.isActive = false
-            #expect(state.hasChanges)
-            state.isActive = true
-            #expect(!state.hasChanges)
-
-            var new = ExpenseForm.State()
-            #expect(!new.hasChanges)
-            new.name = "Gym"
-            #expect(new.hasChanges)
-        }
-
-        @Test
-        func dismissingWithChangesAsksToDiscardThem() async {
+        func dismissingWithChangesClosesTheForm() async {
             await confirmation("Dismisses the form") { dismissesForm in
                 let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
                     ExpenseForm()
@@ -277,42 +331,11 @@ extension BaseSuite {
                     $0.dismiss = DismissEffect { dismissesForm() }
                 }
 
-                await store.send(.binding(.set(\.name, "Office"))) {
-                    $0.name = "Office"
+                await store.send(.name(.binding(.set(\.text, "Office")))) {
+                    $0.name.text = "Office"
                 }
-                await store.send(.dismissButtonTapped) {
-                    $0.confirmationDialog = ConfirmationDialogState(titleVisibility: .hidden) {
-                        TextState("Discard Changes?")
-                    } actions: {
-                        ButtonState(role: .destructive, action: .confirmDiscard) {
-                            TextState("Discard Changes")
-                        }
-                        ButtonState(role: .cancel) {
-                            TextState("Keep Editing")
-                        }
-                    }
-                }
-                await store.send(.confirmationDialog(.presented(.confirmDiscard))) {
-                    $0.confirmationDialog = nil
-                }
+                await store.send(.dismissButtonTapped)
                 await store.finish()
-            }
-        }
-
-        @Test
-        func keepingTheChangesLeavesTheFormOpen() async {
-            let store = TestStore(initialState: ExpenseForm.State(expense: .rent)) {
-                ExpenseForm()
-            }
-
-            await store.send(.binding(.set(\.name, "Office"))) {
-                $0.name = "Office"
-            }
-            await store.send(.dismissButtonTapped) {
-                $0.confirmationDialog = .discardChanges(.confirmDiscard)
-            }
-            await store.send(.confirmationDialog(.dismiss)) {
-                $0.confirmationDialog = nil
             }
         }
     }

@@ -14,24 +14,19 @@ struct Expense: Equatable, Identifiable, Sendable {
     let createdAt: Date
     let id: UUID
     var isActive: Bool
-    var name: String
+    var name: ExpenseName
 }
 
 extension Expense {
-    static let maximumNameLength = 100
-
     var annualAmount: Int {
-        switch billingCycle {
-        case .monthly: amount.value * 12
-        case .yearly: amount.value
-        }
+        billingCycle.amount(amount, in: .yearly)
     }
 
     static func listOrder(_ lhs: Expense, _ rhs: Expense) -> Bool {
         if lhs.annualAmount != rhs.annualAmount {
             return lhs.annualAmount > rhs.annualAmount
         }
-        switch lhs.name.localizedStandardCompare(rhs.name) {
+        switch lhs.name.value.localizedStandardCompare(rhs.name.value) {
         case .orderedAscending:
             return true
         case .orderedDescending:

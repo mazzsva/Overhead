@@ -21,31 +21,30 @@ extension BaseSuite {
             let state = IncomeForm.State(budget: nil)
 
             expectNoDifference(state.focus, .income)
-            expectNoDifference(state.incomeText, "")
+            expectNoDifference(state.income.text, "")
             expectNoDifference(state.investment, nil)
             #expect(!state.isEditing)
-            #expect(!state.hasChanges)
         }
 
         @Test
         func onlyTextThatCannotBecomeValidIsRefused() {
             var state = IncomeForm.State(budget: nil)
-            state.incomeText = "0"
-            #expect(state.incomeInput.isInvalid)
-            #expect(!state.isIncomeRefused)
+            state.income.text = "0"
+            #expect(state.income.input.isInvalid)
+            #expect(!state.income.input.isRefused)
 
-            state.incomeText = "1.2"
-            #expect(state.isIncomeRefused)
+            state.income.text = "1.2"
+            #expect(state.income.input.isRefused)
 
-            state.incomeText = "1000000000"
-            #expect(state.isIncomeRefused)
+            state.income.text = "1000000000"
+            #expect(state.income.input.isRefused)
         }
 
         @Test
         func anExistingIncomeStartsFormattedAndFocused() {
             let english = IncomeForm.State(budget: .mock)
             expectNoDifference(english.focus, .income)
-            expectNoDifference(english.incomeText, "3000")
+            expectNoDifference(english.income.text, "3000")
             expectNoDifference(english.investment, 450)
             #expect(english.isEditing)
 
@@ -54,54 +53,28 @@ extension BaseSuite {
             } operation: {
                 IncomeForm.State(budget: .mock)
             }
-            expectNoDifference(italian.incomeText, "3000")
+            expectNoDifference(italian.income.text, "3000")
         }
 
         @Test(arguments: ["0", "-10", "12abc", "1e3", "12.5", "1000000000"])
         func anInvalidIncomeIsRefused(text: String) {
             var state = IncomeForm.State(budget: nil)
-            state.incomeText = text
+            state.income.text = text
 
-            expectNoDifference(state.income, nil)
-            #expect(state.incomeInput.isInvalid)
+            expectNoDifference(state.income.value, nil)
+            #expect(state.income.input.isInvalid)
         }
 
         @Test
         func anEmptyIncomeIsNotYetInvalid() {
             var state = IncomeForm.State(budget: nil)
-            state.incomeText = "  "
+            state.income.text = "  "
 
-            expectNoDifference(state.income, nil)
-            #expect(!state.incomeInput.isInvalid)
+            expectNoDifference(state.income.value, nil)
+            #expect(!state.income.input.isInvalid)
 
-            state.incomeText = " 3,500 "
-            expectNoDifference(state.income, 3500)
-        }
-
-        @Test
-        func onlyADifferentAmountCountsAsAChange() {
-            var state = IncomeForm.State(budget: .mock)
-
-            state.incomeText = "3000"
-            #expect(!state.hasChanges)
-
-            state.incomeText = "3,000 "
-            #expect(!state.hasChanges)
-
-            state.incomeText = "3001"
-            #expect(state.hasChanges)
-
-            state.incomeText = "abc"
-            #expect(state.hasChanges)
-
-            state.incomeText = ""
-            #expect(state.hasChanges)
-
-            var new = IncomeForm.State(budget: nil)
-            new.incomeText = "  "
-            #expect(!new.hasChanges)
-            new.incomeText = "abc"
-            #expect(new.hasChanges)
+            state.income.text = " 3,500 "
+            expectNoDifference(state.income.value, 3500)
         }
 
         @Test
@@ -110,8 +83,8 @@ extension BaseSuite {
                 IncomeForm()
             }
 
-            await store.send(.binding(.set(\.incomeText, "3500"))) {
-                $0.incomeText = "3500"
+            await store.send(.income(.binding(.set(\.text, "3500")))) {
+                $0.income.text = "3500"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, 3500)
@@ -123,8 +96,8 @@ extension BaseSuite {
                 IncomeForm()
             }
 
-            await store.send(.binding(.set(\.incomeText, "400"))) {
-                $0.incomeText = "400"
+            await store.send(.income(.binding(.set(\.text, "400")))) {
+                $0.income.text = "400"
             }
             #expect(store.state.isBelowInvestment)
             await store.send(.saveButtonTapped) {
@@ -226,7 +199,7 @@ extension BaseSuite {
         }
 
         @Test
-        func dismissingWithChangesAsksToDiscardThem() async {
+        func dismissingWithChangesClosesTheForm() async {
             await confirmation("Dismisses the form") { dismissesForm in
                 let store = TestStore(initialState: IncomeForm.State(budget: .mock)) {
                     IncomeForm()
@@ -234,26 +207,10 @@ extension BaseSuite {
                     $0.dismiss = DismissEffect { dismissesForm() }
                 }
 
-                await store.send(.binding(.set(\.incomeText, "3500"))) {
-                    $0.incomeText = "3500"
+                await store.send(.income(.binding(.set(\.text, "3500")))) {
+                    $0.income.text = "3500"
                 }
-                #expect(store.state.hasChanges)
-                await store.send(.dismissButtonTapped) {
-                    $0.destination = .confirmationDialog(
-                        ConfirmationDialogState(titleVisibility: .hidden) {
-                            TextState("Discard Changes?")
-                        } actions: {
-                            ButtonState(role: .destructive, action: .confirmDiscard) {
-                                TextState("Discard Changes")
-                            }
-                            ButtonState(role: .cancel) {
-                                TextState("Keep Editing")
-                            }
-                        })
-                }
-                await store.send(.destination(.presented(.confirmationDialog(.confirmDiscard)))) {
-                    $0.destination = nil
-                }
+                await store.send(.dismissButtonTapped)
                 await store.finish()
             }
         }

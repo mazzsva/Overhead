@@ -80,7 +80,7 @@ extension Expense {
             let createdAt = data["createdAt"] as? Timestamp,
             let id = UUID(uuidString: documentID),
             let isActive = data["isActive"] as? Bool,
-            let name = data["name"] as? String
+            let name = (data["name"] as? String).flatMap(ExpenseName.init(value:))
         else {
             logger.error("Skipping expense document \(documentID, privacy: .public) that failed to decode.")
             reportIssue("Skipping expense document \(documentID) that failed to decode.")
@@ -102,7 +102,7 @@ extension Expense {
             "billingCycle": billingCycle.rawValue,
             "createdAt": Timestamp(roundingToMicroseconds: createdAt),
             "isActive": isActive,
-            "name": name,
+            "name": name.value,
         ]
     }
 }
