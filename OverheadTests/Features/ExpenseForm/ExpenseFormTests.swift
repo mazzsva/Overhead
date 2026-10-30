@@ -229,26 +229,26 @@ extension BaseSuite {
         }
 
         @Test
-        func theNextButtonMovesToTheAmountOnlyWithAValidName() async {
+        func theContinueButtonMovesToTheAmountOnlyWithAValidName() async {
             let store = TestStore(initialState: ExpenseForm.State()) {
                 ExpenseForm()
             }
 
-            await store.send(.nextButtonTapped)
+            await store.send(.continueButtonTapped)
             await store.send(
                 .name(.binding(.set(\.text, String(repeating: "a", count: ExpenseName.maximumLength + 1))))
             ) {
                 $0.name.text = String(repeating: "a", count: ExpenseName.maximumLength + 1)
             }
-            await store.send(.nextButtonTapped)
+            await store.send(.continueButtonTapped)
             await store.send(.name(.binding(.set(\.text, "Netflix")))) {
                 $0.name.text = "Netflix"
             }
-            await store.send(.nextButtonTapped) {
+            await store.send(.continueButtonTapped) {
                 $0.focus = .amount
                 $0.step = .amount
             }
-            await store.send(.nextButtonTapped)
+            await store.send(.continueButtonTapped)
         }
 
         @Test
@@ -270,7 +270,7 @@ extension BaseSuite {
             }
 
             await store.send(.backButtonTapped)
-            await store.send(.nextButtonTapped) {
+            await store.send(.continueButtonTapped) {
                 $0.focus = .amount
                 $0.step = .amount
             }

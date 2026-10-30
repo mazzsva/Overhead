@@ -55,11 +55,11 @@ struct ExpenseForm {
         case backButtonTapped
         case billingCycleButtonTapped(BillingCycle)
         case binding(BindingAction<State>)
+        case continueButtonTapped
         case delegate(Delegate)
         case dismissButtonTapped
         case name(NameField.Action)
         case nameFieldSubmitted
-        case nextButtonTapped
         case saveButtonTapped
 
         @CasePathable
@@ -98,6 +98,12 @@ struct ExpenseForm {
             case .binding:
                 return .none
 
+            case .continueButtonTapped, .nameFieldSubmitted:
+                guard state.step == .name, state.name.value != nil else { return .none }
+                state.step = .amount
+                state.focus = .amount
+                return .none
+
             case .delegate:
                 return .none
 
@@ -105,12 +111,6 @@ struct ExpenseForm {
                 return .run { _ in await dismiss() }
 
             case .name:
-                return .none
-
-            case .nameFieldSubmitted, .nextButtonTapped:
-                guard state.step == .name, state.name.value != nil else { return .none }
-                state.step = .amount
-                state.focus = .amount
                 return .none
 
             case .saveButtonTapped:
