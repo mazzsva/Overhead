@@ -42,5 +42,28 @@ extension BaseSuite {
             expectNoDifference(AmountInput(text: "12,5", locale: italian), .refused)
             expectNoDifference(AmountInput(text: "1.200", locale: italian), .valid(1200))
         }
+
+        @Test
+        func anAmountAboveTheLimitIsOverTheLimit() {
+            let english = Locale(identifier: "en_US")
+
+            expectNoDifference(AmountInput(text: "3000", locale: english, limit: 3000), .valid(3000))
+            expectNoDifference(AmountInput(text: "3,001", locale: english, limit: 3000), .overLimit(3001))
+            expectNoDifference(AmountInput(text: "3001", locale: english, limit: 3000).amount, nil)
+            expectNoDifference(AmountInput(text: "999999999", locale: english), .valid(.maximum))
+        }
+
+        @Test(
+            arguments: [
+                (AmountInput.empty, false),
+                (.incomplete, false),
+                (.valid(1), false),
+                (.overLimit(3001), true),
+                (.refused, true),
+            ]
+        )
+        func onlyAnOverLimitOrRefusedInputIsRefused(input: AmountInput, isRefused: Bool) {
+            expectNoDifference(input.isRefused, isRefused)
+        }
     }
 }

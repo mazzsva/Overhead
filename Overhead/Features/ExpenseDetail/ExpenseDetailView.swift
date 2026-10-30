@@ -38,7 +38,7 @@ struct ExpenseDetailView: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .groupedBackground()
-        .navigationTitle(store.expense.name)
+        .navigationTitle(store.expense.name.value)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

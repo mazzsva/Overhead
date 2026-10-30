@@ -21,18 +21,17 @@ extension BaseSuite {
             let state = InvestmentForm.State(income: 3000, investment: nil)
 
             expectNoDifference(state.focus, .investment)
-            expectNoDifference(state.investmentText, "")
+            expectNoDifference(state.investment.text, "")
             #expect(!state.isEditing)
-            #expect(!state.isSubmittable)
-            #expect(!state.investmentInput.isInvalid)
-            #expect(!state.hasChanges)
+            expectNoDifference(state.investment.value, nil)
+            #expect(!state.investment.input.isInvalid)
         }
 
         @Test
         func anExistingInvestmentStartsFormattedAndFocused() {
             let english = InvestmentForm.State(income: 3000, investment: 450)
             expectNoDifference(english.focus, .investment)
-            expectNoDifference(english.investmentText, "450")
+            expectNoDifference(english.investment.text, "450")
             #expect(english.isEditing)
             expectNoDifference(english.share, Decimal(string: "0.15"))
 
@@ -41,19 +40,20 @@ extension BaseSuite {
             } operation: {
                 InvestmentForm.State(income: 3000, investment: 450)
             }
-            expectNoDifference(italian.investmentText, "450")
+            expectNoDifference(italian.investment.text, "450")
         }
 
         @Test
         func theInvestmentIsAtMostTheIncome() {
             var state = InvestmentForm.State(income: 3000, investment: nil)
 
-            state.investmentText = "3000"
-            #expect(state.isSubmittable)
+            state.investment.text = "3000"
+            expectNoDifference(state.investment.value, 3000)
             #expect(!state.exceedsIncome)
 
-            state.investmentText = "3001"
-            #expect(!state.isSubmittable)
+            state.investment.text = "3001"
+            expectNoDifference(state.investment.input, .overLimit(3001))
+            expectNoDifference(state.investment.value, nil)
             #expect(state.exceedsIncome)
             expectNoDifference(state.share, nil)
         }
@@ -61,11 +61,11 @@ extension BaseSuite {
         @Test(arguments: ["0", "-10", "12abc", "1e3", "12.5"])
         func anInvalidInvestmentIsRefused(text: String) {
             var state = InvestmentForm.State(income: 3000, investment: nil)
-            state.investmentText = text
+            state.investment.text = text
 
-            #expect(!state.isSubmittable)
+            expectNoDifference(state.investment.value, nil)
             #expect(!state.exceedsIncome)
-            #expect(state.investmentInput.isInvalid)
+            #expect(state.investment.input.isInvalid)
         }
 
         @Test
@@ -75,10 +75,10 @@ extension BaseSuite {
             }
 
             await store.send(.shareButtonTapped(15)) {
-                $0.investmentText = "185"
+                $0.investment.text = "185"
             }
             await store.send(.shareButtonTapped(20)) {
-                $0.investmentText = "247"
+                $0.investment.text = "247"
             }
         }
 
@@ -87,17 +87,17 @@ extension BaseSuite {
             var state = InvestmentForm.State(income: 3200, investment: nil)
             expectNoDifference(state.selectedSharePercent, nil)
 
-            state.investmentText = "480"
+            state.investment.text = "480"
             expectNoDifference(state.selectedSharePercent, 15)
 
-            state.investmentText = "481"
+            state.investment.text = "481"
             expectNoDifference(state.selectedSharePercent, nil)
         }
 
         @Test
         func aRoundedShareIsStillSelected() {
             var state = InvestmentForm.State(income: 1030, investment: nil)
-            state.investmentText = "155"
+            state.investment.text = "155"
 
             expectNoDifference(state.selectedSharePercent, 15)
         }
@@ -105,15 +105,15 @@ extension BaseSuite {
         @Test
         func onlyTextThatCannotBecomeValidIsRefused() {
             var state = InvestmentForm.State(income: 3200, investment: nil)
-            state.investmentText = "0"
-            #expect(state.investmentInput.isInvalid)
-            #expect(!state.isInvestmentRefused)
+            state.investment.text = "0"
+            #expect(state.investment.input.isInvalid)
+            #expect(!state.investment.input.isRefused)
 
-            state.investmentText = "1.2"
-            #expect(state.isInvestmentRefused)
+            state.investment.text = "1.2"
+            #expect(state.investment.input.isRefused)
 
-            state.investmentText = "4000"
-            #expect(state.isInvestmentRefused)
+            state.investment.text = "4000"
+            #expect(state.investment.input.isRefused)
         }
 
         @Test
@@ -123,7 +123,7 @@ extension BaseSuite {
             }
 
             await store.send(.shareButtonTapped(15)) {
-                $0.investmentText = "155"
+                $0.investment.text = "155"
             }
         }
 
@@ -148,26 +148,8 @@ extension BaseSuite {
             }
 
             await store.send(.shareButtonTapped(15)) {
-                $0.investmentText = "450"
+                $0.investment.text = "450"
             }
-        }
-
-        @Test
-        func onlyADifferentAmountCountsAsAChange() {
-            var state = InvestmentForm.State(income: 3000, investment: 450)
-
-            state.investmentText = "450"
-            #expect(!state.hasChanges)
-
-            state.investmentText = "451"
-            #expect(state.hasChanges)
-
-            state.investmentText = ""
-            #expect(state.hasChanges)
-
-            var new = InvestmentForm.State(income: 3000, investment: nil)
-            new.investmentText = " "
-            #expect(!new.hasChanges)
         }
 
         @Test
@@ -176,8 +158,8 @@ extension BaseSuite {
                 InvestmentForm()
             }
 
-            await store.send(.binding(.set(\.investmentText, "450"))) {
-                $0.investmentText = "450"
+            await store.send(.investment(.binding(.set(\.text, "450")))) {
+                $0.investment.text = "450"
             }
             await store.send(.saveButtonTapped)
             await store.receive(\.delegate.didSubmit, 450)
@@ -189,8 +171,8 @@ extension BaseSuite {
                 InvestmentForm()
             }
 
-            await store.send(.binding(.set(\.investmentText, "3500"))) {
-                $0.investmentText = "3500"
+            await store.send(.investment(.binding(.set(\.text, "3500")))) {
+                $0.investment.text = "3500"
             }
             await store.send(.saveButtonTapped)
         }
@@ -260,19 +242,19 @@ extension BaseSuite {
         }
 
         @Test
-        func dismissingWithChangesAsksToDiscardThem() async {
-            let store = TestStore(initialState: InvestmentForm.State(income: 3000, investment: 450)) {
-                InvestmentForm()
-            }
+        func dismissingWithChangesClosesTheForm() async {
+            await confirmation("Dismisses the form") { dismissesForm in
+                let store = TestStore(initialState: InvestmentForm.State(income: 3000, investment: 450)) {
+                    InvestmentForm()
+                } withDependencies: {
+                    $0.dismiss = DismissEffect { dismissesForm() }
+                }
 
-            await store.send(.shareButtonTapped(10)) {
-                $0.investmentText = "300"
-            }
-            await store.send(.dismissButtonTapped) {
-                $0.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
-            }
-            await store.send(.destination(.dismiss)) {
-                $0.destination = nil
+                await store.send(.shareButtonTapped(10)) {
+                    $0.investment.text = "300"
+                }
+                await store.send(.dismissButtonTapped)
+                await store.finish()
             }
         }
     }

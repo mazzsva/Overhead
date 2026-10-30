@@ -47,9 +47,9 @@ extension BaseSuite {
                 edited.amount = 1000
 
                 await store.send(
-                    .destination(.presented(.editExpense(.binding(.set(\.amountText, "1000")))))
+                    .destination(.presented(.editExpense(.amount(.binding(.set(\.text, "1000"))))))
                 ) {
-                    $0.destination?.modify(\.editExpense) { $0.amountText = "1000" }
+                    $0.destination?.modify(\.editExpense) { $0.amount.text = "1000" }
                 }
                 await store.send(.destination(.presented(.editExpense(.saveButtonTapped))))
                 await store.receive(\.destination.presented.editExpense.delegate.didSubmit, edited) {

@@ -92,7 +92,7 @@ extension BaseSuite.IntegrationSuite {
             try await document.setData(Expense.gym.documentData())
             var data = Expense.gym.documentData()
             data["isActive"] = false
-            data["name"] = String(repeating: "a", count: Expense.maximumNameLength)
+            data["name"] = String(repeating: "a", count: ExpenseName.maximumLength)
             try await document.setData(data)
             try await document.delete()
         }
@@ -107,7 +107,7 @@ extension BaseSuite.IntegrationSuite {
                 ("createdAt", "2026-10-04"),
                 ("isActive", "yes"),
                 ("name", ""),
-                ("name", String(repeating: "a", count: Expense.maximumNameLength + 1)),
+                ("name", String(repeating: "a", count: ExpenseName.maximumLength + 1)),
                 ("currency", "USD"),
             ] as [(String, any Sendable)])
         func theRulesRefuseAnInvalidExpense(field: String, value: any Sendable) async throws {
@@ -144,10 +144,10 @@ extension BaseSuite.IntegrationSuite {
         }
 
         @Test(arguments: [
-            String(repeating: "a", count: Expense.maximumNameLength),
-            String(repeating: "é", count: Expense.maximumNameLength),
-            String(repeating: "👍🏽", count: Expense.maximumNameLength / 4),
-            String(repeating: "家", count: Expense.maximumNameLength),
+            String(repeating: "a", count: ExpenseName.maximumLength),
+            String(repeating: "é", count: ExpenseName.maximumLength),
+            String(repeating: "👍🏽", count: ExpenseName.maximumLength / 4),
+            String(repeating: "家", count: ExpenseName.maximumLength),
         ])
         func theRulesAcceptEveryNameTheAppAccepts(name: String) async throws {
             let uid = try await FirebaseEmulators.signIn()
@@ -158,8 +158,8 @@ extension BaseSuite.IntegrationSuite {
         }
 
         @Test(arguments: [
-            String(repeating: "é", count: Expense.maximumNameLength + 1),
-            String(repeating: "👍🏽", count: Expense.maximumNameLength / 4 + 1),
+            String(repeating: "é", count: ExpenseName.maximumLength + 1),
+            String(repeating: "👍🏽", count: ExpenseName.maximumLength / 4 + 1),
         ])
         func theRulesRefuseEveryNameTheAppRefuses(name: String) async throws {
             let uid = try await FirebaseEmulators.signIn()

@@ -754,7 +754,7 @@ extension BaseSuite {
                 createdAt: Date(timeIntervalSince1970: 1_750_000_000),
                 id: UUID(id),
                 isActive: true,
-                name: billingCycle.rawValue
+                name: ExpenseName(stringLiteral: billingCycle.rawValue)
             )
         }
 

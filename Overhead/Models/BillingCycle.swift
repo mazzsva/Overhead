@@ -13,10 +13,22 @@ enum BillingCycle: String, CaseIterable, Sendable {
 }
 
 extension BillingCycle {
-    var title: LocalizedStringResource {
+    var counterpart: BillingCycle {
         switch self {
-        case .monthly: "Monthly"
-        case .yearly: "Yearly"
+        case .monthly: .yearly
+        case .yearly: .monthly
+        }
+    }
+
+    func amount(_ amount: Amount, in cycle: BillingCycle) -> Int {
+        let annual =
+            switch self {
+            case .monthly: amount.value * 12
+            case .yearly: amount.value
+            }
+        return switch cycle {
+        case .monthly: (annual + 6) / 12
+        case .yearly: annual
         }
     }
 }

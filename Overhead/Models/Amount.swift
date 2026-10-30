@@ -9,11 +9,16 @@ import Foundation
 
 struct Amount: Comparable, Hashable, Sendable {
     static let range = 1 ... 999_999_999
+    static let maximum = Amount(validValue: range.upperBound)
 
     let value: Int
 
     init?(value: Int) {
         guard Self.range.contains(value) else { return nil }
+        self.init(validValue: value)
+    }
+
+    private init(validValue value: Int) {
         self.value = value
     }
 

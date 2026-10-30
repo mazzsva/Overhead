@@ -421,14 +421,14 @@ extension BaseSuite {
                     }
 
                     await store.send(
-                        .destination(.presented(.createExpense(.binding(.set(\.name, "  Phone Plan  ")))))
+                        .destination(.presented(.createExpense(.name(.binding(.set(\.text, "  Phone Plan  "))))))
                     ) {
-                        $0.destination?.modify(\.createExpense) { $0.name = "  Phone Plan  " }
+                        $0.destination?.modify(\.createExpense) { $0.name.text = "  Phone Plan  " }
                     }
                     await store.send(
-                        .destination(.presented(.createExpense(.binding(.set(\.amountText, "13")))))
+                        .destination(.presented(.createExpense(.amount(.binding(.set(\.text, "13"))))))
                     ) {
-                        $0.destination?.modify(\.createExpense) { $0.amountText = "13" }
+                        $0.destination?.modify(\.createExpense) { $0.amount.text = "13" }
                     }
                     await store.send(.destination(.presented(.createExpense(.saveButtonTapped))))
                     await store.receive(\.destination.presented.createExpense.delegate.didSubmit) {

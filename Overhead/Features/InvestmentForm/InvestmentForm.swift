@@ -17,11 +17,6 @@ struct InvestmentForm {
     @Reducer
     enum Destination {
         case alert(AlertState<InvestmentForm.Alert>)
-        case confirmationDialog(ConfirmationDialogState<InvestmentForm.Dialog>)
-    }
-
-    enum Dialog: Equatable {
-        case confirmDiscard
     }
 
     enum Field: Hashable {
@@ -39,58 +34,39 @@ struct InvestmentForm {
 
     @ObservableState
     struct State: Equatable {
-        @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         var focus: Field? = .investment
-        var income: Amount
-        let initialInvestment: Amount?
-        var investmentText: String
-        let locale: Locale
+        var investment: AmountField.State
 
         init(income: Amount, investment: Amount?) {
-            @Dependency(\.locale) var locale
-            self.income = income
-            initialInvestment = investment
-            investmentText = investment?.text(locale: locale) ?? ""
-            self.locale = locale
+            self.investment = AmountField.State(investment, limit: income)
         }
 
         var exceedsIncome: Bool {
-            guard let investment else { return false }
-            return investment > income
+            guard case .overLimit = investment.input else { return false }
+            return true
         }
 
-        var hasChanges: Bool {
-            investment != initialInvestment || investmentInput.isInvalid
-        }
-
-        var investment: Amount? {
-            investmentInput.amount
-        }
-
-        var investmentInput: AmountInput {
-            AmountInput(text: investmentText, locale: locale)
+        var income: Amount {
+            get { investment.limit }
+            set { investment.limit = newValue }
         }
 
         var isEditing: Bool {
-            initialInvestment != nil
-        }
-
-        var isInvestmentRefused: Bool {
-            exceedsIncome || investmentInput == .refused
+            investment.initial != nil
         }
 
         var isSubmittable: Bool {
-            investment != nil && !exceedsIncome
+            investment.value != nil
         }
 
         var selectedSharePercent: Int? {
-            guard let investment else { return nil }
+            guard let investment = investment.value else { return nil }
             return shareOptions.first { $0.amount == investment }?.percent
         }
 
         var share: Decimal? {
-            guard isSubmittable, let investment else { return nil }
+            guard let investment = investment.value else { return nil }
             return Decimal(investment.value) / Decimal(income.value)
         }
 
@@ -106,6 +82,7 @@ struct InvestmentForm {
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case dismissButtonTapped
+        case investment(AmountField.Action)
         case removeButtonTapped
         case saveButtonTapped
         case shareButtonTapped(Int)
@@ -121,6 +98,9 @@ struct InvestmentForm {
 
     var body: some Reducer<State, Action> {
         BindingReducer()
+        Scope(state: \.investment, action: \.investment) {
+            AmountField()
+        }
         Reduce { state, action in
             switch action {
             case .binding:
@@ -132,15 +112,13 @@ struct InvestmentForm {
             case .destination(.presented(.alert(.confirmRemoval))):
                 return .send(.delegate(.didRemove))
 
-            case .destination(.presented(.confirmationDialog(.confirmDiscard))):
-                return .run { _ in await dismiss() }
-
             case .destination:
                 return .none
 
             case .dismissButtonTapped:
-                guard state.hasChanges else { return .run { _ in await dismiss() } }
-                state.destination = .confirmationDialog(.discardChanges(.confirmDiscard))
+                return .run { _ in await dismiss() }
+
+            case .investment:
                 return .none
 
             case .removeButtonTapped:
@@ -149,14 +127,14 @@ struct InvestmentForm {
                 return .none
 
             case .saveButtonTapped:
-                guard state.isSubmittable, let investment = state.investment else { return .none }
+                guard let investment = state.investment.value else { return .none }
                 return .send(.delegate(.didSubmit(investment)))
 
             case .shareButtonTapped(let percent):
                 guard let amount = state.shareOptions.first(where: { $0.percent == percent })?.amount else {
                     return .none
                 }
-                state.investmentText = amount.text(locale: state.locale)
+                state.investment.fill(amount)
                 return .none
             }
         }
