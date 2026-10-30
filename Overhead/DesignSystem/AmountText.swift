@@ -25,8 +25,22 @@ struct AmountText: View {
                 Text(value, format: .currency(currency))
             }
         }
-        .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
+        .transition(.replace(reducingMotion: reduceMotion))
     }
 
     private static let placeholder = 8_888
+}
+
+struct AmountLabel: View {
+    let value: Int
+    let currency: Currency
+    let isHidden: Bool
+
+    var body: some View {
+        AmountText(value: value, currency: currency, isHidden: isHidden)
+            .monospacedDigit()
+            .contentTransition(.numericText(value: Double(value)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+    }
 }

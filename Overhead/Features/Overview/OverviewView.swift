@@ -65,7 +65,7 @@ struct OverviewView: View {
         VStack(spacing: 12) {
             Picker(
                 "Period",
-                selection: $store.period.sending(\.periodPickerChanged).animation(reduceMotion ? .fade : .value)
+                selection: $store.period.sending(\.periodPickerChanged).animation(.value(reducingMotion: reduceMotion))
             ) {
                 ForEach(Overview.Period.allCases, id: \.self) { period in
                     Text(period.title)
@@ -74,7 +74,7 @@ struct OverviewView: View {
             .pickerStyle(.segmented)
             .sensoryFeedback(.selection, trigger: store.period)
 
-            HeroCard(
+            CostsHero(
                 content: content,
                 currency: store.currency,
                 isHidingAmounts: store.hidesAmounts,
@@ -96,14 +96,6 @@ struct OverviewView: View {
     }
 }
 
-extension Animation {
-    fileprivate static let fade = Animation.easeInOut(duration: 0.25)
-    fileprivate static let glow = Animation.smooth(duration: 0.8)
-    fileprivate static let press = Animation.snappy(duration: 0.2)
-    fileprivate static let structure = Animation.spring(duration: 0.5, bounce: 0.1).delay(0.25)
-    fileprivate static let value = Animation.snappy(duration: 0.4)
-}
-
 extension Overview.Breakdown.ShareLabel {
     fileprivate var text: Text {
         switch self {
@@ -116,34 +108,6 @@ extension Overview.Breakdown.ShareLabel {
         case .percent(let share):
             Text(share, format: .percent.precision(.fractionLength(0)))
         }
-    }
-}
-
-extension Color {
-    fileprivate static let overIncome = Color(
-        UIColor {
-            $0.userInterfaceStyle == .dark
-                ? UIColor(red: 1, green: 0.412, blue: 0.38, alpha: 1)
-                : UIColor(red: 0.843, green: 0, blue: 0.082, alpha: 1)
-        }
-    )
-}
-
-extension Gradient {
-    fileprivate static var available: Gradient {
-        Gradient(colors: [.green.mix(with: .white, by: 0.25), .green])
-    }
-
-    fileprivate static var expenses: Gradient {
-        Gradient(colors: [.orange.mix(with: .yellow, by: 0.3), .orange])
-    }
-
-    fileprivate static var overIncome: Gradient {
-        Gradient(colors: [.red, .red])
-    }
-
-    fileprivate static var savings: Gradient {
-        Gradient(colors: [.cyan, .blue])
     }
 }
 
@@ -185,73 +149,23 @@ extension Overview.Period {
     }
 }
 
-private struct AmountLabel: View {
-    let value: Int
-    let currency: Currency
-    let isHidden: Bool
-
-    var body: some View {
-        AmountText(value: value, currency: currency, isHidden: isHidden)
-            .monospacedDigit()
-            .contentTransition(.numericText(value: Double(value)))
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
-    }
-}
-
-private struct Marker: View {
-    let color: Color
-
-    @ScaledMetric private var size = 10
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(color)
-            .frame(width: size, height: size)
-    }
-}
-
-private struct HeroCard: View {
+private struct CostsHero: View {
     let content: Overview.Content
     let currency: Currency
     let isHidingAmounts: Bool
     let period: Overview.Period
 
-    @ScaledMetric(relativeTo: .largeTitle) private var amountSize = 48
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            Text(period.costsTitle)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .contentTransition(.interpolate)
-                .accessibilityHidden(true)
-
+        HeroCard(title: period.costsTitle, glow: glow, accessibilityValue: amountValue) {
             AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
-                .font(.system(size: amountSize, weight: .bold, design: .rounded))
-                .kerning(-0.8)
                 .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
                 .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
-                .padding(.top, 2)
-                .accessibilityLabel(Text(period.costsTitle))
-                .accessibilityValue(amountValue)
-
+        } caption: {
             Text(caption)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 22)
-        .background {
-            HeroBackground(glow: glow)
-                .animation(reduceMotion ? .fade : .glow, value: glow)
-        }
-        .animation(reduceMotion ? .fade : .value, value: content.summary)
+        .animation(.value(reducingMotion: reduceMotion), value: content.summary)
     }
 
     private var amount: Int {
@@ -271,75 +185,15 @@ private struct HeroCard: View {
         content.summary?.savings == nil ? period.expensesCaption : period.expensesAndSavingsCaption
     }
 
-    private var glow: HeroBackground.Glow {
+    private var glow: HeroGlow {
         guard let breakdown = content.summary else {
-            return HeroBackground.Glow(available: 0, expenses: amount > 0 ? 1 : 0, savings: 0)
+            return .breakdown(available: 0, expenses: amount > 0 ? 1 : 0, savings: 0)
         }
-        return HeroBackground.Glow(
+        return .breakdown(
             available: breakdown.isOverBudget ? 0 : breakdown.available.share.doubleValue,
             expenses: breakdown.expenses.share.doubleValue,
             savings: breakdown.savings?.share.doubleValue ?? 0
         )
-    }
-}
-
-private struct HeroBackground: View {
-    struct Glow: Equatable {
-        let available: Double
-        let expenses: Double
-        let savings: Double
-    }
-
-    let glow: Glow
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
-        let isDark = colorScheme == .dark
-        shape
-            .fill(
-                LinearGradient(
-                    colors: isDark
-                        ? [Color(white: 0.17), Color(white: 0.12), Color(white: 0.1)]
-                        : [
-                            .white, Color(red: 0.97, green: 0.97, blue: 0.98),
-                            Color(red: 0.93, green: 0.93, blue: 0.95),
-                        ],
-                    startPoint: UnitPoint(x: 0.35, y: 0),
-                    endPoint: UnitPoint(x: 0.65, y: 1)
-                )
-            )
-            .overlay(alignment: .top) {
-                ZStack {
-                    Ellipse()
-                        .fill(Color.orange.opacity(opacity(for: glow.expenses)))
-                        .frame(width: 240, height: 180)
-                        .offset(x: -150)
-                    Ellipse()
-                        .fill(Color.green.opacity(opacity(for: glow.available)))
-                        .frame(width: 200, height: 190)
-                        .offset(y: -60)
-                    Ellipse()
-                        .fill(Color.blue.opacity(opacity(for: glow.savings)))
-                        .frame(width: 260, height: 190)
-                        .offset(x: 150)
-                }
-                .offset(y: -110)
-                .blur(radius: 36)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            }
-            .clipShape(shape)
-            .overlay {
-                shape.strokeBorder(.primary.opacity(isDark ? 0.1 : 0.06), lineWidth: 0.5)
-            }
-            .shadow(color: .black.opacity(isDark ? 0 : 0.06), radius: 15, y: 10)
-    }
-
-    private func opacity(for share: Double) -> Double {
-        guard share > 0 else { return 0 }
-        return (0.06 + 0.16 * min(share, 1)) * (colorScheme == .dark ? 1.15 : 1)
     }
 }
 
@@ -367,13 +221,13 @@ private struct TileGrid: View {
                 Button(action: onExpenses) {
                     expensesTile
                 }
-                .buttonStyle(TileButtonStyle())
+                .buttonStyle(.pressable(.tile))
 
                 if hasBudgetTiles {
                     Button(action: onSavings) {
                         savingsTile
                     }
-                    .buttonStyle(TileButtonStyle())
+                    .buttonStyle(.pressable(.tile))
                     .disabled(content.summary == nil)
                     .transition(insertion)
                 } else {
@@ -399,23 +253,23 @@ private struct TileGrid: View {
         let isOverBudget = breakdown?.isOverBudget ?? false
         return Tile(
             title: isOverBudget ? "Over Income" : "Available",
-            marker: Marker(color: isOverBudget ? .red : .green)
+            accent: isOverBudget ? .overIncome : .available
         ) {
             AmountLabel(
                 value: breakdown.map { abs($0.available.amount) } ?? Self.placeholderAmount,
                 currency: currency,
                 isHidden: isHidingAmounts
             )
-            .foregroundStyle(isOverBudget ? Color.overIncome : .primary)
+            .foregroundStyle(isOverBudget ? Color.critical : .primary)
         } caption: {
             ShareBar(
                 share: abs(breakdown?.available.share ?? 0),
                 label: breakdown?.availableShareLabel ?? .percent(0),
-                gradient: isOverBudget ? .overIncome : .available
+                accent: isOverBudget ? .overIncome : .available
             )
         }
         .redacted(reason: breakdown == nil ? .placeholder : [])
-        .animation(reduceMotion ? .fade : .value, value: breakdown)
+        .animation(.value(reducingMotion: reduceMotion), value: breakdown)
     }
 
     private var expensesAmount: Int {
@@ -426,7 +280,7 @@ private struct TileGrid: View {
     }
 
     private var expensesTile: some View {
-        Tile(title: "Expenses", marker: Marker(color: .orange)) {
+        Tile(title: "Expenses", accent: .expenses) {
             if expenseCount > 0 {
                 AmountLabel(value: expensesAmount, currency: currency, isHidden: isHidingAmounts)
             } else {
@@ -437,14 +291,14 @@ private struct TileGrid: View {
             }
         } caption: {
             if let breakdown = content.summary, breakdown.hasExpenses {
-                ShareBar(share: breakdown.expenses.share, label: breakdown.expensesShareLabel, gradient: .expenses)
+                ShareBar(share: breakdown.expenses.share, label: breakdown.expensesShareLabel, accent: .expenses)
             } else if expenseCount > 0 {
                 Text("^[\(expenseCount) expense](inflect: true)")
             } else {
                 Text("No expenses yet")
             }
         }
-        .animation(reduceMotion ? .fade : .value, value: content.summary)
+        .animation(.value(reducingMotion: reduceMotion), value: content.summary)
     }
 
     private var hasBudgetTiles: Bool {
@@ -453,7 +307,7 @@ private struct TileGrid: View {
 
     private var incomeTile: some View {
         Button(action: onIncome) {
-            Tile(title: "Income", marker: Marker(color: .gray)) {
+            Tile(title: "Income", accent: .income) {
                 switch content {
                 case .summary(let breakdown):
                     AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
@@ -487,7 +341,7 @@ private struct TileGrid: View {
             }
             .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
         }
-        .buttonStyle(TileButtonStyle())
+        .buttonStyle(.pressable(.tile))
         .disabled(!canEditIncome)
     }
 
@@ -505,37 +359,37 @@ private struct TileGrid: View {
     }
 
     private var savingsTile: some View {
-        Tile(title: "Savings", marker: Marker(color: .blue)) {
+        Tile(title: "Savings", accent: .savings) {
             ZStack(alignment: .leading) {
                 if content.summary == nil {
                     AmountLabel(value: Self.placeholderAmount, currency: currency, isHidden: false)
                 } else if let savings = content.summary?.savings {
                     AmountLabel(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
-                        .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
+                        .transition(.replace(reducingMotion: reduceMotion))
                 } else {
                     Text("Add Savings")
                         .foregroundStyle(.tint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
-                        .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
+                        .transition(.replace(reducingMotion: reduceMotion))
                 }
             }
         } caption: {
             if let savings = content.summary?.savings, let label = content.summary?.savingsShareLabel {
-                ShareBar(share: savings.share, label: label, gradient: .savings)
+                ShareBar(share: savings.share, label: label, accent: .savings)
             } else {
                 Text("Optional")
             }
         }
         .redacted(reason: content.summary == nil ? .placeholder : [])
-        .animation(reduceMotion ? .fade : .value, value: content.summary?.savings)
+        .animation(.value(reducingMotion: reduceMotion), value: content.summary?.savings)
     }
 }
 
 private struct ShareBar: View {
     let share: Decimal
     let label: Overview.Breakdown.ShareLabel
-    let gradient: Gradient
+    let accent: Accent
 
     @ScaledMetric(relativeTo: .footnote) private var height = 6
 
@@ -546,7 +400,7 @@ private struct ShareBar: View {
                 .overlay(alignment: .leading) {
                     GeometryReader { proxy in
                         Capsule()
-                            .fill(LinearGradient(gradient: gradient, startPoint: .leading, endPoint: .trailing))
+                            .fill(LinearGradient(gradient: accent.gradient, startPoint: .leading, endPoint: .trailing))
                             .frame(width: filledWidth(of: proxy.size.width))
                     }
                 }
@@ -565,54 +419,6 @@ private struct ShareBar: View {
     private func filledWidth(of width: CGFloat) -> CGFloat {
         let fraction = min(max(share.doubleValue, 0), 1)
         return fraction > 0 ? max(width * fraction, height) : 0
-    }
-}
-
-private struct Tile<Value: View, Caption: View>: View {
-    let title: LocalizedStringResource
-    let marker: Marker
-    @ViewBuilder let value: Value
-    @ViewBuilder let caption: Caption
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                marker
-                Text(title)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.interpolate)
-            }
-            .font(.subheadline)
-            .unredacted()
-            VStack(alignment: .leading, spacing: 2) {
-                value
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
-                caption
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 22, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct TileButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(.primary)
-            .contentShape(.rect(cornerRadius: 22, style: .continuous))
-            .brightness(configuration.isPressed ? (colorScheme == .dark ? 0.04 : -0.03) : 0)
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
-            .animation(.press, value: configuration.isPressed)
     }
 }
 
