@@ -134,6 +134,7 @@ struct Expenses {
                 )
 
             case .path(.element(id: _, action: .delegate(.didUpdate(let expense)))):
+                state.$expenses.withLock { $0?[id: expense.id] = expense }
                 return save(expense, uid: state.user.uid)
 
             case .path:

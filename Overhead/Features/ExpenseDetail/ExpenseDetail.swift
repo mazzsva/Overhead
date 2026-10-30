@@ -31,6 +31,7 @@ struct ExpenseDetail {
     }
 
     enum Action {
+        case activeToggleChanged(Bool)
         case delegate(Delegate)
         case deleteButtonTapped
         case destination(PresentationAction<Destination.Action>)
@@ -48,6 +49,12 @@ struct ExpenseDetail {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
+            case .activeToggleChanged(let isActive):
+                guard isActive != state.expense.isActive else { return .none }
+                var expense = state.expense
+                expense.isActive = isActive
+                return .send(.delegate(.didUpdate(expense)))
+
             case .delegate:
                 return .none
 

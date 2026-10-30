@@ -44,38 +44,18 @@ struct ExpenseFormView: View {
             }
         } accessory: {
             if store.step == .amount {
-                Group {
-                    billingCycleChoices
-                    if !store.isCreating {
-                        activeToggle
-                    }
-                }
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(with: .offset(x: reduceMotion ? 0 : StepPage.distance)),
-                        removal: .opacity.animation(.easeOut(duration: 0.12))
+                billingCycleChoices
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .offset(x: reduceMotion ? 0 : StepPage.distance)),
+                            removal: .opacity.animation(.easeOut(duration: 0.12))
+                        )
                     )
-                )
             }
         }
         .animation(.step(reducingMotion: reduceMotion), value: store.step)
         .sensoryFeedback(.impact(weight: .light), trigger: store.step)
         .bind($store.focus, to: $focus)
-    }
-
-    private var activeToggle: some View {
-        Toggle(isOn: $store.isActive.animation(.value(reducingMotion: reduceMotion))) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Active")
-                Text(store.isActive ? "Counts toward your costs" : "Stays in your list, but not in your costs")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.interpolate)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .cardBackground(.control)
     }
 
     private var billingCycleChoices: some View {
