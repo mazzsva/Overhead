@@ -35,11 +35,11 @@ extension BaseSuite {
 
                 authChanges.continuation.yield(.mock)
                 await store.receive(\.authUserChanged) {
-                    $0.scene = .tabs(Tabs.State(user: .mock))
+                    $0.scene = .home(Home.State(user: .mock))
                 }
 
                 revocations.continuation.yield()
-                await store.receive(\.appleCredentialInvalidated)
+                await store.receive(\.appleCredentialRevoked)
 
                 authChanges.continuation.finish()
                 revocations.continuation.finish()
@@ -49,7 +49,7 @@ extension BaseSuite {
 
         // Apple can revoke the credential while the app does not run
         @Test
-        func aSignedInUserAtLaunchRoutesToTabsAndVerifiesTheCredential() async {
+        func aSignedInUserAtLaunchRoutesToHomeAndVerifiesTheCredential() async {
             await confirmation("Verifies the Apple credential") { verifiesCredential in
                 let store = TestStore(initialState: AppFeature.State()) {
                     AppFeature()
@@ -63,7 +63,27 @@ extension BaseSuite {
                 }
 
                 await store.send(.authUserChanged(.mock)) {
-                    $0.scene = .tabs(Tabs.State(user: .mock))
+                    $0.scene = .home(Home.State(user: .mock))
+                }
+                await store.finish()
+            }
+        }
+
+        @Test
+        func aSignedInUserAtLaunchKeepsTheSessionWhenTheCredentialIsNotFound() async {
+            await confirmation("Verifies the Apple credential") { verifiesCredential in
+                let store = TestStore(initialState: AppFeature.State()) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.signInWithAppleClient.credentialState = { _ in
+                        verifiesCredential()
+                        return .notFound
+                    }
+                }
+
+                await store.send(.authUserChanged(.mock)) {
+                    $0.scene = .home(Home.State(user: .mock))
                 }
                 await store.finish()
             }
@@ -167,7 +187,7 @@ extension BaseSuite {
 
         // The sign in scene shows first at launch, so a restored session comes through it
         @Test
-        func aRestoredSessionRoutesToTabsAndVerifiesTheCredential() async {
+        func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
             var state = AppFeature.State()
             state.scene = .signIn(SignIn.State())
 
@@ -183,7 +203,7 @@ extension BaseSuite {
                 }
 
                 await store.send(.authUserChanged(.mock)) {
-                    $0.scene = .tabs(Tabs.State(user: .mock, sessionOrigin: .restored))
+                    $0.scene = .home(Home.State(user: .mock, sessionOrigin: .restored))
                 }
                 await store.finish()
             }
@@ -191,7 +211,7 @@ extension BaseSuite {
 
         // Apple authorized the user a moment ago, so the app does not check the credential again
         @Test
-        func finishingTheSignInRoutesToTabsAsAFreshSignIn() async {
+        func finishingTheSignInRoutesToHomeAsAFreshSignIn() async {
             var signIn = SignIn.State()
             signIn.step = .signingIn
             var state = AppFeature.State()
@@ -202,8 +222,8 @@ extension BaseSuite {
             }
 
             await store.send(.authUserChanged(.mock)) {
-                $0.scene = .tabs(
-                    Tabs.State(user: .mock, sessionOrigin: .freshSignIn)
+                $0.scene = .home(
+                    Home.State(user: .mock, sessionOrigin: .freshSignIn)
                 )
             }
             await store.finish()
@@ -213,7 +233,7 @@ extension BaseSuite {
         @Test
         func theSameSignedInUserIsIgnored() async {
             var state = AppFeature.State()
-            state.scene = .tabs(Tabs.State(user: .mock))
+            state.scene = .home(Home.State(user: .mock))
 
             let store = TestStore(initialState: state) {
                 AppFeature()
@@ -226,7 +246,7 @@ extension BaseSuite {
         @Test
         func becomingActiveSignsTheUserOutWhenTheCredentialIsRevoked() async {
             var state = AppFeature.State()
-            state.scene = .tabs(Tabs.State(user: .mock))
+            state.scene = .home(Home.State(user: .mock))
 
             await confirmation("Signs the user out") { signsOut in
                 let store = TestStore(initialState: state) {
@@ -238,7 +258,28 @@ extension BaseSuite {
                 }
 
                 await store.send(.appBecameActive)
-                await store.receive(\.appleCredentialInvalidated)
+                await store.receive(\.appleCredentialRevoked)
+                await store.finish()
+            }
+        }
+
+        @Test(arguments: [.notFound, .transferred, .unknown] as [AppleCredentialState])
+        func becomingActiveKeepsTheSessionWhenTheCredentialIsNotRevoked(credentialState: AppleCredentialState) async {
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            await confirmation("Verifies the Apple credential") { verifiesCredential in
+                let store = TestStore(initialState: state) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.signInWithAppleClient.credentialState = { _ in
+                        verifiesCredential()
+                        return credentialState
+                    }
+                }
+
+                await store.send(.appBecameActive)
                 await store.finish()
             }
         }
@@ -246,17 +287,50 @@ extension BaseSuite {
         // The deletion revokes the credential itself, and a sign out would stop it
         @Test
         func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
-            var tabs = Tabs.State(user: .mock)
-            tabs.settings.deletionStep = .credentialRevoked
+            var home = Home.State(user: .mock)
+            home.accountDeletion = AccountDeletion.State(step: .credentialRevoked, uid: User.mock.uid)
             var state = AppFeature.State()
-            state.scene = .tabs(tabs)
+            state.scene = .home(home)
 
             let store = TestStore(initialState: state) {
                 AppFeature()
             }
 
             await store.send(.appBecameActive)
-            await store.send(.appleCredentialInvalidated(.revoked))
+            await store.send(.appleCredentialRevoked)
+        }
+
+        @Test(
+            arguments: [nil, .connectionFailed, .notDeleted, .notFullyDeleted, .notSignedOut]
+                as [AccountDeletion.Failure?]
+        )
+        func endingTheAccountDeletionVerifiesTheCredential(failure: AccountDeletion.Failure?) async {
+            var home = Home.State(user: .mock)
+            home.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            var state = AppFeature.State()
+            state.scene = .home(home)
+
+            await confirmation("Signs the user out") { signsOut in
+                let store = TestStore(initialState: state) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.authClient.signOut = { signsOut() }
+                    $0.signInWithAppleClient.credentialState = { _ in .revoked }
+                }
+
+                let delegate: AccountDeletion.Action.Delegate = failure.map { .didFail($0) } ?? .didCancel
+                await store.send(.scene(.home(.accountDeletion(.presented(.delegate(delegate)))))) {
+                    $0.scene?
+                        .modify(\.home) { home in
+                            home.accountDeletion = nil
+                            home.selectedTab = .settings
+                            home.settings.destination = failure.map { .alert(.accountDeletionFailed($0)) }
+                        }
+                }
+                await store.receive(\.appleCredentialRevoked)
+                await store.finish()
+            }
         }
 
         // The message follows the step in progress, and a system sheet gets none
@@ -272,17 +346,17 @@ extension BaseSuite {
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
 
-            var tabs = Tabs.State(user: .mock)
-            tabs.settings.deletionStep = .reauthenticating
-            state.scene = .tabs(tabs)
+            var home = Home.State(user: .mock)
+            home.accountDeletion = AccountDeletion.State(step: .reauthenticating, uid: User.mock.uid)
+            state.scene = .home(home)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, nil)
 
-            state.scene?.modify(\.tabs) { $0.settings.deletionStep = .deleting }
+            state.scene?.modify(\.home) { $0.accountDeletion?.step = .deleting }
             expectNoDifference(state.loadingMessage, "Deleting your account…")
 
-            state.scene = .tabs(
-                Tabs.State(user: .mock, sessionOrigin: .freshSignIn)
+            state.scene = .home(
+                Home.State(user: .mock, sessionOrigin: .freshSignIn)
             )
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
@@ -296,36 +370,42 @@ extension BaseSuite {
         // The Apple sheet covers the app, so the message waits for the deletion to start
         @Test
         func theLoadingMessageAppearsOnceTheAccountDeletionStarts() async {
+            var home = Home.State(user: .mock)
+            home.selectedTab = .settings
             var state = AppFeature.State()
-            state.scene = .tabs(Tabs.State(user: .mock))
+            state.scene = .home(home)
 
-            let clock = TestClock()
             let store = TestStore(initialState: state) {
                 AppFeature()
             } withDependencies: {
                 $0.authClient.reauthenticate = { _ in try await Task.never() }
-                $0.continuousClock = clock
+                $0.continuousClock = TestClock()
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
-            await store.send(\.scene.tabs.settings.deleteAccountButtonTapped) {
-                $0.scene?.modify(\.tabs) { $0.settings.alert = .confirmAccountDeletion }
+            await store.send(\.scene.home.settings.deleteAccountButtonTapped) {
+                $0.scene?.modify(\.home) { $0.settings.destination = .alert(.confirmAccountDeletion) }
             }
-            await store.send(.scene(.tabs(.settings(.alert(.presented(.confirmAccountDeletion)))))) {
-                $0.scene?.modify(\.tabs) { $0.settings.alert = nil }
-                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = .reauthenticating }
+            await store.send(
+                .scene(.home(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
+            ) {
+                $0.scene?.modify(\.home) { $0.settings.destination = nil }
             }
+            await store.receive(\.scene.home.settings.delegate.didConfirmAccountDeletion) {
+                $0.scene?
+                    .modify(\.home) { home in
+                        home.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+                    }
+            }
+            await store.receive(\.scene.home.accountDeletion.presented.deletionConfirmed)
             expectNoDifference(store.state.loadingMessage, nil)
 
-            await store.receive(\.scene.tabs.settings.appleCredentialReceived) {
-                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = .deleting }
+            await store.receive(\.scene.home.accountDeletion.presented.appleCredentialReceived) {
+                $0.scene?.modify(\.home) { $0.accountDeletion?.step = .deleting }
             }
             expectNoDifference(store.state.loadingMessage, "Deleting your account…")
-
-            await clock.advance(by: .seconds(60))
-            await store.receive(\.scene.tabs.settings.accountDeletionFailed) {
-                $0.scene?.modify(\.tabs) { $0.settings.alert = .accountDeletionFailed }
-                $0.scene?.modify(\.tabs) { $0.settings.deletionStep = nil }
+            await store.send(\.scene.home.accountDeletion.dismiss) {
+                $0.scene?.modify(\.home) { $0.accountDeletion = nil }
             }
         }
 
@@ -334,31 +414,64 @@ extension BaseSuite {
         func switchingAccountsRestartsTheSession() async {
             let other = User(email: "other@example.com", uid: "other-uid")
             var state = AppFeature.State()
-            state.scene = .tabs(Tabs.State(user: .mock))
+            state.scene = .home(Home.State(user: .mock))
 
             let store = TestStore(initialState: state) {
                 AppFeature()
             } withDependencies: {
                 $0.authClient.appleUserID = { nil }
+                $0.authClient.currentUser = { other }
                 $0.expensesClient.clearLocalData = {}
             }
 
-            await withExpectedIssue {
+            await withKnownIssue {
                 await store.send(.authUserChanged(other)) {
                     $0.scene = nil
                 }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
             }
-            await store.receive(\.authUserChanged) {
-                $0.scene = .tabs(Tabs.State(user: other))
+            await store.receive(\.authUserChanged, other) {
+                $0.scene = .home(Home.State(user: other))
             }
             await store.finish()
+        }
+
+        @Test
+        func aSignOutDuringTheAccountSwitchEndsAtTheSignIn() async {
+            let events = LockIsolated<[String]>([])
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.currentUser = {
+                    events.withValue { $0.append("currentUser") }
+                    return nil
+                }
+                $0.expensesClient.clearLocalData = { events.withValue { $0.append("clearLocalData") } }
+            }
+
+            await withKnownIssue {
+                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                    $0.scene = nil
+                }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
+            }
+            await store.receive(\.authUserChanged, nil) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.finish()
+            expectNoDifference(events.value, ["clearLocalData", "currentUser", "clearLocalData"])
         }
 
         // The loading state hides the sign in controls while the local data disappears
         @Test
         func signingOutSettlesBeforeTheSignInAppears() async {
             var state = AppFeature.State()
-            state.scene = .tabs(Tabs.State(user: .mock))
+            state.scene = .home(Home.State(user: .mock))
 
             let clock = TestClock()
             await confirmation("Clears the local data") { clearsLocalData in
@@ -371,26 +484,184 @@ extension BaseSuite {
 
                 await store.send(.authUserChanged(nil)) {
                     $0.isSignedOutSettling = true
+                }
+                #expect(store.state.isLoading)
+                #expect(store.state.scene.is(\.home))
+
+                await clock.advance(by: AppFeature.signedOutCoverDelay)
+                await store.receive(\.signedOutCoverTimerElapsed) {
                     $0.scene = .signIn(SignIn.State())
                 }
-                expectNoDifference(store.state.isLoading, true)
+                #expect(store.state.isLoading)
 
-                await clock.advance(by: .milliseconds(500))
+                await clock.advance(by: AppFeature.signedOutSettleDelay)
                 await store.receive(\.signedOutSettleTimerElapsed) {
                     $0.isSignedOutSettling = false
                 }
-                expectNoDifference(store.state.isLoading, false)
+                #expect(!store.state.isLoading)
                 await store.finish()
             }
         }
 
         @Test
-        func signingOutCancelsTheExpenseWritesInFlight() async {
-            var tabs = Tabs.State(user: .mock)
-            tabs.expenses.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
-            let detailID = Array(tabs.expenses.path.ids)[0]
+        func aSignOutCancelsTheCredentialCheck() async {
+            let isCheckCanceled = LockIsolated(false)
+            let isCheckRunning = LockIsolated(false)
             var state = AppFeature.State()
-            state.scene = .tabs(tabs)
+            state.scene = .home(Home.State(user: .mock))
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.continuousClock = clock
+                $0.expensesClient.clearLocalData = {}
+                $0.signInWithAppleClient.credentialState = { _ in
+                    await withTaskCancellationHandler {
+                        isCheckRunning.setValue(true)
+                        _ = try? await Task.never()
+                    } onCancel: {
+                        isCheckCanceled.setValue(true)
+                    }
+                    return .authorized
+                }
+            }
+
+            await store.send(.appBecameActive)
+            while !isCheckRunning.value {
+                await Task.yield()
+            }
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+            }
+
+            await clock.advance(by: AppFeature.signedOutCoverDelay)
+            await store.receive(\.signedOutCoverTimerElapsed) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await clock.advance(by: AppFeature.signedOutSettleDelay)
+            await store.receive(\.signedOutSettleTimerElapsed) {
+                $0.isSignedOutSettling = false
+            }
+            await store.finish()
+            #expect(isCheckCanceled.value)
+        }
+
+        // A late answer for the old user must not sign out the new one
+        @Test
+        func anAccountSwitchCancelsTheCredentialCheck() async {
+            let isCheckCanceled = LockIsolated(false)
+            let isCheckRunning = LockIsolated(false)
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.authClient.currentUser = { nil }
+                $0.expensesClient.clearLocalData = {}
+                $0.signInWithAppleClient.credentialState = { _ in
+                    await withTaskCancellationHandler {
+                        isCheckRunning.setValue(true)
+                        _ = try? await Task.never()
+                    } onCancel: {
+                        isCheckCanceled.setValue(true)
+                    }
+                    return .revoked
+                }
+            }
+
+            await store.send(.appBecameActive)
+            while !isCheckRunning.value {
+                await Task.yield()
+            }
+            await withKnownIssue {
+                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                    $0.scene = nil
+                }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
+            }
+            await store.receive(\.authUserChanged, nil) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.finish()
+            #expect(isCheckCanceled.value)
+        }
+
+        // The sign-out timers of the old session must not hide the new one
+        @Test
+        func anAccountSwitchDuringTheSignOutCancelsTheTimers() async {
+            let other = User(email: "other@example.com", uid: "other-uid")
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { nil }
+                $0.authClient.currentUser = { other }
+                $0.continuousClock = clock
+                $0.expensesClient.clearLocalData = {}
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+            }
+            await withKnownIssue {
+                await store.send(.authUserChanged(other)) {
+                    $0.isSignedOutSettling = false
+                    $0.scene = nil
+                }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
+            }
+            await store.receive(\.authUserChanged, other) {
+                $0.scene = .home(Home.State(user: other))
+            }
+            await clock.advance(by: AppFeature.signedOutCoverDelay + AppFeature.signedOutSettleDelay)
+            await store.finish()
+        }
+
+        // The sign out is already in progress, so a second one would stop it
+        @Test
+        func theCredentialChecksAreIgnoredWhileSigningOut() async {
+            var state = AppFeature.State()
+            state.isSignedOutSettling = true
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            }
+
+            await store.send(.appBecameActive)
+            await store.send(.appleCredentialRevoked)
+        }
+
+        // The sign-in scene does not hold a session, so it has nothing to check
+        @Test
+        func theCredentialChecksAreIgnoredOutsideTheHomeScene() async {
+            var state = AppFeature.State()
+            state.scene = .signIn(SignIn.State())
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            }
+
+            await store.send(.appBecameActive)
+            await store.send(.appleCredentialRevoked)
+        }
+
+        @Test
+        func signingOutCancelsTheExpenseWritesInFlight() async {
+            var home = Home.State(user: .mock)
+            home.expenses.path.append(ExpenseDetail.State(expense: SharedReader(value: .rent)))
+            let detailID = Array(home.expenses.path.ids)[0]
+            var state = AppFeature.State()
+            state.scene = .home(home)
 
             let pendingSave = LockIsolated<CheckedContinuation<Void, Never>?>(nil)
             let store = TestStore(initialState: state) {
@@ -405,7 +676,7 @@ extension BaseSuite {
             }
 
             await store.send(
-                .scene(.tabs(.expenses(.path(.element(id: detailID, action: .delegate(.didUpdate(.rent)))))))
+                .scene(.home(.expenses(.path(.element(id: detailID, action: .delegate(.didUpdate(.rent)))))))
             )
             while pendingSave.value == nil {
                 await Task.yield()
@@ -413,6 +684,8 @@ extension BaseSuite {
 
             await store.send(.authUserChanged(nil)) {
                 $0.isSignedOutSettling = true
+            }
+            await store.receive(\.signedOutCoverTimerElapsed) {
                 $0.scene = .signIn(SignIn.State())
             }
             await store.receive(\.signedOutSettleTimerElapsed) {
@@ -422,6 +695,8 @@ extension BaseSuite {
             pendingSave.value?.resume()
             await store.finish()
         }
+
+        private struct DeletionFailure: Error {}
 
         private struct ExpensesFailure: Error {}
     }

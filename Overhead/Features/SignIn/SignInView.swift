@@ -12,20 +12,18 @@ struct SignInView: View {
     @Bindable var store: StoreOf<SignIn>
 
     var body: some View {
-        VStack {
-            Spacer()
-            Text("Overhead")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+        VStack(spacing: 0) {
             Spacer()
             AppleSignInButton {
                 store.send(.signInButtonTapped)
             }
             .disabled(store.isAuthenticating)
-            .padding(.horizontal, 32)
-            .padding(.bottom, 16)
+            .padding(10)
+            .glassEffect(.regular, in: .capsule)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 48)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: .bottom)
         .groupedBackground()
         .alert($store.scope(state: \.alert, action: \.alert))
     }

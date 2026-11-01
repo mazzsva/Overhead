@@ -1,5 +1,5 @@
 //
-//  TabsTests.swift
+//  HomeTests.swift
 //  OverheadTests
 //
 //  Created by Lorenzo Mazzarotto on 01/10/26.
@@ -15,11 +15,11 @@ import Testing
 extension BaseSuite {
     @Suite
     @MainActor
-    struct TabsTests {
+    struct HomeTests {
         @Test
         func theOverviewFollowsTheExpenses() async {
-            let store = TestStore(initialState: Tabs.State(user: .mock)) {
-                Tabs()
+            let store = TestStore(initialState: Home.State(user: .mock)) {
+                Home()
             }
             expectNoDifference(store.state.overview.annualExpenses, nil)
 
@@ -42,8 +42,8 @@ extension BaseSuite {
         func theOverviewTaskObservesTheBudget() async {
             let budget = AsyncThrowingStream<BudgetSnapshot, any Error>.makeStream()
 
-            let store = TestStore(initialState: Tabs.State(user: .mock)) {
-                Tabs()
+            let store = TestStore(initialState: Home.State(user: .mock)) {
+                Home()
             } withDependencies: {
                 $0.budgetClient.budget = { uid in
                     expectNoDifference(uid, User.mock.uid)
@@ -61,14 +61,62 @@ extension BaseSuite {
         }
 
         @Test
-        func theOverviewExpensesTileSelectsTheExpensesTab() async {
-            let store = TestStore(initialState: Tabs.State(user: .mock)) {
-                Tabs()
+        func theOverviewExpensesButtonSelectsTheExpensesTab() async {
+            let store = TestStore(initialState: Home.State(user: .mock)) {
+                Home()
             }
 
             await store.send(.overview(.expensesTileTapped))
             await store.receive(\.overview.delegate.didSelectExpenses) {
                 $0.selectedTab = .expenses
+            }
+        }
+
+        @Test
+        func aFailedAccountDeletionBringsTheSettingsBackWithAnAlert() async {
+            var state = Home.State(user: .mock)
+            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.accountDeletion(.presented(.delegate(.didFail(.notDeleted))))) {
+                $0.accountDeletion = nil
+                $0.settings.destination = .alert(.accountDeletionFailed(.notDeleted))
+                $0.selectedTab = .settings
+            }
+        }
+
+        @Test
+        func aCanceledAccountDeletionBringsTheSettingsBack() async {
+            var state = Home.State(user: .mock)
+            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.accountDeletion(.presented(.delegate(.didCancel)))) {
+                $0.accountDeletion = nil
+                $0.selectedTab = .settings
+            }
+        }
+
+        @Test
+        func aConfirmedAccountDeletionStartsTheDeletion() async {
+            var state = Home.State(user: .mock)
+            state.selectedTab = .settings
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.signInWithAppleClient.requestCredential = { try await Task.never() }
+            }
+
+            await store.send(.settings(.delegate(.didConfirmAccountDeletion))) {
+                $0.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            }
+            await store.receive(\.accountDeletion.presented.deletionConfirmed)
+            await store.send(.accountDeletion(.dismiss)) {
+                $0.accountDeletion = nil
             }
         }
 
@@ -82,7 +130,7 @@ extension BaseSuite {
             let state = makeReadyState()
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.overview(.delegate(.didFailToChangeBudget(change)))) {
@@ -111,7 +159,7 @@ extension BaseSuite {
             let state = makeReadyState()
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToSave))) {
@@ -126,7 +174,7 @@ extension BaseSuite {
             let state = makeReadyState()
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.settings(.delegate(.didFailToSaveCurrency))) {
@@ -141,7 +189,7 @@ extension BaseSuite {
             let state = makeReadyState()
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToSave))) {
@@ -163,7 +211,7 @@ extension BaseSuite {
             state.failedOperations = [.deleteExpense, .saveExpense]
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.failurePresentationChanged(false)) {
@@ -175,10 +223,10 @@ extension BaseSuite {
         func aHiddenAlertKeepsTheFailures() async {
             var state = makeReadyState()
             state.failedOperations = [.saveExpense]
-            state.settings.alert = .signOutFailed
+            state.settings.destination = .alert(.signOutFailed)
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.failurePresentationChanged(false))
@@ -191,7 +239,7 @@ extension BaseSuite {
             state.expenses.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToSave))) {
@@ -212,7 +260,7 @@ extension BaseSuite {
             state.expenses.destination = .createExpense(ExpenseForm.State())
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToDelete))) {
@@ -235,7 +283,7 @@ extension BaseSuite {
             state.expenses.path[id: detailID]?.destination = .alert(.confirmDeletion)
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToSave))) {
@@ -252,10 +300,10 @@ extension BaseSuite {
         @Test
         func aFailureWaitsForTheSettingsAlert() async {
             var state = makeReadyState()
-            state.settings.alert = .confirmSignOut
+            state.settings.destination = .alert(.confirmSignOut)
 
             let store = TestStore(initialState: state) {
-                Tabs()
+                Home()
             }
 
             await store.send(.expenses(.delegate(.didFailToSave))) {
@@ -263,8 +311,8 @@ extension BaseSuite {
             }
             #expect(!store.state.isPresentingFailure)
 
-            await store.send(.settings(.alert(.dismiss))) {
-                $0.settings.alert = nil
+            await store.send(.settings(.destination(.dismiss))) {
+                $0.settings.destination = nil
             }
             #expect(store.state.isPresentingFailure)
         }
@@ -274,10 +322,10 @@ extension BaseSuite {
             var state = makeReadyState()
             state.failedOperations = [.saveExpense]
 
-            state.settings.deletionStep = .deleting
+            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
             #expect(!state.isPresentingFailure)
 
-            state.settings.deletionStep = nil
+            state.accountDeletion = nil
             #expect(state.isPresentingFailure)
         }
 
@@ -306,10 +354,10 @@ extension BaseSuite {
             #expect(state.isPresentingFailure)
         }
 
-        private func makeReadyState() -> Tabs.State {
+        private func makeReadyState() -> Home.State {
             @Shared(.hasDismissedWelcome) var hasDismissedWelcome
             $hasDismissedWelcome.withLock { $0 = true }
-            let state = Tabs.State(user: .mock)
+            let state = Home.State(user: .mock)
             state.expenses.$expenses.withLock { $0 = [] }
             return state
         }
