@@ -25,7 +25,6 @@ struct ExpenseDetail {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expense: Expense
-        @SharedReader(.hidesAmounts) var hidesAmounts
 
         var isPresenting: Bool { destination != nil }
     }

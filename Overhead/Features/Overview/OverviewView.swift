@@ -71,15 +71,13 @@ struct OverviewView: View {
         VStack(spacing: 12) {
             CostsHero(
                 content: content,
-                currency: store.currency,
-                isHidingAmounts: store.hidesAmounts
+                currency: store.currency
             )
 
             TileGrid(
                 content: content,
                 currency: store.currency,
                 expenseCount: store.activeExpenseCount ?? 0,
-                isHidingAmounts: store.hidesAmounts,
                 onExpenses: { store.send(.expensesButtonTapped) },
                 onIncome: { store.send(.incomeTileTapped) },
                 onSavings: { store.send(.savingsTileTapped) }
@@ -108,14 +106,13 @@ extension Overview.Breakdown.ShareLabel {
 private struct CostsHero: View {
     let content: Overview.Content
     let currency: Currency
-    let isHidingAmounts: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HeroCard(title: "Monthly Costs", glow: glow, accessibilityValue: amountValue, hasCard: false) {
-            AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
-                .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
+            AmountLabel(value: amount, currency: currency)
+                .foregroundStyle(amount == 0 ? .tertiary : .primary)
                 .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
         } caption: {
             Text(caption)
@@ -131,7 +128,7 @@ private struct CostsHero: View {
     }
 
     private var amountValue: Text {
-        let amount = isHidingAmounts ? Text("Hidden") : Text(amount, format: .currency(currency))
+        let amount = Text(amount, format: .currency(currency))
         guard let breakdown = content.summary else { return amount }
         return Text("\(amount), \(breakdown.committedShareLabel.text) of income")
     }
@@ -158,7 +155,6 @@ private struct TileGrid: View {
     let content: Overview.Content
     let currency: Currency
     let expenseCount: Int
-    let isHidingAmounts: Bool
     let onExpenses: () -> Void
     let onIncome: () -> Void
     let onSavings: () -> Void
@@ -205,12 +201,8 @@ private struct TileGrid: View {
             title: isOverBudget ? "Over Income" : "Available",
             accent: isOverBudget ? .overIncome : .available
         ) {
-            AmountLabel(
-                value: breakdown.map { abs($0.available.amount) } ?? Self.placeholderAmount,
-                currency: currency,
-                isHidden: isHidingAmounts
-            )
-            .foregroundStyle(isOverBudget ? Color.critical : .primary)
+            AmountLabel(value: breakdown.map { abs($0.available.amount) } ?? Self.placeholderAmount, currency: currency)
+                .foregroundStyle(isOverBudget ? Color.critical : .primary)
         } caption: {
             ShareBar(
                 share: abs(breakdown?.available.share ?? 0),
@@ -232,7 +224,7 @@ private struct TileGrid: View {
     private var expensesTile: some View {
         Tile(title: "Expenses", accent: .expenses) {
             if expenseCount > 0 {
-                AmountLabel(value: expensesAmount, currency: currency, isHidden: isHidingAmounts)
+                AmountLabel(value: expensesAmount, currency: currency)
             } else {
                 Text("Add Expense")
                     .foregroundStyle(.tint)
@@ -260,14 +252,14 @@ private struct TileGrid: View {
             Tile(title: "Income", accent: .income) {
                 switch content {
                 case .summary(let breakdown):
-                    AmountLabel(value: breakdown.income, currency: currency, isHidden: isHidingAmounts)
+                    AmountLabel(value: breakdown.income, currency: currency)
                 case .expensesOnly(_, .missing):
                     Text("Add Income")
                         .foregroundStyle(.tint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 case .expensesOnly(_, .loading):
-                    AmountLabel(value: Self.placeholderAmount, currency: currency, isHidden: false)
+                    AmountLabel(value: Self.placeholderAmount, currency: currency)
                 case .expensesOnly(_, .failed):
                     Image(systemName: "exclamationmark.circle")
                         .foregroundStyle(.secondary)
@@ -312,9 +304,9 @@ private struct TileGrid: View {
         Tile(title: "Savings", accent: .savings) {
             ZStack(alignment: .leading) {
                 if content.summary == nil {
-                    AmountLabel(value: Self.placeholderAmount, currency: currency, isHidden: false)
+                    AmountLabel(value: Self.placeholderAmount, currency: currency)
                 } else if let savings = content.summary?.savings {
-                    AmountLabel(value: savings.amount, currency: currency, isHidden: isHidingAmounts)
+                    AmountLabel(value: savings.amount, currency: currency)
                         .transition(.replace(reducingMotion: reduceMotion))
                 } else {
                     Text("Add Savings")

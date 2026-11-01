@@ -16,26 +16,6 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
-        @Test
-        func theHideAmountsToggleHidesAndShowsTheAmounts() async {
-            @Shared(.hidesAmounts) var hidesAmounts = false
-            let selections = LockIsolated(0)
-            let store = TestStore(initialState: Settings.State(user: .mock)) {
-                Settings()
-            } withDependencies: {
-                $0.hapticsClient.selection = { selections.withValue { $0 += 1 } }
-            }
-
-            await store.send(.hidesAmountsToggleChanged(true)) {
-                $0.$hidesAmounts.withLock { $0 = true }
-            }
-            await store.send(.hidesAmountsToggleChanged(false)) {
-                $0.$hidesAmounts.withLock { $0 = false }
-            }
-            await store.finish()
-            expectNoDifference(selections.value, 2)
-        }
-
         // A sign out clears the local data
         @Test
         func theSignOutButtonAsksForConfirmation() async {

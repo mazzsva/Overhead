@@ -22,7 +22,6 @@ struct Expenses {
         @Presents var destination: Destination.State?
         @Shared var expenses: IdentifiedArrayOf<Expense>?
         var hasFailedFirstLoad = false
-        @SharedReader(.hidesAmounts) var hidesAmounts
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
         let user: User

@@ -25,7 +25,6 @@ struct Settings {
     struct State: Equatable {
         @Shared(.currency) var currency
         @Presents var destination: Destination.State?
-        @Shared(.hidesAmounts) var hidesAmounts
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
@@ -45,7 +44,6 @@ struct Settings {
         case delegate(Delegate)
         case deleteAccountButtonTapped
         case destination(PresentationAction<Destination.Action>)
-        case hidesAmountsToggleChanged(Bool)
         case signOutButtonTapped
         case signOutFailed(any Error)
         case task
@@ -67,7 +65,6 @@ struct Settings {
     #if DEBUG
     @Dependency(\.expensesClient) var expensesClient
     #endif
-    @Dependency(\.hapticsClient) var hapticsClient
     @Dependency(\.locale) var locale
 
     var body: some Reducer<State, Action> {
@@ -121,10 +118,6 @@ struct Settings {
 
             case .destination:
                 return .none
-
-            case .hidesAmountsToggleChanged(let hidesAmounts):
-                state.$hidesAmounts.withLock { $0 = hidesAmounts }
-                return .run { _ in await hapticsClient.selection() }
 
             case .signOutButtonTapped:
                 state.destination = .alert(.confirmSignOut)

@@ -10,7 +10,6 @@ import SwiftUI
 struct ExpenseRowView: View {
     let currency: Currency
     let expense: Expense
-    let isHidden: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -22,7 +21,7 @@ struct ExpenseRowView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                AmountText(value: expense.amount.value, currency: currency, isHidden: isHidden)
+                AmountText(value: expense.amount.value, currency: currency)
                     .font(.system(.body, design: .rounded, weight: .semibold))
                     .foregroundStyle(expense.isActive ? .primary : .secondary)
                     .monospacedDigit()
@@ -38,6 +37,6 @@ struct ExpenseRowView: View {
 
 #Preview {
     List(Expense.mocks) { expense in
-        ExpenseRowView(currency: .usd, expense: expense, isHidden: false)
+        ExpenseRowView(currency: .usd, expense: expense)
     }
 }

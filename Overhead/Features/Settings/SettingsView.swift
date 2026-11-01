@@ -37,11 +37,6 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Toggle(isOn: $store.hidesAmounts.sending(\.hidesAmountsToggleChanged)) {
-                        Label("Hide Amounts", systemImage: "eye.slash")
-                    }
-                }
-                Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
                     }
