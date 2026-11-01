@@ -34,6 +34,17 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(store.isDeletingAccount)
+                if let biometryType = store.biometryType {
+                    Section {
+                        Toggle(isOn: $store.locksApp.sending(\.lockToggleChanged)) {
+                            Label(String(localized: biometryType.lockTitle), systemImage: biometryType.systemImage)
+                        }
+                        .disabled(store.isAuthenticatingWithBiometrics)
+                    } footer: {
+                        Text("Overhead locks when you leave the app.")
+                    }
+                    .disabled(store.isDeletingAccount)
+                }
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)

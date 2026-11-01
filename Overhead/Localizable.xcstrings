@@ -160,6 +160,12 @@
     "Overhead" : {
       "shouldTranslate" : false
     },
+    "Overhead Is Locked" : {
+
+    },
+    "Overhead locks when you leave the app." : {
+
+    },
     "Overhead will try again automatically." : {
 
     },
@@ -176,6 +182,18 @@
 
     },
     "Remove Savings" : {
+
+    },
+    "Require Face ID" : {
+
+    },
+    "Require Optic ID" : {
+
+    },
+    "Require Passcode" : {
+
+    },
+    "Require Touch ID" : {
 
     },
     "Save" : {
@@ -223,10 +241,22 @@
     "To see what is available" : {
 
     },
+    "Turn off the Overhead lock." : {
+
+    },
+    "Turn on the Overhead lock." : {
+
+    },
     "Unable to Load Expenses" : {
 
     },
     "Unknown" : {
+
+    },
+    "Unlock" : {
+
+    },
+    "Unlock Overhead." : {
 
     },
     "Version %@" : {
