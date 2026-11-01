@@ -58,7 +58,13 @@
     "Back" : {
 
     },
+    "Billing Cycle" : {
+
+    },
     "Cancel" : {
+
+    },
+    "Clear" : {
 
     },
     "Connect to the internet to see your income." : {
@@ -104,6 +110,9 @@
 
     },
     "Expenses, a month" : {
+
+    },
+    "Groceries, Transportation, Utilities" : {
 
     },
     "Hidden" : {
