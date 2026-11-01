@@ -76,12 +76,6 @@
     "Currency" : {
 
     },
-    "Daily Costs" : {
-
-    },
-    "Day" : {
-
-    },
     "Delete" : {
 
     },
@@ -112,31 +106,13 @@
     "Expenses" : {
 
     },
-    "Expenses and savings, a day" : {
-
-    },
     "Expenses and savings, a month" : {
-
-    },
-    "Expenses and savings, a week" : {
-
-    },
-    "Expenses and savings, a year" : {
-
-    },
-    "Expenses, a day" : {
 
     },
     "Expenses, a month" : {
 
     },
     "Groceries, Transportation, Utilities" : {
-
-    },
-    "Expenses, a week" : {
-
-    },
-    "Expenses, a year" : {
 
     },
     "Hidden" : {
@@ -152,9 +128,6 @@
 
     },
     "Income" : {
-
-    },
-    "Month" : {
 
     },
     "Monthly" : {
@@ -191,9 +164,6 @@
 
     },
     "Overview" : {
-
-    },
-    "Period" : {
 
     },
     "Remove" : {
@@ -262,25 +232,13 @@
     "Version %@" : {
 
     },
-    "Week" : {
-
-    },
-    "Weekly Costs" : {
-
-    },
     "Welcome to" : {
-
-    },
-    "Year" : {
 
     },
     "Yearly" : {
 
     },
     "Yearly Cost" : {
-
-    },
-    "Yearly Costs" : {
 
     },
     "You couldn't be signed in." : {

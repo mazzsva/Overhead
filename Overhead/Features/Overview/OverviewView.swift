@@ -63,22 +63,10 @@ struct OverviewView: View {
 
     private func dashboard(_ content: Overview.Content) -> some View {
         VStack(spacing: 12) {
-            Picker(
-                "Period",
-                selection: $store.period.sending(\.periodPickerChanged).animation(.value(reducingMotion: reduceMotion))
-            ) {
-                ForEach(Overview.Period.allCases, id: \.self) { period in
-                    Text(period.title)
-                }
-            }
-            .pickerStyle(.segmented)
-            .sensoryFeedback(.selection, trigger: store.period)
-
             CostsHero(
                 content: content,
                 currency: store.currency,
-                isHidingAmounts: store.hidesAmounts,
-                period: store.period
+                isHidingAmounts: store.hidesAmounts
             )
 
             TileGrid(
@@ -111,54 +99,15 @@ extension Overview.Breakdown.ShareLabel {
     }
 }
 
-extension Overview.Period {
-    fileprivate var costsTitle: LocalizedStringResource {
-        switch self {
-        case .day: "Daily Costs"
-        case .week: "Weekly Costs"
-        case .month: "Monthly Costs"
-        case .year: "Yearly Costs"
-        }
-    }
-
-    fileprivate var expensesAndSavingsCaption: LocalizedStringResource {
-        switch self {
-        case .day: "Expenses and savings, a day"
-        case .week: "Expenses and savings, a week"
-        case .month: "Expenses and savings, a month"
-        case .year: "Expenses and savings, a year"
-        }
-    }
-
-    fileprivate var expensesCaption: LocalizedStringResource {
-        switch self {
-        case .day: "Expenses, a day"
-        case .week: "Expenses, a week"
-        case .month: "Expenses, a month"
-        case .year: "Expenses, a year"
-        }
-    }
-
-    fileprivate var title: LocalizedStringResource {
-        switch self {
-        case .day: "Day"
-        case .week: "Week"
-        case .month: "Month"
-        case .year: "Year"
-        }
-    }
-}
-
 private struct CostsHero: View {
     let content: Overview.Content
     let currency: Currency
     let isHidingAmounts: Bool
-    let period: Overview.Period
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HeroCard(title: period.costsTitle, glow: glow, accessibilityValue: amountValue) {
+        HeroCard(title: "Monthly Costs", glow: glow, accessibilityValue: amountValue, hasCard: false) {
             AmountLabel(value: amount, currency: currency, isHidden: isHidingAmounts)
                 .foregroundStyle(amount == 0 && !isHidingAmounts ? .tertiary : .primary)
                 .redacted(reason: content.expensesOnly?.income == .loading ? .placeholder : [])
@@ -182,7 +131,7 @@ private struct CostsHero: View {
     }
 
     private var caption: LocalizedStringResource {
-        content.summary?.savings == nil ? period.expensesCaption : period.expensesAndSavingsCaption
+        content.summary?.savings == nil ? "Expenses, a month" : "Expenses and savings, a month"
     }
 
     private var glow: HeroGlow {

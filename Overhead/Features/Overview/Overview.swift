@@ -32,7 +32,6 @@ struct Overview {
 
         let annualExpenses: Int
         let budget: Budget
-        let period: Period
 
         var available: Line {
             let amount = income - expenses.amount - (savings?.amount ?? 0)
@@ -59,7 +58,7 @@ struct Overview {
 
         var expenses: Line {
             Line(
-                amount: period.amount(annual: annualExpenses),
+                amount: Self.monthly(annualExpenses),
                 share: (Decimal(annualExpenses) / Decimal(annualIncome)).rounded(scale: 2)
             )
         }
@@ -73,7 +72,7 @@ struct Overview {
         }
 
         var income: Int {
-            period.amount(annual: annualIncome)
+            Self.monthly(annualIncome)
         }
 
         var isOverBudget: Bool {
@@ -83,7 +82,7 @@ struct Overview {
         var savings: Line? {
             budget.investment.map {
                 Line(
-                    amount: period.amount(annual: $0.value * 12),
+                    amount: Self.monthly($0.value * 12),
                     share: (Decimal($0.value * 12) / Decimal(annualIncome)).rounded(scale: 2)
                 )
             }
@@ -91,6 +90,10 @@ struct Overview {
 
         var savingsShareLabel: ShareLabel? {
             savings.map { shareLabel($0, annual: annualSavings) }
+        }
+
+        static func monthly(_ annual: Int) -> Int {
+            (annual + 6) / 12
         }
 
         private var annualCommitted: Int {
@@ -154,24 +157,6 @@ struct Overview {
         case offline
     }
 
-    enum Period: CaseIterable, Sendable {
-        case day
-        case week
-        case month
-        case year
-
-        func amount(annual: Int) -> Int {
-            let periods =
-                switch self {
-                case .day: 365
-                case .week: 52
-                case .month: 12
-                case .year: 1
-                }
-            return (annual + periods / 2) / periods
-        }
-    }
-
     @ObservableState
     struct State: Equatable {
         var budgetStatus = BudgetStatus.loading
@@ -179,7 +164,6 @@ struct Overview {
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
         @Shared(.hidesAmounts) var hidesAmounts
-        var period = Period.month
         let user: User
 
         var activeExpenseCount: Int? {
@@ -201,7 +185,7 @@ struct Overview {
             case .failed:
                 incomeStatus = .failed
             case .loaded(let budget?):
-                return .summary(Breakdown(annualExpenses: annualExpenses, budget: budget, period: period))
+                return .summary(Breakdown(annualExpenses: annualExpenses, budget: budget))
             case .loaded(nil):
                 incomeStatus = .missing
             case .loading:
@@ -209,7 +193,7 @@ struct Overview {
             case .offline:
                 incomeStatus = .offline
             }
-            return .expensesOnly(amount: period.amount(annual: annualExpenses), income: incomeStatus)
+            return .expensesOnly(amount: Breakdown.monthly(annualExpenses), income: incomeStatus)
         }
 
         var isPresenting: Bool {
@@ -225,7 +209,6 @@ struct Overview {
         case destination(PresentationAction<Destination.Action>)
         case expensesTileTapped
         case incomeTileTapped
-        case periodPickerChanged(Period)
         case savingsTileTapped
         case task
 
@@ -324,10 +307,6 @@ struct Overview {
 
             case .expensesTileTapped:
                 return .send(.delegate(.didSelectExpenses))
-
-            case .periodPickerChanged(let period):
-                state.period = period
-                return .none
 
             case .savingsTileTapped:
                 guard state.destination == nil, let budget = state.budget else { return .none }

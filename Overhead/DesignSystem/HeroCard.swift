@@ -16,10 +16,14 @@ struct HeroCard<Value: View, Caption: View>: View {
     let title: LocalizedStringResource
     let glow: HeroGlow
     let accessibilityValue: Text
+    var hasCard = true
     @ViewBuilder let value: Value
     @ViewBuilder let caption: Caption
 
-    @ScaledMetric(relativeTo: .largeTitle) private var valueSize = 48
+    @ScaledMetric(relativeTo: .largeTitle) private var cardValueSize = 48
+    @ScaledMetric(relativeTo: .largeTitle) private var plainValueSize = 58
+
+    private var valueSize: CGFloat { hasCard ? cardValueSize : plainValueSize }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -46,11 +50,13 @@ struct HeroCard<Value: View, Caption: View>: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 22)
+        .padding(.top, hasCard ? 20 : 28)
+        .padding(.bottom, hasCard ? 22 : 24)
         .background {
-            HeroBackground(glow: glow)
-                .animation(.glow(reducingMotion: reduceMotion), value: glow)
+            if hasCard {
+                HeroBackground(glow: glow)
+                    .animation(.glow(reducingMotion: reduceMotion), value: glow)
+            }
         }
     }
 }
