@@ -76,6 +76,10 @@ struct Home {
 
         var sessionOrigin: SessionOrigin { expenses.sessionOrigin }
 
+        subscript(isPresentingFailureOn screen: Screen?) -> Bool {
+            isPresentingFailure && self.screen == screen
+        }
+
         private var isPresentingAnythingElse: Bool {
             accountDeletion != nil || expenses.isPresenting || overview.isPresenting || settings.isPresenting
                 || isLoadingFirstContent || !hasDismissedWelcome
