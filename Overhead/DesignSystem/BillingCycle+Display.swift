@@ -15,13 +15,6 @@ extension BillingCycle {
         }
     }
 
-    var recurrence: LocalizedStringResource {
-        switch self {
-        case .monthly: "Every month"
-        case .yearly: "Once a year"
-        }
-    }
-
     func rate(_ amount: Text) -> Text {
         switch self {
         case .monthly: Text("\(amount) a month")

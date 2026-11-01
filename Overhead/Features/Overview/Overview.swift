@@ -163,7 +163,6 @@ struct Overview {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
-        @SharedReader(.hidesAmounts) var hidesAmounts
         let user: User
 
         var activeExpenseCount: Int? {

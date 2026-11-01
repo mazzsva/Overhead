@@ -53,19 +53,14 @@ struct ExpenseDetailView: View {
         return HeroCard(
             title: expense.billingCycle.costTitle,
             glow: .accent(.expense(isActive: expense.isActive)),
-            accessibilityValue: store.hidesAmounts ? Text("Hidden") : amount
+            accessibilityValue: amount
         ) {
-            AmountLabel(value: expense.amount.value, currency: store.currency, isHidden: store.hidesAmounts)
+            AmountLabel(value: expense.amount.value, currency: store.currency)
                 .foregroundStyle(expense.isActive ? .primary : .secondary)
         } caption: {
-            if store.hidesAmounts {
-                Text(expense.billingCycle.recurrence)
-            } else {
-                counterpart.rate(
-                    Text(
-                        expense.billingCycle.amount(expense.amount, in: counterpart), format: .currency(store.currency))
-                )
-            }
+            counterpart.rate(
+                Text(expense.billingCycle.amount(expense.amount, in: counterpart), format: .currency(store.currency))
+            )
         }
     }
 
