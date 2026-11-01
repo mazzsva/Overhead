@@ -31,8 +31,11 @@ struct Settings {
     @ObservableState
     struct State: Equatable {
         @Presents var alert: AlertState<Settings.Alert>?
+        var biometryType: BiometryType?
         @Shared(.currency) var currency
         var deletionStep: DeletionStep?
+        @Shared(.isAuthenticatingWithBiometrics) var isAuthenticatingWithBiometrics
+        @Shared(.locksApp) var locksApp
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
@@ -60,6 +63,8 @@ struct Settings {
         #endif
         case delegate(Delegate)
         case deleteAccountButtonTapped
+        case lockAuthenticationResponse(isOn: Bool, Result<Bool, any Error>)
+        case lockToggleChanged(Bool)
         case signOutButtonTapped
         case signOutFailed(any Error)
         case task
@@ -75,6 +80,7 @@ struct Settings {
     }
 
     @Dependency(\.authClient) var authClient
+    @Dependency(\.biometricsClient) var biometricsClient
     @Dependency(\.budgetClient) var budgetClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.currencyClient) var currencyClient
@@ -158,6 +164,38 @@ struct Settings {
                 state.alert = .confirmAccountDeletion
                 return .none
 
+            case .lockAuthenticationResponse(let isOn, .success(true)):
+                state.$isAuthenticatingWithBiometrics.withLock { $0 = false }
+                state.$locksApp.withLock { $0 = isOn }
+                return .none
+
+            case .lockAuthenticationResponse(_, .success(false)):
+                state.$isAuthenticatingWithBiometrics.withLock { $0 = false }
+                return .none
+
+            case .lockAuthenticationResponse(_, .failure(let error)):
+                state.$isAuthenticatingWithBiometrics.withLock { $0 = false }
+                logger.error("Confirming the app lock change failed: \(error, privacy: .public)")
+                return .none
+
+            case .lockToggleChanged(let isOn):
+                guard !state.isAuthenticatingWithBiometrics, state.biometryType != nil else { return .none }
+                state.$isAuthenticatingWithBiometrics.withLock { $0 = true }
+                return .run { send in
+                    await send(
+                        .lockAuthenticationResponse(
+                            isOn: isOn,
+                            Result {
+                                try await biometricsClient.authenticate(
+                                    isOn
+                                        ? String(localized: "Turn on the Overhead lock.")
+                                        : String(localized: "Turn off the Overhead lock.")
+                                )
+                            }
+                        )
+                    )
+                }
+
             case .signOutButtonTapped:
                 guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmSignOut
@@ -170,6 +208,7 @@ struct Settings {
                 return .none
 
             case .task:
+                state.biometryType = biometricsClient.biometryType()
                 return subscribeToCurrency(uid: state.user.uid)
             }
         }
