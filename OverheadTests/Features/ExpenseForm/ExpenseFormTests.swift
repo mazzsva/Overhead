@@ -218,65 +218,33 @@ extension BaseSuite {
         }
 
         @Test
-        func everyFormStartsOnTheName() {
-            let new = ExpenseForm.State()
-            expectNoDifference(new.step, .name)
-            expectNoDifference(new.focus, .name)
-
-            let existing = ExpenseForm.State(expense: .rent)
-            expectNoDifference(existing.step, .name)
-            expectNoDifference(existing.focus, .name)
+        func everyFormStartsOnTheAmount() {
+            expectNoDifference(ExpenseForm.State().focus, .amount)
+            expectNoDifference(ExpenseForm.State(expense: .rent).focus, .amount)
         }
 
         @Test
-        func theContinueButtonMovesToTheAmountOnlyWithAValidName() async {
+        func submittingTheNameMovesToAMissingAmount() async {
             let store = TestStore(initialState: ExpenseForm.State()) {
                 ExpenseForm()
             }
 
-            await store.send(.continueButtonTapped)
-            await store.send(
-                .name(.binding(.set(\.text, String(repeating: "a", count: ExpenseName.maximumLength + 1))))
-            ) {
-                $0.name.text = String(repeating: "a", count: ExpenseName.maximumLength + 1)
+            await store.send(.binding(.set(\.focus, .name))) {
+                $0.focus = .name
             }
-            await store.send(.continueButtonTapped)
-            await store.send(.name(.binding(.set(\.text, "Netflix")))) {
-                $0.name.text = "Netflix"
-            }
-            await store.send(.continueButtonTapped) {
+            await store.send(.nameFieldSubmitted) {
                 $0.focus = .amount
-                $0.step = .amount
             }
-            await store.send(.continueButtonTapped)
         }
 
         @Test
-        func submittingTheNameMovesToTheAmount() async {
+        func submittingTheNameWithAnAmountDismissesTheKeyboard() async {
             let store = TestStore(initialState: ExpenseForm.State(expense: .gym)) {
                 ExpenseForm()
             }
 
             await store.send(.nameFieldSubmitted) {
-                $0.focus = .amount
-                $0.step = .amount
-            }
-        }
-
-        @Test
-        func theBackButtonReturnsToTheName() async {
-            let store = TestStore(initialState: ExpenseForm.State(expense: .gym)) {
-                ExpenseForm()
-            }
-
-            await store.send(.backButtonTapped)
-            await store.send(.continueButtonTapped) {
-                $0.focus = .amount
-                $0.step = .amount
-            }
-            await store.send(.backButtonTapped) {
-                $0.focus = .name
-                $0.step = .name
+                $0.focus = nil
             }
         }
 
