@@ -12,19 +12,20 @@ Fixed-cost tracker in SwiftUI, TCA, and Firestore.
   <tr><td><b>Backend</b></td><td>Firebase</td></tr>
   <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
+  <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
 </table>
 
 ## Quality gates
 
-- **Tests:** 284 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 258 unit tests cover every reducer and never touch the network, and 26 integration tests run against local Firebase emulators.
+- **Tests:** 284 tests: 258 offline unit tests and 26 integration tests on Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
-- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on every pull request that is ready for review.
+- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on each ready pull request.
 - **Accessibility:** Every control has a VoiceOver label, and each amount reads as one value.
 - **Localization:** Every string the app shows is ready for translation.
 
 ## Engineering decisions
 
-**Rules that match the app.** The Firestore rules check the same limits as the form: a positive amount, a name of 1 to 100 characters, a supported currency, and savings never above income. A bad write fails on the server, not only in the UI.
+**Rules that match the app.** The Firestore rules enforce the form's limits: a positive amount, a name of 1 to 100 characters, a supported currency, and savings within income. A bad write fails on the server, not only in the UI.
 
 **Live sync.** The expenses and the budget each have one source of truth: a live Firestore listener backed by its local cache, so local changes appear at once, even offline, and sync to every other device.
 
