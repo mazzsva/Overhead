@@ -15,11 +15,6 @@ struct ExpenseForm {
         case name
     }
 
-    enum Step: Hashable {
-        case amount
-        case name
-    }
-
     @ObservableState
     struct State: Equatable {
         var amount: AmountField.State
@@ -27,13 +22,12 @@ struct ExpenseForm {
         let expense: Expense?
         var focus: Field?
         var name: NameField.State
-        var step = Step.name
 
         init(expense: Expense? = nil) {
             amount = AmountField.State(expense?.amount)
             billingCycle = expense?.billingCycle ?? .monthly
             self.expense = expense
-            focus = .name
+            focus = .amount
             name = NameField.State(expense?.name)
         }
 
@@ -52,10 +46,8 @@ struct ExpenseForm {
 
     enum Action: BindableAction {
         case amount(AmountField.Action)
-        case backButtonTapped
         case billingCycleButtonTapped(BillingCycle)
         case binding(BindingAction<State>)
-        case continueButtonTapped
         case delegate(Delegate)
         case dismissButtonTapped
         case name(NameField.Action)
@@ -85,12 +77,6 @@ struct ExpenseForm {
             case .amount:
                 return .none
 
-            case .backButtonTapped:
-                guard state.step == .amount else { return .none }
-                state.step = .name
-                state.focus = .name
-                return .none
-
             case .billingCycleButtonTapped(let billingCycle):
                 state.billingCycle = billingCycle
                 return .none
@@ -98,10 +84,8 @@ struct ExpenseForm {
             case .binding:
                 return .none
 
-            case .continueButtonTapped, .nameFieldSubmitted:
-                guard state.step == .name, state.name.value != nil else { return .none }
-                state.step = .amount
-                state.focus = .amount
+            case .nameFieldSubmitted:
+                state.focus = state.amount.value == nil ? .amount : nil
                 return .none
 
             case .delegate:
