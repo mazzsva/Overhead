@@ -12,8 +12,8 @@ enum CornerRadius: CGFloat {
     case hero = 28
     case tile = 22
 
-    var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: rawValue, style: .continuous)
+    var shape: ConcentricRectangle {
+        ConcentricRectangle(corners: .concentric(minimum: .fixed(rawValue)))
     }
 }
 

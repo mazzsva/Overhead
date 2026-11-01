@@ -108,7 +108,7 @@ private struct HeroBackground: View {
             }
             .clipShape(shape)
             .overlay {
-                shape.strokeBorder(.primary.opacity(isDark ? 0.1 : 0.06), lineWidth: 0.5)
+                shape.stroke(.primary.opacity(isDark ? 0.1 : 0.06), lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(isDark ? 0 : 0.06), radius: 15, y: 10)
     }
