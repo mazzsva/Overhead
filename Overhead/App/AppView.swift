@@ -17,10 +17,10 @@ struct AppView: View {
         ZStack {
             if let sceneStore = store.scope(state: \.scene, action: \.scene) {
                 switch sceneStore.case {
+                case .home(let homeStore):
+                    HomeView(store: homeStore)
                 case .signIn(let signInStore):
                     SignInView(store: signInStore)
-                case .tabs(let tabsStore):
-                    TabsView(store: tabsStore)
                 }
             } else {
                 Color(.systemGroupedBackground)
@@ -33,12 +33,9 @@ struct AppView: View {
                 .interactiveDismissDisabled()
         }
         .task { await store.send(.task).finish() }
-        .onChange(of: scenePhase) { _, newPhase in scenePhaseChanged(to: newPhase) }
-    }
-
-    private func scenePhaseChanged(to newPhase: ScenePhase) {
-        guard newPhase == .active else { return }
-        store.send(.appBecameActive)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active { store.send(.appBecameActive) }
+        }
     }
 }
 

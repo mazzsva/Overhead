@@ -1,5 +1,5 @@
 //
-//  TabsView.swift
+//  HomeView.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 01/10/26.
@@ -8,8 +8,8 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct TabsView: View {
-    @Bindable var store: StoreOf<Tabs>
+struct HomeView: View {
+    @Bindable var store: StoreOf<Home>
 
     var body: some View {
         TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
@@ -37,9 +37,9 @@ struct TabsView: View {
 }
 
 #Preview {
-    TabsView(
-        store: Store(initialState: Tabs.State(user: .mock)) {
-            Tabs()
+    HomeView(
+        store: Store(initialState: Home.State(user: .mock)) {
+            Home()
         }
     )
 }

@@ -1,5 +1,5 @@
 //
-//  Tabs.swift
+//  Home.swift
 //  Overhead
 //
 //  Created by Lorenzo Mazzarotto on 01/10/26.
@@ -9,7 +9,7 @@ import ComposableArchitecture
 import Foundation
 
 @Reducer
-struct Tabs {
+struct Home {
     enum FailedOperation: Hashable {
         case budget(Overview.BudgetChange)
         case deleteExpense
@@ -25,6 +25,7 @@ struct Tabs {
 
     @ObservableState
     struct State: Equatable {
+        @Presents var accountDeletion: AccountDeletion.State?
         var expenses: Expenses.State
         var failedOperations: Set<FailedOperation> = []
         @SharedReader(.hasDismissedWelcome) var hasDismissedWelcome
@@ -62,25 +63,26 @@ struct Tabs {
             }
         }
 
-        var isDeletingAccount: Bool { settings.isDeletingAccount }
+        var isDeletingAccount: Bool { accountDeletion != nil }
 
-        var isLoadingFirstExpenses: Bool { expenses.isLoadingFirstExpenses }
+        var isLoadingFirstContent: Bool { expenses.isLoadingFirstExpenses }
 
         var isPresentingFailure: Bool {
             !failedOperations.isEmpty && !isPresentingAnythingElse
         }
 
-        var isReauthenticating: Bool { settings.isReauthenticating }
+        var isReauthenticating: Bool { accountDeletion?.step == .reauthenticating }
 
         var sessionOrigin: SessionOrigin { expenses.sessionOrigin }
 
         private var isPresentingAnythingElse: Bool {
-            expenses.isPresenting || overview.isPresenting || settings.isPresenting || isLoadingFirstExpenses
-                || !hasDismissedWelcome
+            accountDeletion != nil || expenses.isPresenting || overview.isPresenting || settings.isPresenting
+                || isLoadingFirstContent || !hasDismissedWelcome
         }
     }
 
     enum Action {
+        case accountDeletion(PresentationAction<AccountDeletion.Action>)
         case expenses(Expenses.Action)
         case failurePresentationChanged(Bool)
         case overview(Overview.Action)
@@ -100,6 +102,20 @@ struct Tabs {
         }
         Reduce { state, action in
             switch action {
+            case .accountDeletion(.presented(.delegate(.didCancel))):
+                state.accountDeletion = nil
+                state.selectedTab = .settings
+                return .none
+
+            case .accountDeletion(.presented(.delegate(.didFail(let failure)))):
+                state.accountDeletion = nil
+                state.settings.destination = .alert(.accountDeletionFailed(failure))
+                state.selectedTab = .settings
+                return .none
+
+            case .accountDeletion:
+                return .none
+
             case .expenses(.delegate(.didFailToDelete)):
                 state.failedOperations.insert(.deleteExpense)
                 return .none
@@ -124,17 +140,24 @@ struct Tabs {
                 state.selectedTab = .expenses
                 return .none
 
+            case .selectedTabChanged(let tab):
+                state.selectedTab = tab
+                return .none
+
             case .settings(.delegate(.didFailToSaveCurrency)):
                 state.failedOperations.insert(.saveCurrency)
                 return .none
 
+            case .settings(.delegate(.didConfirmAccountDeletion)):
+                state.accountDeletion = AccountDeletion.State(uid: state.user.uid)
+                return .send(.accountDeletion(.presented(.deletionConfirmed)))
+
             case .expenses, .overview, .settings:
                 return .none
-
-            case .selectedTabChanged(let tab):
-                state.selectedTab = tab
-                return .none
             }
+        }
+        .ifLet(\.$accountDeletion, action: \.accountDeletion) {
+            AccountDeletion()
         }
     }
 }

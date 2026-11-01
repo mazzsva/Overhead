@@ -25,6 +25,8 @@ struct SettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
+                } footer: {
+                    Text("Using Sign in with Apple")
                 }
                 Section {
                     Picker("Currency", selection: $store.currency.sending(\.currencyPickerChanged)) {
@@ -33,7 +35,6 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .disabled(store.isDeletingAccount)
                 if let biometryType = store.biometryType {
                     Section {
                         Toggle(isOn: $store.locksApp.sending(\.lockToggleChanged)) {
@@ -43,17 +44,18 @@ struct SettingsView: View {
                     } footer: {
                         Text("Overhead locks when you leave the app.")
                     }
-                    .disabled(store.isDeletingAccount)
                 }
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
                     }
+                }
+                .listSectionSpacing(.custom(8))
+                Section {
                     Button("Delete Account", role: .destructive) {
                         store.send(.deleteAccountButtonTapped)
                     }
                 }
-                .disabled(store.isDeletingAccount)
                 #if DEBUG
                 Section("Developer") {
                     Button {
@@ -70,7 +72,6 @@ struct SettingsView: View {
                         Text(verbatim: "Reset hasDismissedWelcome")
                     }
                 }
-                .disabled(store.isDeletingAccount)
                 #endif
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -87,7 +88,7 @@ struct SettingsView: View {
                         .fontWeight(.bold)
                 }
             }
-            .alert($store.scope(state: \.alert, action: \.alert))
+            .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         }
         .safeAreaBar(edge: .bottom) {
             Text("Version \(Bundle.main.appVersion)")

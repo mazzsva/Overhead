@@ -11,29 +11,21 @@ import os
 
 @Reducer
 struct Settings {
-    enum AccountDeletionError: Error {
-        case missingAuthorizationCode
-        case timedOut
-    }
-
     enum Alert: Equatable {
         case confirmAccountDeletion
         case confirmSignOut
     }
 
-    enum DeletionStep: Equatable {
-        case budgetDeleted
-        case credentialRevoked
-        case deleting
-        case reauthenticating
+    @Reducer
+    enum Destination {
+        case alert(AlertState<Settings.Alert>)
     }
 
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<Settings.Alert>?
         var biometryType: BiometryType?
         @Shared(.currency) var currency
-        var deletionStep: DeletionStep?
+        @Presents var destination: Destination.State?
         @Shared(.isAuthenticatingWithBiometrics) var isAuthenticatingWithBiometrics
         @Shared(.locksApp) var locksApp
         #if DEBUG
@@ -41,19 +33,10 @@ struct Settings {
         #endif
         let user: User
 
-        var isDeletingAccount: Bool { deletionStep != nil }
-
-        var isPresenting: Bool { alert != nil || isDeletingAccount }
-
-        var isReauthenticating: Bool { deletionStep == .reauthenticating }
+        var isPresenting: Bool { destination != nil }
     }
 
     enum Action {
-        case accountDeletionFailed(any Error)
-        case alert(PresentationAction<Alert>)
-        case appleCredentialReceived
-        case appleCredentialRevoked
-        case budgetDeleted
         case currencyPickerChanged(Currency)
         case currencyUpdated(CurrencySnapshot)
         #if DEBUG
@@ -63,6 +46,7 @@ struct Settings {
         #endif
         case delegate(Delegate)
         case deleteAccountButtonTapped
+        case destination(PresentationAction<Destination.Action>)
         case lockAuthenticationResponse(isOn: Bool, Result<Bool, any Error>)
         case lockToggleChanged(Bool)
         case signOutButtonTapped
@@ -71,6 +55,7 @@ struct Settings {
 
         @CasePathable
         enum Delegate {
+            case didConfirmAccountDeletion
             case didFailToSaveCurrency
         }
     }
@@ -81,52 +66,16 @@ struct Settings {
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.biometricsClient) var biometricsClient
-    @Dependency(\.budgetClient) var budgetClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.currencyClient) var currencyClient
+    #if DEBUG
     @Dependency(\.expensesClient) var expensesClient
+    #endif
     @Dependency(\.locale) var locale
-    @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .accountDeletionFailed(let error):
-                guard state.deletionStep != .credentialRevoked else {
-                    logger.error(
-                        "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
-                    return signOut()
-                }
-                let hasDeletedUserData = state.deletionStep == .budgetDeleted
-                state.deletionStep = nil
-                if !error.isSignInWithAppleCancellation {
-                    logger.error("Account deletion failed: \(error, privacy: .public)")
-                    state.alert = hasDeletedUserData ? .accountDeletionUnfinished : .accountDeletionFailed
-                }
-                return .none
-
-            case .alert(.presented(.confirmAccountDeletion)):
-                state.deletionStep = .reauthenticating
-                return deleteAccount(uid: state.user.uid)
-
-            case .alert(.presented(.confirmSignOut)):
-                return signOut()
-
-            case .alert:
-                return .none
-
-            case .appleCredentialReceived:
-                state.deletionStep = .deleting
-                return .none
-
-            case .appleCredentialRevoked:
-                state.deletionStep = .credentialRevoked
-                return .none
-
-            case .budgetDeleted:
-                state.deletionStep = .budgetDeleted
-                return .none
-
             case .currencyPickerChanged(let currency):
                 state.$currency.withLock { $0 = currency }
                 let uid = state.user.uid
@@ -160,8 +109,20 @@ struct Settings {
                 return .none
 
             case .deleteAccountButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
-                state.alert = .confirmAccountDeletion
+                state.destination = .alert(.confirmAccountDeletion)
+                return .none
+
+            case .destination(.presented(.alert(.confirmAccountDeletion))):
+                return .send(.delegate(.didConfirmAccountDeletion))
+
+            case .destination(.presented(.alert(.confirmSignOut))):
+                return .run { _ in
+                    try await authClient.signOut()
+                } catch: { error, send in
+                    await send(.signOutFailed(error))
+                }
+
+            case .destination:
                 return .none
 
             case .lockAuthenticationResponse(let isOn, .success(true)):
@@ -197,14 +158,12 @@ struct Settings {
                 }
 
             case .signOutButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
-                state.alert = .confirmSignOut
+                state.destination = .alert(.confirmSignOut)
                 return .none
 
             case .signOutFailed(let error):
-                state.deletionStep = nil
                 logger.error("Sign out failed: \(error, privacy: .public)")
-                state.alert = .signOutFailed
+                state.destination = .alert(.signOutFailed)
                 return .none
 
             case .task:
@@ -212,7 +171,7 @@ struct Settings {
                 return subscribeToCurrency(uid: state.user.uid)
             }
         }
-        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$destination, action: \.destination)
     }
 
     #if DEBUG
@@ -235,46 +194,6 @@ struct Settings {
     }
     #endif
 
-    private func deleteAccount(uid: String) -> Effect<Action> {
-        .run { send in
-            let credential = try await signInWithAppleClient.requestCredential()
-            guard let authorizationCode = credential.authorizationCode else {
-                throw AccountDeletionError.missingAuthorizationCode
-            }
-            await send(.appleCredentialReceived)
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    try await clock.sleep(for: .seconds(60))
-                    throw AccountDeletionError.timedOut
-                }
-                group.addTask {
-                    try await authClient.reauthenticate(credential: credential)
-                    try Task.checkCancellation()
-                    try await budgetClient.delete(uid: uid)
-                    await send(.budgetDeleted)
-                    try await expensesClient.deleteAll(uid: uid)
-                    try Task.checkCancellation()
-                    try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
-                    await send(.appleCredentialRevoked)
-                    try Task.checkCancellation()
-                    try await authClient.deleteAccount()
-                }
-                try await group.next()
-                group.cancelAll()
-            }
-        } catch: { error, send in
-            await send(.accountDeletionFailed(error))
-        }
-    }
-
-    private func signOut() -> Effect<Action> {
-        .run { _ in
-            try await authClient.signOut()
-        } catch: { error, send in
-            await send(.signOutFailed(error))
-        }
-    }
-
     private func subscribeToCurrency(uid: String) -> Effect<Action> {
         .run { send in
             while true {
@@ -294,17 +213,24 @@ struct Settings {
     }
 }
 
-extension AlertState where Action == Settings.Alert {
-    static let accountDeletionFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your account couldn't be deleted.")
-    }
+extension Settings.Destination.State: Equatable {}
 
-    static let accountDeletionUnfinished = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your account couldn't be fully deleted.")
+extension AlertState where Action == Settings.Alert {
+    static func accountDeletionFailed(_ failure: AccountDeletion.Failure) -> AlertState {
+        AlertState {
+            TextState("Something Went Wrong")
+        } message: {
+            switch failure {
+            case .connectionFailed:
+                TextState("Your account couldn't be deleted. Check your connection and try again.")
+            case .notDeleted:
+                TextState("Your account couldn't be deleted.")
+            case .notFullyDeleted:
+                TextState("Your account couldn't be fully deleted.")
+            case .notSignedOut:
+                TextState("You couldn't be signed out.")
+            }
+        }
     }
 
     static let confirmAccountDeletion = AlertState {

@@ -259,6 +259,9 @@
     "Unlock Overhead." : {
 
     },
+    "Using Sign in with Apple" : {
+
+    },
     "Version %@" : {
 
     },
@@ -281,6 +284,9 @@
 
     },
     "Your account couldn't be deleted." : {
+
+    },
+    "Your account couldn't be deleted. Check your connection and try again." : {
 
     },
     "Your account couldn't be fully deleted." : {

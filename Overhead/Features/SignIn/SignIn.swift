@@ -13,15 +13,15 @@ import os
 struct SignIn {
     enum Alert: Equatable {}
 
+    enum Step: Equatable {
+        case awaitingAuthorization
+        case signingIn
+    }
+
     @ObservableState
     struct State: Equatable {
         @Presents var alert: AlertState<SignIn.Alert>?
         var step: Step?
-
-        enum Step: Equatable {
-            case awaitingAuthorization
-            case signingIn
-        }
 
         var isAuthenticating: Bool { step != nil }
     }

@@ -22,7 +22,7 @@ private struct AppLockModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(AppLockWindow(isVisible: store.isCovering && session.scene.is(\.tabs), store: store))
+            .background(AppLockWindow(isVisible: store.isCovering && session.scene.is(\.home), store: store))
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
