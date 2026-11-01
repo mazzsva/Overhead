@@ -66,7 +66,7 @@ struct NameFieldView<Field: Hashable & Sendable>: View {
         .cardBackground(.control)
         .overlay {
             CornerRadius.control.shape
-                .strokeBorder(Color.critical.opacity(isInvalid ? 0.7 : 0), lineWidth: 1.5)
+                .stroke(Color.critical.opacity(isInvalid ? 0.7 : 0), lineWidth: 1.5)
         }
         .contentShape(.rect)
         .onTapGesture { focus.wrappedValue = field }
