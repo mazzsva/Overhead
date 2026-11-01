@@ -16,15 +16,13 @@ Fixed-cost tracker in SwiftUI, TCA, and Firestore.
 
 ## Quality gates
 
-- **Tests:** 298 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 272 unit tests cover every reducer and never touch the network, and 26 integration tests run against local Firebase emulators.
+- **Tests:** 284 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 258 unit tests cover every reducer and never touch the network, and 26 integration tests run against local Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
 - **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each amount reads as one value, or as "Hidden" when it is blurred.
 - **Localization:** Every string the app shows is ready for translation.
 
 ## Engineering decisions
-
-**App lock.** Face ID, Touch ID, Optic ID, or the passcode can lock the app. The lock screen sits in its own window above everything, including sheets, and it covers the app as soon as the app becomes inactive, so the app switcher never shows an amount.
 
 **Rules that match the app.** The Firestore rules check the same limits as the form: a positive amount, a name of 1 to 100 characters, a supported currency, and savings never above income. A bad write fails on the server, not only in the UI.
 
