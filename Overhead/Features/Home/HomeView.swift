@@ -27,20 +27,19 @@ struct HomeView: View {
                     SettingsView(store: store.scope(state: \.settings, action: \.settings))
                 }
             }
-            .failureAlert(isPresented: failureBinding(on: screen), message: store.failureMessage)
+            .failureAlert(
+                isPresented: $store[isPresentingFailureOn: screen].sending(\.failurePresentationChanged),
+                message: store.failureMessage
+            )
             .navigationTransition(.zoom(sourceID: screen, in: namespace))
         }
-        .failureAlert(isPresented: failureBinding(on: nil), message: store.failureMessage)
+        .failureAlert(
+            isPresented: $store[isPresentingFailureOn: nil].sending(\.failurePresentationChanged),
+            message: store.failureMessage
+        )
         .task { await store.send(.expenses(.task)).finish() }
         .task { await store.send(.overview(.task)).finish() }
         .task { await store.send(.settings(.task)).finish() }
-    }
-
-    private func failureBinding(on screen: Home.Screen?) -> Binding<Bool> {
-        Binding(
-            get: { store.isPresentingFailure && store.screen == screen },
-            set: { store.send(.failurePresentationChanged($0)) }
-        )
     }
 }
 
