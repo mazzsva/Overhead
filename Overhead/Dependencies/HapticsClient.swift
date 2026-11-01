@@ -11,7 +11,8 @@ import UIKit
 
 @DependencyClient
 struct HapticsClient: Sendable {
-    var impact: @Sendable () async -> Void
+    var selection: @Sendable () async -> Void
+    var softImpact: @Sendable () async -> Void
     var success: @Sendable () async -> Void
     var warning: @Sendable () async -> Void
 }
@@ -19,8 +20,11 @@ struct HapticsClient: Sendable {
 extension HapticsClient: DependencyKey {
     static var liveValue: HapticsClient {
         HapticsClient(
-            impact: {
-                await MainActor.run { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+            selection: {
+                await MainActor.run { UISelectionFeedbackGenerator().selectionChanged() }
+            },
+            softImpact: {
+                await MainActor.run { UIImpactFeedbackGenerator(style: .soft).impactOccurred() }
             },
             success: {
                 await MainActor.run { UINotificationFeedbackGenerator().notificationOccurred(.success) }
@@ -32,7 +36,7 @@ extension HapticsClient: DependencyKey {
     }
 
     static var previewValue: HapticsClient {
-        HapticsClient(impact: {}, success: {}, warning: {})
+        HapticsClient(selection: {}, softImpact: {}, success: {}, warning: {})
     }
 
     static var testValue: HapticsClient {

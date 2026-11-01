@@ -130,7 +130,7 @@ struct Settings {
 
             case .hidesAmountsToggleChanged(let hidesAmounts):
                 state.$hidesAmounts.withLock { $0 = hidesAmounts }
-                return .run { _ in await hapticsClient.impact() }
+                return .run { _ in await hapticsClient.selection() }
 
             case .lockAuthenticationResponse(let isOn, .success(true)):
                 state.$isAuthenticatingWithBiometrics.withLock { $0 = false }

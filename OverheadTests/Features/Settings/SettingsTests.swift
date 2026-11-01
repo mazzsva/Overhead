@@ -34,11 +34,11 @@ extension BaseSuite {
         @Test
         func theHideAmountsToggleHidesAndShowsTheAmounts() async {
             @Shared(.hidesAmounts) var hidesAmounts = false
-            let impacts = LockIsolated(0)
+            let selections = LockIsolated(0)
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
-                $0.hapticsClient.impact = { impacts.withValue { $0 += 1 } }
+                $0.hapticsClient.selection = { selections.withValue { $0 += 1 } }
             }
 
             await store.send(.hidesAmountsToggleChanged(true)) {
@@ -48,7 +48,7 @@ extension BaseSuite {
                 $0.$hidesAmounts.withLock { $0 = false }
             }
             await store.finish()
-            expectNoDifference(impacts.value, 2)
+            expectNoDifference(selections.value, 2)
         }
 
         @Test
