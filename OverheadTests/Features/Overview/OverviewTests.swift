@@ -62,7 +62,7 @@ extension BaseSuite {
         func aLoadedBudgetShowsTheSummary() {
             expectNoDifference(
                 makeState(.loaded(.mock), expenses: Expense.mocks).content,
-                .summary(Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month))
+                .summary(Overview.Breakdown(annualExpenses: 11880, budget: .mock))
             )
         }
 
@@ -72,28 +72,10 @@ extension BaseSuite {
         }
 
         @Test
-        func withoutIncomeTheContentShowsTheExpensesForThePeriod() {
-            var state = makeState(.loaded(nil), expenses: [expense(1300, .yearly, id: 10)])
-            state.period = .week
+        func withoutIncomeTheContentShowsTheMonthlyExpenses() {
+            let state = makeState(.loaded(nil), expenses: [expense(1300, .yearly, id: 10)])
 
-            expectNoDifference(state.content, .expensesOnly(amount: 25, income: .missing))
-        }
-
-        @Test
-        func thePeriodIsMonthByDefault() {
-            expectNoDifference(makeState().period, .month)
-        }
-
-        @Test
-        func theChosenPeriodIsNotRemembered() async {
-            let store = TestStore(initialState: makeState()) {
-                Overview()
-            }
-
-            await store.send(.periodPickerChanged(.week)) {
-                $0.period = .week
-            }
-            expectNoDifference(makeState().period, .month)
+            expectNoDifference(state.content, .expensesOnly(amount: 108, income: .missing))
         }
 
         @Test
@@ -117,7 +99,7 @@ extension BaseSuite {
 
         @Test
         func theBreakdownSplitsTheIncome() {
-            let breakdown = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 11880, budget: .mock)
 
             expectNoDifference(breakdown.income, 3000)
             expectNoDifference(breakdown.expenses, .init(amount: 990, share: percent(33)))
@@ -128,42 +110,21 @@ extension BaseSuite {
         }
 
         @Test
-        func theWeekShowsTheExactWeeklyAmount() {
-            let breakdown = Overview.Breakdown(annualExpenses: 25 * 52, budget: .mock, period: .week)
-
-            expectNoDifference(breakdown.expenses.amount, 25)
-        }
-
-        @Test(
-            arguments: [
-                (Overview.Period.day, 105, 39, 15),
-                (.week, 738, 271, 104),
-                (.month, 3200, 1174, 450),
-                (.year, 38400, 14091, 5400),
-            ]
-        )
-        func eachPeriodRoundsEachPartOnceAndKeepsTheSum(
-            period: Overview.Period,
-            income: Int,
-            expenses: Int,
-            savings: Int
-        ) throws {
+        func theBreakdownRoundsEachPartOnceAndKeepsTheSum() throws {
             let budget = try #require(Budget(income: 3200, investment: 450))
-            let breakdown = Overview.Breakdown(
-                annualExpenses: 14091, budget: budget, period: period)
+            let breakdown = Overview.Breakdown(annualExpenses: 14091, budget: budget)
 
-            expectNoDifference(breakdown.income, income)
-            expectNoDifference(breakdown.expenses.amount, expenses)
-            expectNoDifference(breakdown.savings?.amount, savings)
-            expectNoDifference(breakdown.committed.amount, expenses + savings)
-            expectNoDifference(breakdown.available.amount, income - expenses - savings)
+            expectNoDifference(breakdown.income, 3200)
+            expectNoDifference(breakdown.expenses.amount, 1174)
+            expectNoDifference(breakdown.savings?.amount, 450)
+            expectNoDifference(breakdown.committed.amount, 1624)
+            expectNoDifference(breakdown.available.amount, 1576)
         }
 
-        @Test(arguments: Overview.Period.allCases)
-        func aBudgetDoesNotGoOverWhenOnlyTheRoundingDoes(period: Overview.Period) throws {
+        @Test
+        func aBudgetDoesNotGoOverWhenOnlyTheRoundingDoes() throws {
             let budget = try #require(Budget(income: 2000, investment: 1000))
-            let breakdown = Overview.Breakdown(
-                annualExpenses: 11999, budget: budget, period: period)
+            let breakdown = Overview.Breakdown(annualExpenses: 11999, budget: budget)
 
             #expect(!breakdown.isOverBudget)
             #expect(breakdown.available.amount >= 0)
@@ -173,7 +134,7 @@ extension BaseSuite {
         @Test
         func tinyPartsShowAsLessThanOnePercent() throws {
             let budget = try #require(Budget(income: 10000, investment: 5))
-            let breakdown = Overview.Breakdown(annualExpenses: 12, budget: budget, period: .day)
+            let breakdown = Overview.Breakdown(annualExpenses: 12, budget: budget)
 
             #expect(breakdown.hasExpenses)
             expectNoDifference(breakdown.expensesShareLabel, .lessThanOnePercent)
@@ -185,7 +146,7 @@ extension BaseSuite {
         @Test
         func withoutCostsTheIncomeIsAllAvailable() throws {
             let budget = try #require(Budget(income: 3000, investment: nil))
-            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: budget)
 
             #expect(!breakdown.hasExpenses)
             expectNoDifference(breakdown.expensesShareLabel, .percent(0))
@@ -195,7 +156,7 @@ extension BaseSuite {
         @Test
         func costsEqualToTheIncomeAreFullyCommitted() throws {
             let budget = try #require(Budget(income: 3000, investment: nil))
-            let breakdown = Overview.Breakdown(annualExpenses: 36000, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 36000, budget: budget)
 
             #expect(!breakdown.isOverBudget)
             expectNoDifference(breakdown.available.amount, 0)
@@ -206,7 +167,7 @@ extension BaseSuite {
         @Test
         func roundedSharesThatReachTheWholeStillShowAFullyCommittedBudget() throws {
             let budget = try #require(Budget(income: 1000, investment: 495))
-            let breakdown = Overview.Breakdown(annualExpenses: 6060, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 6060, budget: budget)
 
             expectNoDifference(breakdown.committed.share, percent(101))
             expectNoDifference(breakdown.committedShareLabel, .percent(1))
@@ -215,7 +176,7 @@ extension BaseSuite {
         @Test
         func roundedSharesThatStayAtTheWholeStillShowAnOverBudget() throws {
             let budget = try #require(Budget(income: 1000, investment: nil))
-            let breakdown = Overview.Breakdown(annualExpenses: 12001, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 12001, budget: budget)
 
             expectNoDifference(breakdown.committed.share, 1)
             #expect(breakdown.isOverBudget)
@@ -225,7 +186,7 @@ extension BaseSuite {
 
         @Test
         func withoutExpensesTheCommittedShareIsTheSavings() {
-            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: .mock, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 0, budget: .mock)
 
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(15)))
         }
@@ -233,28 +194,18 @@ extension BaseSuite {
         @Test
         func expensesAboveTheIncomeShowSharesAboveTheWhole() throws {
             let budget = try #require(Budget(income: 1000, investment: 300))
-            let breakdown = Overview.Breakdown(annualExpenses: 14400, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 14400, budget: budget)
 
             expectNoDifference(breakdown.available.amount, -500)
             expectNoDifference(breakdown.committedShareLabel, .percent(percent(150)))
             expectNoDifference(breakdown.availableShareLabel, .percent(percent(50)))
         }
 
-        @Test(arguments: Overview.Period.allCases)
-        func theSharesDoNotDependOnThePeriod(period: Overview.Period) {
-            let month = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: .month)
-            let breakdown = Overview.Breakdown(annualExpenses: 11880, budget: .mock, period: period)
-
-            expectNoDifference(breakdown.expenses.share, month.expenses.share)
-            expectNoDifference(breakdown.savings?.share, month.savings?.share)
-            expectNoDifference(breakdown.available.share, month.available.share)
-        }
-
         @Test
         func theSharesAlwaysAddUpToTheWhole() throws {
             let budget = try #require(Budget(income: 3000, investment: 1001))
             let breakdown = Overview.Breakdown(
-                annualExpenses: 12006, budget: budget, period: .month)
+                annualExpenses: 12006, budget: budget)
 
             expectNoDifference(breakdown.expenses.share, percent(33))
             expectNoDifference(breakdown.savings?.share, percent(33))
@@ -265,7 +216,7 @@ extension BaseSuite {
         @Test
         func aBudgetWithoutSavingsHasNoSavingsLine() throws {
             let budget = try #require(Budget(income: 3000, investment: nil))
-            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget)
 
             expectNoDifference(breakdown.savings, nil)
             expectNoDifference(breakdown.committed, .init(amount: 1000, share: percent(33)))
@@ -275,7 +226,7 @@ extension BaseSuite {
         @Test
         func costsAboveTheIncomeMakeTheAvailableAmountNegative() throws {
             let budget = try #require(Budget(income: 900, investment: 100))
-            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget, period: .month)
+            let breakdown = Overview.Breakdown(annualExpenses: 12000, budget: budget)
 
             expectNoDifference(breakdown.available.amount, -200)
             #expect(breakdown.isOverBudget)
