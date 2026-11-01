@@ -11,6 +11,7 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var store: StoreOf<Settings>
 
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
 
     var body: some View {
@@ -35,13 +36,18 @@ struct SettingsView: View {
                         }
                     }
                 }
-                if let biometryType = store.biometryType {
-                    Section {
+                Section {
+                    Toggle(isOn: $store.hidesAmounts.sending(\.hidesAmountsToggleChanged)) {
+                        Label("Hide Amounts", systemImage: "eye.slash")
+                    }
+                    if let biometryType = store.biometryType {
                         Toggle(isOn: $store.locksApp.sending(\.lockToggleChanged)) {
                             Label(String(localized: biometryType.lockTitle), systemImage: biometryType.systemImage)
                         }
                         .disabled(store.isAuthenticatingWithBiometrics)
-                    } footer: {
+                    }
+                } footer: {
+                    if store.biometryType != nil {
                         Text("Overhead locks when you leave the app.")
                     }
                 }
@@ -74,28 +80,22 @@ struct SettingsView: View {
                 }
                 #endif
             }
+            .navigationBarBackButtonHidden()
             .scrollBounceBehavior(.basedOnSize)
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
-            .contentMargins(.top, 8, for: .scrollContent)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarRole(.editor)
+            .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .title) {
-                    Text("Settings")
-                        .font(.title)
-                        .fontWeight(.bold)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Dismiss", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .foregroundStyle(.secondary)
+                    .labelStyle(.iconOnly)
                 }
             }
             .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
-        }
-        .safeAreaBar(edge: .bottom) {
-            Text("Version \(Bundle.main.appVersion)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom)
         }
     }
 }

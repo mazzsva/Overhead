@@ -26,6 +26,7 @@ struct Settings {
         var biometryType: BiometryType?
         @Shared(.currency) var currency
         @Presents var destination: Destination.State?
+        @Shared(.hidesAmounts) var hidesAmounts
         @Shared(.isAuthenticatingWithBiometrics) var isAuthenticatingWithBiometrics
         @Shared(.locksApp) var locksApp
         #if DEBUG
@@ -47,6 +48,7 @@ struct Settings {
         case delegate(Delegate)
         case deleteAccountButtonTapped
         case destination(PresentationAction<Destination.Action>)
+        case hidesAmountsToggleChanged(Bool)
         case lockAuthenticationResponse(isOn: Bool, Result<Bool, any Error>)
         case lockToggleChanged(Bool)
         case signOutButtonTapped
@@ -71,6 +73,7 @@ struct Settings {
     #if DEBUG
     @Dependency(\.expensesClient) var expensesClient
     #endif
+    @Dependency(\.hapticsClient) var hapticsClient
     @Dependency(\.locale) var locale
 
     var body: some Reducer<State, Action> {
@@ -124,6 +127,10 @@ struct Settings {
 
             case .destination:
                 return .none
+
+            case .hidesAmountsToggleChanged(let hidesAmounts):
+                state.$hidesAmounts.withLock { $0 = hidesAmounts }
+                return .run { _ in await hapticsClient.impact() }
 
             case .lockAuthenticationResponse(let isOn, .success(true)):
                 state.$isAuthenticatingWithBiometrics.withLock { $0 = false }

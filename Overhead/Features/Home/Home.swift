@@ -17,10 +17,11 @@ struct Home {
         case saveExpense
     }
 
-    enum Tab: Hashable {
+    enum Screen: Hashable, Identifiable {
         case expenses
-        case overview
         case settings
+
+        var id: Self { self }
     }
 
     @ObservableState
@@ -30,7 +31,7 @@ struct Home {
         var failedOperations: Set<FailedOperation> = []
         @SharedReader(.hasDismissedWelcome) var hasDismissedWelcome
         var overview: Overview.State
-        var selectedTab = Tab.overview
+        var screen: Screen?
         var settings: Settings.State
         let user: User
 
@@ -86,7 +87,7 @@ struct Home {
         case expenses(Expenses.Action)
         case failurePresentationChanged(Bool)
         case overview(Overview.Action)
-        case selectedTabChanged(Tab)
+        case screenChanged(Home.Screen?)
         case settings(Settings.Action)
     }
 
@@ -104,13 +105,13 @@ struct Home {
             switch action {
             case .accountDeletion(.presented(.delegate(.didCancel))):
                 state.accountDeletion = nil
-                state.selectedTab = .settings
+                state.screen = .settings
                 return .none
 
             case .accountDeletion(.presented(.delegate(.didFail(let failure)))):
                 state.accountDeletion = nil
                 state.settings.destination = .alert(.accountDeletionFailed(failure))
-                state.selectedTab = .settings
+                state.screen = .settings
                 return .none
 
             case .accountDeletion:
@@ -137,11 +138,15 @@ struct Home {
                 return .none
 
             case .overview(.delegate(.didSelectExpenses)):
-                state.selectedTab = .expenses
+                state.screen = .expenses
                 return .none
 
-            case .selectedTabChanged(let tab):
-                state.selectedTab = tab
+            case .overview(.delegate(.didSelectSettings)):
+                state.screen = .settings
+                return .none
+
+            case .screenChanged(let screen):
+                state.screen = screen
                 return .none
 
             case .settings(.delegate(.didFailToSaveCurrency)):
@@ -149,10 +154,17 @@ struct Home {
                 return .none
 
             case .settings(.delegate(.didConfirmAccountDeletion)):
+                state.screen = nil
                 state.accountDeletion = AccountDeletion.State(uid: state.user.uid)
                 return .send(.accountDeletion(.presented(.deletionConfirmed)))
 
-            case .expenses, .overview, .settings:
+            case .settings:
+                if state.settings.destination != nil {
+                    state.screen = .settings
+                }
+                return .none
+
+            case .expenses, .overview:
                 return .none
             }
         }

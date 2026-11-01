@@ -10,6 +10,7 @@ import SwiftUI
 
 struct OverviewView: View {
     @Bindable var store: StoreOf<Overview>
+    let namespace: Namespace.ID
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -22,6 +23,7 @@ struct OverviewView: View {
                     }
                     .contentMargins(.top, 8, for: .scrollContent)
                     .contentMargins(.bottom, 24, for: .scrollContent)
+                    .scrollBounceBehavior(.basedOnSize)
                 } else {
                     ContentUnavailableView(
                         "Unable to Load Expenses",
@@ -41,13 +43,17 @@ struct OverviewView: View {
                         .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(
-                        store.hidesAmounts ? "Show Amounts" : "Hide Amounts",
-                        systemImage: store.hidesAmounts ? "eye.slash" : "eye"
-                    ) {
-                        store.send(.amountsVisibilityButtonTapped, animation: reduceMotion ? nil : .value)
+                    Button("Expenses", systemImage: "tray.full") {
+                        store.send(.expensesButtonTapped)
                     }
-                    .contentTransition(.symbolEffect(.replace))
+                    .matchedTransitionSource(id: Home.Screen.expenses, in: namespace)
+                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Settings", systemImage: "gearshape") {
+                        store.send(.settingsButtonTapped)
+                    }
+                    .matchedTransitionSource(id: Home.Screen.settings, in: namespace)
                 }
             }
         }
@@ -74,7 +80,7 @@ struct OverviewView: View {
                 currency: store.currency,
                 expenseCount: store.activeExpenseCount ?? 0,
                 isHidingAmounts: store.hidesAmounts,
-                onExpenses: { store.send(.expensesTileTapped) },
+                onExpenses: { store.send(.expensesButtonTapped) },
                 onIncome: { store.send(.incomeTileTapped) },
                 onSavings: { store.send(.savingsTileTapped) }
             )
@@ -367,6 +373,7 @@ private struct ShareBar: View {
 }
 
 #Preview {
+    @Previewable @Namespace var namespace
     OverviewView(
         store: Store(
             initialState: Overview.State(
@@ -376,11 +383,13 @@ private struct ShareBar: View {
             )
         ) {
             Overview()
-        }
+        },
+        namespace: namespace
     )
 }
 
 #Preview("Without Income") {
+    @Previewable @Namespace var namespace
     OverviewView(
         store: Store(
             initialState: Overview.State(
@@ -390,6 +399,7 @@ private struct ShareBar: View {
             )
         ) {
             Overview()
-        }
+        },
+        namespace: namespace
     )
 }

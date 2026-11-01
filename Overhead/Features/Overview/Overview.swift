@@ -163,7 +163,7 @@ struct Overview {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
-        @Shared(.hidesAmounts) var hidesAmounts
+        @SharedReader(.hidesAmounts) var hidesAmounts
         let user: User
 
         var activeExpenseCount: Int? {
@@ -202,20 +202,21 @@ struct Overview {
     }
 
     enum Action {
-        case amountsVisibilityButtonTapped
         case budgetStreamFailed
         case budgetUpdated(BudgetSnapshot)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
-        case expensesTileTapped
+        case expensesButtonTapped
         case incomeTileTapped
         case savingsTileTapped
+        case settingsButtonTapped
         case task
 
         @CasePathable
         enum Delegate {
             case didFailToChangeBudget(BudgetChange)
             case didSelectExpenses
+            case didSelectSettings
         }
     }
 
@@ -234,10 +235,6 @@ struct Overview {
                 guard state.destination == nil, case .loaded(let budget) = state.budgetStatus else { return .none }
                 state.destination = .incomeForm(IncomeForm.State(budget: budget))
                 return .none
-
-            case .amountsVisibilityButtonTapped:
-                state.$hidesAmounts.withLock { $0.toggle() }
-                return .run { _ in await hapticsClient.impact() }
 
             case .budgetStreamFailed:
                 guard state.budgetStatus == .loading else { return .none }
@@ -305,8 +302,11 @@ struct Overview {
             case .destination:
                 return .none
 
-            case .expensesTileTapped:
+            case .expensesButtonTapped:
                 return .send(.delegate(.didSelectExpenses))
+
+            case .settingsButtonTapped:
+                return .send(.delegate(.didSelectSettings))
 
             case .savingsTileTapped:
                 guard state.destination == nil, let budget = state.budget else { return .none }

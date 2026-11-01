@@ -324,7 +324,7 @@ extension BaseSuite {
                     $0.scene?
                         .modify(\.home) { home in
                             home.accountDeletion = nil
-                            home.selectedTab = .settings
+                            home.screen = .settings
                             home.settings.destination = failure.map { .alert(.accountDeletionFailed($0)) }
                         }
                 }
@@ -371,7 +371,7 @@ extension BaseSuite {
         @Test
         func theLoadingMessageAppearsOnceTheAccountDeletionStarts() async {
             var home = Home.State(user: .mock)
-            home.selectedTab = .settings
+            home.screen = .settings
             var state = AppFeature.State()
             state.scene = .home(home)
 
@@ -394,6 +394,7 @@ extension BaseSuite {
             await store.receive(\.scene.home.settings.delegate.didConfirmAccountDeletion) {
                 $0.scene?
                     .modify(\.home) { home in
+                        home.screen = nil
                         home.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
                     }
             }

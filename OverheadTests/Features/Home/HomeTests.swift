@@ -61,14 +61,39 @@ extension BaseSuite {
         }
 
         @Test
-        func theOverviewExpensesButtonSelectsTheExpensesTab() async {
+        func theOverviewExpensesButtonPresentsTheExpenses() async {
             let store = TestStore(initialState: Home.State(user: .mock)) {
                 Home()
             }
 
-            await store.send(.overview(.expensesTileTapped))
+            await store.send(.overview(.expensesButtonTapped))
             await store.receive(\.overview.delegate.didSelectExpenses) {
-                $0.selectedTab = .expenses
+                $0.screen = .expenses
+            }
+        }
+
+        @Test
+        func theOverviewSettingsButtonPresentsTheSettings() async {
+            let store = TestStore(initialState: Home.State(user: .mock)) {
+                Home()
+            }
+
+            await store.send(.overview(.settingsButtonTapped))
+            await store.receive(\.overview.delegate.didSelectSettings) {
+                $0.screen = .settings
+            }
+        }
+
+        @Test(arguments: [Home.Screen.expenses, .settings])
+        func dismissingAScreenHidesIt(screen: Home.Screen) async {
+            var state = Home.State(user: .mock)
+            state.screen = screen
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.screenChanged(nil)) {
+                $0.screen = nil
             }
         }
 
@@ -83,7 +108,7 @@ extension BaseSuite {
             await store.send(.accountDeletion(.presented(.delegate(.didFail(.notDeleted))))) {
                 $0.accountDeletion = nil
                 $0.settings.destination = .alert(.accountDeletionFailed(.notDeleted))
-                $0.selectedTab = .settings
+                $0.screen = .settings
             }
         }
 
@@ -97,14 +122,14 @@ extension BaseSuite {
 
             await store.send(.accountDeletion(.presented(.delegate(.didCancel)))) {
                 $0.accountDeletion = nil
-                $0.selectedTab = .settings
+                $0.screen = .settings
             }
         }
 
         @Test
-        func aConfirmedAccountDeletionStartsTheDeletion() async {
+        func aConfirmedAccountDeletionClosesTheSettingsAndStartsTheDeletion() async {
             var state = Home.State(user: .mock)
-            state.selectedTab = .settings
+            state.screen = .settings
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
@@ -112,11 +137,24 @@ extension BaseSuite {
             }
 
             await store.send(.settings(.delegate(.didConfirmAccountDeletion))) {
+                $0.screen = nil
                 $0.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
             }
             await store.receive(\.accountDeletion.presented.deletionConfirmed)
             await store.send(.accountDeletion(.dismiss)) {
                 $0.accountDeletion = nil
+            }
+        }
+
+        @Test
+        func aSettingsAlertBringsTheSettingsBack() async {
+            let store = TestStore(initialState: Home.State(user: .mock)) {
+                Home()
+            }
+
+            await store.send(.settings(.signOutFailed(CancellationError()))) {
+                $0.settings.destination = .alert(.signOutFailed)
+                $0.screen = .settings
             }
         }
 

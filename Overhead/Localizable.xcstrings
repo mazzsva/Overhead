@@ -58,7 +58,13 @@
     "Back" : {
 
     },
+    "Billing Cycle" : {
+
+    },
     "Cancel" : {
+
+    },
+    "Clear" : {
 
     },
     "Connect to the internet to see your income." : {
@@ -80,6 +86,9 @@
 
     },
     "Deleting your account…" : {
+
+    },
+    "Dismiss" : {
 
     },
     "Edit" : {
@@ -104,6 +113,9 @@
 
     },
     "Expenses, a month" : {
+
+    },
+    "Groceries, Transportation, Utilities" : {
 
     },
     "Hidden" : {
@@ -202,9 +214,6 @@
     "Settings" : {
 
     },
-    "Show Amounts" : {
-
-    },
     "Sign in with Apple to keep every expense in your account." : {
 
     },
@@ -251,9 +260,6 @@
 
     },
     "Using Sign in with Apple" : {
-
-    },
-    "Version %@" : {
 
     },
     "Welcome to" : {
