@@ -13,11 +13,6 @@ import SwiftUI
 @main
 struct OverheadApp: App {
     @MainActor
-    static let appLockStore = Store(initialState: AppLock.State()) {
-        AppLock()
-    }
-
-    @MainActor
     static let store = Store(initialState: AppFeature.State()) {
         AppFeature()
     }
@@ -31,7 +26,6 @@ struct OverheadApp: App {
         WindowGroup {
             if !isTesting {
                 AppView(store: Self.store)
-                    .appLock(store: Self.appLockStore, session: Self.store)
             }
         }
     }

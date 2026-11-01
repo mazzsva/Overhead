@@ -40,16 +40,6 @@ struct SettingsView: View {
                     Toggle(isOn: $store.hidesAmounts.sending(\.hidesAmountsToggleChanged)) {
                         Label("Hide Amounts", systemImage: "eye.slash")
                     }
-                    if let biometryType = store.biometryType {
-                        Toggle(isOn: $store.locksApp.sending(\.lockToggleChanged)) {
-                            Label(String(localized: biometryType.lockTitle), systemImage: biometryType.systemImage)
-                        }
-                        .disabled(store.isAuthenticatingWithBiometrics)
-                    }
-                } footer: {
-                    if store.biometryType != nil {
-                        Text("Overhead locks when you leave the app.")
-                    }
                 }
                 Section {
                     Button("Sign Out") {

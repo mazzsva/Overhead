@@ -17,21 +17,6 @@ extension BaseSuite {
     @MainActor
     struct SettingsTests {
         @Test
-        func theTaskLoadsTheBiometryType() async {
-            let store = TestStore(initialState: Settings.State(user: .mock)) {
-                Settings()
-            } withDependencies: {
-                $0.biometricsClient.biometryType = { .faceID }
-                $0.currencyClient.currency = { _ in .never }
-            }
-
-            await store.send(.task) {
-                $0.biometryType = .faceID
-            }
-            await store.skipInFlightEffects()
-        }
-
-        @Test
         func theHideAmountsToggleHidesAndShowsTheAmounts() async {
             @Shared(.hidesAmounts) var hidesAmounts = false
             let selections = LockIsolated(0)
@@ -49,65 +34,6 @@ extension BaseSuite {
             }
             await store.finish()
             expectNoDifference(selections.value, 2)
-        }
-
-        @Test
-        func turningTheLockOnAsksForAuthenticationFirst() async {
-            @Shared(.locksApp) var locksApp = false
-            var state = Settings.State(user: .mock)
-            state.biometryType = .faceID
-            let store = TestStore(initialState: state) {
-                Settings()
-            } withDependencies: {
-                $0.biometricsClient.authenticate = { _ in true }
-            }
-
-            await store.send(.lockToggleChanged(true)) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = true }
-            }
-            await store.receive(\.lockAuthenticationResponse) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = false }
-                $0.$locksApp.withLock { $0 = true }
-            }
-        }
-
-        @Test
-        func aFailedAuthenticationLeavesTheLockOff() async {
-            @Shared(.locksApp) var locksApp = false
-            var state = Settings.State(user: .mock)
-            state.biometryType = .touchID
-            let store = TestStore(initialState: state) {
-                Settings()
-            } withDependencies: {
-                $0.biometricsClient.authenticate = { _ in false }
-            }
-
-            await store.send(.lockToggleChanged(true)) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = true }
-            }
-            await store.receive(\.lockAuthenticationResponse) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = false }
-            }
-        }
-
-        @Test
-        func turningTheLockOffAlsoAsksForAuthentication() async {
-            @Shared(.locksApp) var locksApp = true
-            var state = Settings.State(user: .mock)
-            state.biometryType = .faceID
-            let store = TestStore(initialState: state) {
-                Settings()
-            } withDependencies: {
-                $0.biometricsClient.authenticate = { _ in true }
-            }
-
-            await store.send(.lockToggleChanged(false)) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = true }
-            }
-            await store.receive(\.lockAuthenticationResponse) {
-                $0.$isAuthenticatingWithBiometrics.withLock { $0 = false }
-                $0.$locksApp.withLock { $0 = false }
-            }
         }
 
         // A sign out clears the local data
@@ -249,7 +175,6 @@ extension BaseSuite {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
-                $0.biometricsClient.biometryType = { nil }
                 $0.currencyClient.currency = { uid in
                     expectNoDifference(uid, User.mock.uid)
                     return currency.stream
@@ -281,7 +206,6 @@ extension BaseSuite {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
-                $0.biometricsClient.biometryType = { nil }
                 $0.continuousClock = clock
                 $0.currencyClient.currency = { _ in
                     let attempt = attempts.withValue {
