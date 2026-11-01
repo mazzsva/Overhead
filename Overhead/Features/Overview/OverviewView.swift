@@ -38,7 +38,7 @@ struct OverviewView: View {
             .toolbarRole(.editor)
             .toolbar {
                 ToolbarItem(placement: .title) {
-                    Text("Overview")
+                    Text("Overhead")
                         .font(.title)
                         .fontWeight(.bold)
                 }
