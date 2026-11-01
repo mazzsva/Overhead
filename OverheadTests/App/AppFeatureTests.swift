@@ -378,6 +378,7 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 AppFeature()
             } withDependencies: {
+                $0.authClient.appleUserID = { nil }
                 $0.authClient.reauthenticate = { _ in try await Task.never() }
                 $0.continuousClock = TestClock()
                 $0.signInWithAppleClient.requestCredential = { .mock }

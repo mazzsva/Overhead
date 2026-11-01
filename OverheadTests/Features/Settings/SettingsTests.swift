@@ -249,6 +249,7 @@ extension BaseSuite {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
+                $0.biometricsClient.biometryType = { nil }
                 $0.currencyClient.currency = { uid in
                     expectNoDifference(uid, User.mock.uid)
                     return currency.stream
@@ -280,6 +281,7 @@ extension BaseSuite {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
+                $0.biometricsClient.biometryType = { nil }
                 $0.continuousClock = clock
                 $0.currencyClient.currency = { _ in
                     let attempt = attempts.withValue {
