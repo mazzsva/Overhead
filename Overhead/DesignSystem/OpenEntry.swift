@@ -71,8 +71,7 @@ struct OpenEntry<Field: Hashable & Sendable>: View {
             } else {
                 display
                     .foregroundStyle(foregroundStyle)
-                    .contentTransition(.opacity)
-                    .animation(.typing, value: text)
+                    .contentTransition(.identity)
                     .animation(.fade, value: isRefused)
                     .transition(.opacity)
             }

@@ -12,30 +12,42 @@ struct AmountText: View {
     let currency: Currency
     let isHidden: Bool
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var height: CGFloat = 0
+    @State private var size: CGSize = .zero
 
     var body: some View {
         Group {
             if isHidden {
                 Text(Self.placeholder, format: .currency(currency))
+                    .hidden()
+                    .overlay { blob }
                     .privacySensitive()
-                    .blur(radius: height * Self.blurRatio)
                     .allowsHitTesting(false)
                     .accessibilityLabel(Text("Hidden"))
             } else {
                 Text(value, format: .currency(currency))
             }
         }
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.height
+        .onGeometryChange(for: CGSize.self) {
+            $0.size
         } action: {
-            height = $0
+            size = $0
         }
-        .transition(.replace(reducingMotion: reduceMotion))
+        .transaction(value: isHidden) { $0.animation = nil }
     }
 
-    private static let blurRatio: CGFloat = 0.3
+    private var blob: some View {
+        Capsule()
+            .fill(.foreground)
+            .opacity(Self.blobOpacity)
+            .padding(.horizontal, size.height * Self.horizontalInsetRatio)
+            .padding(.vertical, size.height * Self.verticalInsetRatio)
+            .blur(radius: size.height * Self.blurRatio)
+    }
+
+    private static let blobOpacity = 0.4
+    private static let blurRatio: CGFloat = 0.22
+    private static let horizontalInsetRatio: CGFloat = 0.2
+    private static let verticalInsetRatio: CGFloat = 0.2
 
     private static let placeholder = 8_888
 }
@@ -52,4 +64,21 @@ struct AmountLabel: View {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
     }
+}
+
+#Preview {
+    VStack(spacing: 24) {
+        ForEach([false, true], id: \.self) { isHidden in
+            VStack(spacing: 12) {
+                AmountLabel(value: 464, currency: .eur, isHidden: isHidden)
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                AmountLabel(value: 1_200, currency: .eur, isHidden: isHidden)
+                    .font(.title2.bold())
+                AmountLabel(value: 22, currency: .eur, isHidden: isHidden)
+                    .font(.body)
+            }
+        }
+    }
+    .padding(32)
+    .background(.orange.gradient)
 }
