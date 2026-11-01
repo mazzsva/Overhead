@@ -363,7 +363,6 @@ private struct ShareBar: View {
                 .contentTransition(.numericText())
                 .accessibilityLabel(Text("\(label.text) of income"))
         }
-        .padding(.top, 4)
     }
 
     private func filledWidth(of width: CGFloat) -> CGFloat {
