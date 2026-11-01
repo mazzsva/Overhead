@@ -11,6 +11,8 @@ import SwiftUI
 struct ExpensesView: View {
     @Bindable var store: StoreOf<Expenses>
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         let activeExpenses = store.activeExpenses
         let inactiveExpenses = store.inactiveExpenses
@@ -31,19 +33,20 @@ struct ExpensesView: View {
                     }
                 }
             }
+            .navigationBarBackButtonHidden()
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
-            .contentMargins(.top, 8, for: .scrollContent)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarRole(.editor)
+            .navigationTitle("Expenses")
             .toolbar {
-                ToolbarItem(placement: .title) {
-                    Text("Expenses")
-                        .font(.title)
-                        .fontWeight(.bold)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Dismiss", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .foregroundStyle(.secondary)
+                    .labelStyle(.iconOnly)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("New Expense", systemImage: "plus") {
                         store.send(.newExpenseButtonTapped)
                     }

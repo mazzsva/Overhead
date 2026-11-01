@@ -88,6 +88,9 @@
     "Deleting your account…" : {
 
     },
+    "Dismiss" : {
+
+    },
     "Edit" : {
 
     },
@@ -211,9 +214,6 @@
     "Settings" : {
 
     },
-    "Show Amounts" : {
-
-    },
     "Sign in with Apple to keep every expense in your account." : {
 
     },
@@ -260,9 +260,6 @@
 
     },
     "Using Sign in with Apple" : {
-
-    },
-    "Version %@" : {
 
     },
     "Welcome to" : {
