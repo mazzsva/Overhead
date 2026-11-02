@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 15/07/26.
 //
 
+import AccountKit
 import Dependencies
 import DependenciesMacros
 import FirebaseFirestore
@@ -29,19 +30,19 @@ extension ExpensesClient: DependencyKey {
     static var liveValue: ExpensesClient {
         ExpensesClient(
             clearLocalData: {
-                try await FirestoreStorage.shared.clearLocalData()
+                try await AccountStorage.shared.clearLocalData()
             },
             delete: { id, uid in
-                try await FirestoreStorage.shared.delete(id: id, uid: uid)
+                try await AccountStorage.shared.delete(id: id, uid: uid)
             },
             deleteAll: { uid in
-                try await FirestoreStorage.shared.deleteAll(uid: uid)
+                try await AccountStorage.shared.deleteAllExpenses(uid: uid)
             },
             expenses: { uid in
-                await FirestoreStorage.shared.expenses(uid: uid)
+                await AccountStorage.shared.expenses(uid: uid)
             },
             save: { expense, uid in
-                try await FirestoreStorage.shared.save(expense, uid: uid)
+                try await AccountStorage.shared.save(expense, uid: uid)
             }
         )
     }

@@ -5,11 +5,14 @@
 //  Created by Lorenzo Mazzarotto on 04/10/26.
 //
 
+import AccountKit
 import Dependencies
 import DependenciesMacros
 import Foundation
 import IssueReporting
 import os
+
+typealias BudgetSnapshot = ProfileSnapshot<Budget?>
 
 @DependencyClient
 struct BudgetClient: Sendable {
@@ -28,22 +31,22 @@ extension BudgetClient: DependencyKey {
     static var liveValue: BudgetClient {
         BudgetClient(
             budget: { uid in
-                await FirestoreStorage.shared.budget(uid: uid)
+                await AccountStorage.shared.budget(uid: uid)
             },
             delete: { uid in
-                try await FirestoreStorage.shared.deleteProfile(uid: uid)
+                try await AccountStorage.shared.deleteProfile(uid: uid)
             },
             removeIncome: { uid in
-                try await FirestoreStorage.shared.removeIncome(uid: uid)
+                try await AccountStorage.shared.removeIncome(uid: uid)
             },
             removeInvestment: { uid in
-                try await FirestoreStorage.shared.removeInvestment(uid: uid)
+                try await AccountStorage.shared.removeInvestment(uid: uid)
             },
             saveIncome: { income, removingInvestment, uid in
-                try await FirestoreStorage.shared.saveIncome(income, removingInvestment: removingInvestment, uid: uid)
+                try await AccountStorage.shared.saveIncome(income, removingInvestment: removingInvestment, uid: uid)
             },
             saveInvestment: { investment, uid in
-                try await FirestoreStorage.shared.saveInvestment(investment, uid: uid)
+                try await AccountStorage.shared.saveInvestment(investment, uid: uid)
             }
         )
     }
