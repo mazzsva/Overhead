@@ -326,7 +326,7 @@ extension BaseSuite {
                         .modify(\.home) { home in
                             home.accountDeletion = nil
                             home.screen = .settings
-                            home.settings.destination = failure.map { .alert(.accountDeletionFailed($0)) }
+                            home.settings.account.alert = failure.map { .accountDeletionFailed($0) }
                         }
                 }
                 await store.receive(\.appleCredentialRevoked)
@@ -385,15 +385,13 @@ extension BaseSuite {
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
 
-            await store.send(\.scene.home.settings.deleteAccountButtonTapped) {
-                $0.scene?.modify(\.home) { $0.settings.destination = .alert(.confirmAccountDeletion) }
+            await store.send(\.scene.home.settings.account.deleteAccountButtonTapped) {
+                $0.scene?.modify(\.home) { $0.settings.account.alert = .confirmAccountDeletion }
             }
-            await store.send(
-                .scene(.home(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
-            ) {
-                $0.scene?.modify(\.home) { $0.settings.destination = nil }
+            await store.send(.scene(.home(.settings(.account(.alert(.presented(.confirmAccountDeletion))))))) {
+                $0.scene?.modify(\.home) { $0.settings.account.alert = nil }
             }
-            await store.receive(\.scene.home.settings.delegate.didConfirmAccountDeletion) {
+            await store.receive(\.scene.home.settings.account.delegate.didConfirmAccountDeletion) {
                 $0.scene?
                     .modify(\.home) { home in
                         home.screen = nil
