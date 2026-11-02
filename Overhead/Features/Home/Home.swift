@@ -178,3 +178,18 @@ struct Home {
         }
     }
 }
+
+extension Home: SignedInFeature {
+    static func clearLocalData() async throws {
+        @Dependency(\.expensesClient) var expensesClient
+        try await expensesClient.clearLocalData()
+    }
+
+    static func deleteUserData(uid: String, didDeleteSomeData: @Sendable () async -> Void) async throws {
+        try await FirestoreStorage.shared.deleteProfile(uid: uid)
+        await didDeleteSomeData()
+        try await FirestoreStorage.shared.deleteAll(uid: uid)
+    }
+}
+
+extension Home.State: SignedInState {}
