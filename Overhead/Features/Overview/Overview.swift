@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 04/10/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 import os
@@ -163,7 +164,7 @@ struct Overview {
         @SharedReader(.currency) var currency
         @Presents var destination: Destination.State?
         @SharedReader var expenses: IdentifiedArrayOf<Expense>?
-        let user: User
+        let user: AccountUser
 
         var activeExpenseCount: Int? {
             expenses.map { $0.filter(\.isActive).count }

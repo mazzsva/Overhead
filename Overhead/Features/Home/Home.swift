@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 01/10/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 
@@ -33,9 +34,9 @@ struct Home {
         var overview: Overview.State
         var screen: Screen?
         var settings: Settings.State
-        let user: User
+        let user: AccountUser
 
-        init(user: User, sessionOrigin: SessionOrigin = .restored) {
+        init(user: AccountUser, sessionOrigin: SessionOrigin = .restored) {
             let expenses = Expenses.State(user: user, sessionOrigin: sessionOrigin)
             self.expenses = expenses
             overview = Overview.State(expenses: SharedReader(expenses.$expenses), user: user)

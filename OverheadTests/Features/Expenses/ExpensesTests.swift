@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Foundation
@@ -86,7 +87,7 @@ extension BaseSuite {
                 Expenses()
             } withDependencies: {
                 $0.expensesClient.expenses = { uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     return expenses.stream
                 }
             }
@@ -413,7 +414,7 @@ extension BaseSuite {
                         $0.date.now = now
                         $0.expensesClient.save = { expense, uid in
                             expectNoDifference(expense, created)
-                            expectNoDifference(uid, User.mock.uid)
+                            expectNoDifference(uid, AccountUser.mock.uid)
                             savesExpense()
                         }
                         $0.hapticsClient.success = { playsHaptic() }
@@ -473,7 +474,7 @@ extension BaseSuite {
                 } withDependencies: {
                     $0.expensesClient.save = { [updated] expense, uid in
                         expectNoDifference(expense, updated)
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         savesExpense()
                     }
                 }
@@ -521,7 +522,7 @@ extension BaseSuite {
                 } withDependencies: {
                     $0.expensesClient.delete = { id, uid in
                         expectNoDifference(id, Expense.rent.id)
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         deletesExpense()
                     }
                     $0.hapticsClient.warning = {}
