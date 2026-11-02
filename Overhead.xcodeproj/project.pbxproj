@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF1092C60BDC1F8A4A6F8D0E /* AccountKit in Frameworks */ = {isa = PBXBuildFile; productRef = EFCDE3D6387C0B8A8C06F8F2 /* AccountKit */; };
 		EF5068C130437F7F0017ACD8 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = EF5068C230437F7F0017ACD8 /* DependenciesTestSupport */; };
 		EFEF340C2FF9633100E80CBE /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = EFEF340B2FF9633100E80CBE /* ComposableArchitecture */; };
 		EFEF34182FF9871900E80CBE /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EFEF34172FF9871900E80CBE /* FirebaseCore */; };
@@ -72,6 +73,7 @@
 				EFEF341C2FF987B500E80CBE /* FirebaseFirestore in Frameworks */,
 				EFEF341A2FF9876D00E80CBE /* FirebaseAuth in Frameworks */,
 				EFEF340C2FF9633100E80CBE /* ComposableArchitecture in Frameworks */,
+				EF1092C60BDC1F8A4A6F8D0E /* AccountKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,6 +155,7 @@
 				EFEF34172FF9871900E80CBE /* FirebaseCore */,
 				EFEF34192FF9876D00E80CBE /* FirebaseAuth */,
 				EFEF341B2FF987B500E80CBE /* FirebaseFirestore */,
+				EFCDE3D6387C0B8A8C06F8F2 /* AccountKit */,
 			);
 			productName = Overhead;
 			productReference = EFEF33F52FF954F400E80CBE /* Overhead.app */;
@@ -190,6 +193,7 @@
 				EFEF340A2FF9633100E80CBE /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				EFEF34152FF9863E00E80CBE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
+				EF621F35A529AC055B0FBFB6 /* XCRemoteSwiftPackageReference "AccountKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EFEF33F62FF954F400E80CBE /* Products */;
@@ -548,6 +552,14 @@
 				minimumVersion = 1.17.1;
 			};
 		};
+		EF621F35A529AC055B0FBFB6 /* XCRemoteSwiftPackageReference "AccountKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mazzsva/AccountKit";
+			requirement = {
+				kind = revision;
+				revision = 9202c269c2c31f493bd013d53b034b77e5beb1bd;
+			};
+		};
 		EFEF340A2FF9633100E80CBE /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -573,6 +585,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
 			productName = DependenciesTestSupport;
+		};
+		EFCDE3D6387C0B8A8C06F8F2 /* AccountKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF621F35A529AC055B0FBFB6 /* XCRemoteSwiftPackageReference "AccountKit" */;
+			productName = AccountKit;
 		};
 		EFEF340B2FF9633100E80CBE /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
