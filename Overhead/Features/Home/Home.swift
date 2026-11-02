@@ -115,7 +115,7 @@ struct Home {
 
             case .accountDeletion(.presented(.delegate(.didFail(let failure)))):
                 state.accountDeletion = nil
-                state.settings.destination = .alert(.accountDeletionFailed(failure))
+                state.settings.account.alert = .accountDeletionFailed(failure)
                 state.screen = .settings
                 return .none
 
@@ -158,13 +158,13 @@ struct Home {
                 state.failedOperations.insert(.saveCurrency)
                 return .none
 
-            case .settings(.delegate(.didConfirmAccountDeletion)):
+            case .settings(.account(.delegate(.didConfirmAccountDeletion))):
                 state.screen = nil
                 state.accountDeletion = AccountDeletion.State(uid: state.user.uid)
                 return .send(.accountDeletion(.presented(.deletionConfirmed)))
 
             case .settings:
-                if state.settings.destination != nil {
+                if state.settings.account.alert != nil {
                     state.screen = .settings
                 }
                 return .none

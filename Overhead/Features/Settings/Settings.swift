@@ -12,29 +12,20 @@ import os
 
 @Reducer
 struct Settings {
-    enum Alert: Equatable {
-        case confirmAccountDeletion
-        case confirmSignOut
-    }
-
-    @Reducer
-    enum Destination {
-        case alert(AlertState<Settings.Alert>)
-    }
-
     @ObservableState
     struct State: Equatable {
+        var account = AccountSettings.State()
         @Shared(.currency) var currency
-        @Presents var destination: Destination.State?
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
         let user: AccountUser
 
-        var isPresenting: Bool { destination != nil }
+        var isPresenting: Bool { account.alert != nil }
     }
 
     enum Action {
+        case account(AccountSettings.Action)
         case currencyPickerChanged(Currency)
         case currencyUpdated(CurrencySnapshot)
         #if DEBUG
@@ -43,15 +34,10 @@ struct Settings {
         case debugResetWelcomeToggleChanged(Bool)
         #endif
         case delegate(Delegate)
-        case deleteAccountButtonTapped
-        case destination(PresentationAction<Destination.Action>)
-        case signOutButtonTapped
-        case signOutFailed(any Error)
         case task
 
         @CasePathable
         enum Delegate {
-            case didConfirmAccountDeletion
             case didFailToSaveCurrency
         }
     }
@@ -60,7 +46,6 @@ struct Settings {
         case currencySubscription
     }
 
-    @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.currencyClient) var currencyClient
     #if DEBUG
@@ -69,8 +54,14 @@ struct Settings {
     @Dependency(\.locale) var locale
 
     var body: some Reducer<State, Action> {
+        Scope(state: \.account, action: \.account) {
+            AccountSettings()
+        }
         Reduce { state, action in
             switch action {
+            case .account:
+                return .none
+
             case .currencyPickerChanged(let currency):
                 state.$currency.withLock { $0 = currency }
                 let uid = state.user.uid
@@ -103,37 +94,10 @@ struct Settings {
             case .delegate:
                 return .none
 
-            case .deleteAccountButtonTapped:
-                state.destination = .alert(.confirmAccountDeletion)
-                return .none
-
-            case .destination(.presented(.alert(.confirmAccountDeletion))):
-                return .send(.delegate(.didConfirmAccountDeletion))
-
-            case .destination(.presented(.alert(.confirmSignOut))):
-                return .run { _ in
-                    try await authClient.signOut()
-                } catch: { error, send in
-                    await send(.signOutFailed(error))
-                }
-
-            case .destination:
-                return .none
-
-            case .signOutButtonTapped:
-                state.destination = .alert(.confirmSignOut)
-                return .none
-
-            case .signOutFailed(let error):
-                logger.error("Sign out failed: \(error, privacy: .public)")
-                state.destination = .alert(.signOutFailed)
-                return .none
-
             case .task:
                 return subscribeToCurrency(uid: state.user.uid)
             }
         }
-        .ifLet(\.$destination, action: \.destination)
     }
 
     #if DEBUG
@@ -172,59 +136,6 @@ struct Settings {
             }
         }
         .cancellable(id: CancelID.currencySubscription, cancelInFlight: true)
-    }
-}
-
-extension Settings.Destination.State: Equatable {}
-
-extension AlertState where Action == Settings.Alert {
-    static func accountDeletionFailed(_ failure: AccountDeletion.Failure) -> AlertState {
-        AlertState {
-            TextState("Something Went Wrong")
-        } message: {
-            switch failure {
-            case .connectionFailed:
-                TextState("Your account couldn't be deleted. Check your connection and try again.")
-            case .notDeleted:
-                TextState("Your account couldn't be deleted.")
-            case .notFullyDeleted:
-                TextState("Your account couldn't be fully deleted.")
-            case .notSignedOut:
-                TextState("You couldn't be signed out.")
-            }
-        }
-    }
-
-    static let confirmAccountDeletion = AlertState {
-        TextState("Delete Account")
-    } actions: {
-        ButtonState(role: .destructive, action: .confirmAccountDeletion) {
-            TextState("Delete")
-        }
-        ButtonState(role: .cancel) {
-            TextState("Cancel")
-        }
-    } message: {
-        TextState("Your account and all your data will be permanently deleted. Are you sure?")
-    }
-
-    static let confirmSignOut = AlertState {
-        TextState("Sign Out")
-    } actions: {
-        ButtonState(role: .destructive, action: .confirmSignOut) {
-            TextState("Sign Out")
-        }
-        ButtonState(role: .cancel) {
-            TextState("Cancel")
-        }
-    } message: {
-        TextState("Are you sure you want to sign out?")
-    }
-
-    static let signOutFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("You couldn't be signed out.")
     }
 }
 

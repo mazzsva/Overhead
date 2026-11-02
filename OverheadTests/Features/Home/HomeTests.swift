@@ -108,7 +108,7 @@ extension BaseSuite {
 
             await store.send(.accountDeletion(.presented(.delegate(.didFail(.notDeleted))))) {
                 $0.accountDeletion = nil
-                $0.settings.destination = .alert(.accountDeletionFailed(.notDeleted))
+                $0.settings.account.alert = .accountDeletionFailed(.notDeleted)
                 $0.screen = .settings
             }
         }
@@ -137,7 +137,7 @@ extension BaseSuite {
                 $0.signInWithAppleClient.requestCredential = { try await Task.never() }
             }
 
-            await store.send(.settings(.delegate(.didConfirmAccountDeletion))) {
+            await store.send(.settings(.account(.delegate(.didConfirmAccountDeletion)))) {
                 $0.screen = nil
                 $0.accountDeletion = AccountDeletion.State(uid: AccountUser.mock.uid)
             }
@@ -153,8 +153,8 @@ extension BaseSuite {
                 Home()
             }
 
-            await store.send(.settings(.signOutFailed(CancellationError()))) {
-                $0.settings.destination = .alert(.signOutFailed)
+            await store.send(.settings(.account(.signOutFailed(CancellationError())))) {
+                $0.settings.account.alert = .signOutFailed
                 $0.screen = .settings
             }
         }
@@ -262,7 +262,7 @@ extension BaseSuite {
         func aHiddenAlertKeepsTheFailures() async {
             var state = makeReadyState()
             state.failedOperations = [.saveExpense]
-            state.settings.destination = .alert(.signOutFailed)
+            state.settings.account.alert = .signOutFailed
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -339,7 +339,7 @@ extension BaseSuite {
         @Test
         func aFailureWaitsForTheSettingsAlert() async {
             var state = makeReadyState()
-            state.settings.destination = .alert(.confirmSignOut)
+            state.settings.account.alert = .confirmSignOut
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -350,8 +350,8 @@ extension BaseSuite {
             }
             #expect(!store.state.isPresentingFailure)
 
-            await store.send(.settings(.destination(.dismiss))) {
-                $0.settings.destination = nil
+            await store.send(.settings(.account(.alert(.dismiss)))) {
+                $0.settings.account.alert = nil
             }
             #expect(store.state.isPresentingFailure)
         }
