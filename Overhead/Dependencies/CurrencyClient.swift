@@ -5,11 +5,14 @@
 //  Created by Lorenzo Mazzarotto on 11/10/26.
 //
 
+import AccountKit
 import Dependencies
 import DependenciesMacros
 import Foundation
 import IssueReporting
 import os
+
+typealias CurrencySnapshot = ProfileSnapshot<Currency?>
 
 @DependencyClient
 struct CurrencyClient: Sendable {
@@ -24,10 +27,10 @@ extension CurrencyClient: DependencyKey {
     static var liveValue: CurrencyClient {
         CurrencyClient(
             currency: { uid in
-                await FirestoreStorage.shared.currency(uid: uid)
+                await AccountStorage.shared.currency(uid: uid)
             },
             save: { currency, uid in
-                try await FirestoreStorage.shared.saveCurrency(currency, uid: uid)
+                try await AccountStorage.shared.saveCurrency(currency, uid: uid)
             }
         )
     }
