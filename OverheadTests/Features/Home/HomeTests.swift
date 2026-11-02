@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 01/10/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Foundation
@@ -46,7 +47,7 @@ extension BaseSuite {
                 Home()
             } withDependencies: {
                 $0.budgetClient.budget = { uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     return budget.stream
                 }
             }
@@ -100,7 +101,7 @@ extension BaseSuite {
         @Test
         func aFailedAccountDeletionBringsTheSettingsBackWithAnAlert() async {
             var state = Home.State(user: .mock)
-            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            state.accountDeletion = AccountDeletion.State(uid: AccountUser.mock.uid)
             let store = TestStore(initialState: state) {
                 Home()
             }
@@ -115,7 +116,7 @@ extension BaseSuite {
         @Test
         func aCanceledAccountDeletionBringsTheSettingsBack() async {
             var state = Home.State(user: .mock)
-            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            state.accountDeletion = AccountDeletion.State(uid: AccountUser.mock.uid)
             let store = TestStore(initialState: state) {
                 Home()
             }
@@ -138,7 +139,7 @@ extension BaseSuite {
 
             await store.send(.settings(.delegate(.didConfirmAccountDeletion))) {
                 $0.screen = nil
-                $0.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+                $0.accountDeletion = AccountDeletion.State(uid: AccountUser.mock.uid)
             }
             await store.receive(\.accountDeletion.presented.deletionConfirmed)
             await store.send(.accountDeletion(.dismiss)) {
@@ -360,7 +361,7 @@ extension BaseSuite {
             var state = makeReadyState()
             state.failedOperations = [.saveExpense]
 
-            state.accountDeletion = AccountDeletion.State(uid: User.mock.uid)
+            state.accountDeletion = AccountDeletion.State(uid: AccountUser.mock.uid)
             #expect(!state.isPresentingFailure)
 
             state.accountDeletion = nil

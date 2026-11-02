@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 04/10/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Foundation
@@ -221,7 +222,7 @@ extension BaseSuite {
                 Overview()
             } withDependencies: {
                 $0.budgetClient.budget = { uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     return budget.stream
                 }
             }
@@ -536,7 +537,7 @@ extension BaseSuite {
             }
             await store.finish()
             expectNoDifference(
-                Set(calls.value), [.saveIncome(3500, removingInvestment: false, uid: User.mock.uid), .success])
+                Set(calls.value), [.saveIncome(3500, removingInvestment: false, uid: AccountUser.mock.uid), .success])
         }
 
         @Test
@@ -559,7 +560,7 @@ extension BaseSuite {
             }
             await store.finish()
             expectNoDifference(
-                Set(calls.value), [.saveIncome(400, removingInvestment: true, uid: User.mock.uid), .success])
+                Set(calls.value), [.saveIncome(400, removingInvestment: true, uid: AccountUser.mock.uid), .success])
         }
 
         @Test
@@ -581,7 +582,7 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.finish()
-            expectNoDifference(Set(calls.value), [.saveInvestment(300, uid: User.mock.uid), .success])
+            expectNoDifference(Set(calls.value), [.saveInvestment(300, uid: AccountUser.mock.uid), .success])
         }
 
         @Test
@@ -603,7 +604,7 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.finish()
-            expectNoDifference(Set(calls.value), [.removeInvestment(uid: User.mock.uid), .warning])
+            expectNoDifference(Set(calls.value), [.removeInvestment(uid: AccountUser.mock.uid), .warning])
         }
 
         @Test
@@ -625,7 +626,7 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.finish()
-            expectNoDifference(Set(calls.value), [.removeIncome(uid: User.mock.uid), .warning])
+            expectNoDifference(Set(calls.value), [.removeIncome(uid: AccountUser.mock.uid), .warning])
         }
 
         @Test

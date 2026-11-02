@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Foundation
@@ -123,7 +124,7 @@ extension BaseSuite {
                 Settings()
             } withDependencies: {
                 $0.currencyClient.save = { currency, uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     saved.withValue { $0.append(currency) }
                 }
             }
@@ -156,7 +157,7 @@ extension BaseSuite {
                 Settings()
             } withDependencies: {
                 $0.currencyClient.currency = { uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     return currency.stream
                 }
             }
@@ -225,7 +226,7 @@ extension BaseSuite {
                 Settings()
             } withDependencies: {
                 $0.expensesClient.save = { expense, uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     saved.withValue { $0.append(expense) }
                 }
             }
@@ -243,7 +244,7 @@ extension BaseSuite {
                     Settings()
                 } withDependencies: {
                     $0.expensesClient.deleteAll = { uid in
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         deletesAllExpenses()
                     }
                 }

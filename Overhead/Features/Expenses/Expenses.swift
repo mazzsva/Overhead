@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 24/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 import os
@@ -24,9 +25,9 @@ struct Expenses {
         var hasFailedFirstLoad = false
         var path = StackState<ExpenseDetail.State>()
         let sessionOrigin: SessionOrigin
-        let user: User
+        let user: AccountUser
 
-        init(user: User, sessionOrigin: SessionOrigin = .restored) {
+        init(user: AccountUser, sessionOrigin: SessionOrigin = .restored) {
             _expenses = Shared(value: nil)
             self.sessionOrigin = sessionOrigin
             self.user = user
