@@ -66,11 +66,5 @@ enum Accent: Equatable {
 }
 
 extension Color {
-    static let critical = Color(
-        UIColor {
-            $0.userInterfaceStyle == .dark
-                ? UIColor(red: 1, green: 0.412, blue: 0.38, alpha: 1)
-                : UIColor(red: 0.843, green: 0, blue: 0.082, alpha: 1)
-        }
-    )
+    static let critical = Color(red: 1, green: 0.412, blue: 0.38)
 }

@@ -139,11 +139,10 @@ struct SheetCaption: View {
 private struct SheetGlow: View {
     let gradient: Gradient
 
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Color(.systemGroupedBackground)
+        Color.black
             .overlay(alignment: .top) {
                 LinearGradient(gradient: gradient, startPoint: .leading, endPoint: .trailing)
                     .frame(height: 340)
@@ -152,7 +151,7 @@ private struct SheetGlow: View {
                             colors: [.black, .black.opacity(0.4), .clear], startPoint: .top, endPoint: .bottom)
                     }
                     .blur(radius: 48)
-                    .opacity(colorScheme == .dark ? 0.3 : 0.24)
+                    .opacity(0.3)
                     .animation(.glow(reducingMotion: reduceMotion), value: gradient)
             }
             .ignoresSafeArea()
