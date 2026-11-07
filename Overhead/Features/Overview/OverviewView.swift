@@ -44,13 +44,6 @@ struct OverviewView: View {
                         .fontWeight(.bold)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Expenses", systemImage: "tray.full") {
-                        store.send(.expensesButtonTapped)
-                    }
-                    .matchedTransitionSource(id: Home.Screen.expenses, in: namespace)
-                }
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                ToolbarItem(placement: .topBarTrailing) {
                     Button("Settings", systemImage: "gearshape") {
                         store.send(.settingsButtonTapped)
                     }
@@ -78,6 +71,7 @@ struct OverviewView: View {
             TileGrid(
                 content: content,
                 currency: store.currency,
+                namespace: namespace,
                 expenseCount: store.activeExpenseCount ?? 0,
                 onExpenses: { store.send(.expensesButtonTapped) },
                 onIncome: { store.send(.incomeTileTapped) },
@@ -155,6 +149,7 @@ private struct TileGrid: View {
 
     let content: Overview.Content
     let currency: Currency
+    let namespace: Namespace.ID
     let expenseCount: Int
     let onExpenses: () -> Void
     let onIncome: () -> Void
@@ -176,6 +171,7 @@ private struct TileGrid: View {
                     expensesTile
                 }
                 .buttonStyle(.pressable(.tile))
+                .matchedTransitionSource(id: Home.Screen.expenses, in: namespace)
             }
             .fixedSize(horizontal: false, vertical: true)
 
