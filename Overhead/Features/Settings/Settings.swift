@@ -16,24 +16,19 @@ struct Settings {
     struct State: Equatable {
         var account = AccountSettings.State()
         @Shared(.currency) var currency
-        #if DEBUG
-        @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
-        #endif
+        var isPresentingAbout = false
         let user: AccountUser
 
-        var isPresenting: Bool { account.alert != nil }
+        var isPresenting: Bool { account.alert != nil || isPresentingAbout }
     }
 
     enum Action {
+        case aboutPresentationChanged(Bool)
         case account(AccountSettings.Action)
         case currencyPickerChanged(Currency)
         case currencyUpdated(CurrencySnapshot)
-        #if DEBUG
-        case debugAddMockExpensesButtonTapped
-        case debugDeleteAllExpensesButtonTapped
-        case debugResetWelcomeToggleChanged(Bool)
-        #endif
         case delegate(Delegate)
+        case infoButtonTapped
         case task
 
         @CasePathable
@@ -48,9 +43,6 @@ struct Settings {
 
     @Dependency(\.continuousClock) var clock
     @Dependency(\.currencyClient) var currencyClient
-    #if DEBUG
-    @Dependency(\.expensesClient) var expensesClient
-    #endif
     @Dependency(\.locale) var locale
 
     var body: some Reducer<State, Action> {
@@ -59,6 +51,10 @@ struct Settings {
         }
         Reduce { state, action in
             switch action {
+            case .aboutPresentationChanged(let isPresenting):
+                state.isPresentingAbout = isPresenting
+                return .none
+
             case .account:
                 return .none
 
@@ -79,19 +75,11 @@ struct Settings {
             case .currencyUpdated(.unknown):
                 return .none
 
-            #if DEBUG
-            case .debugAddMockExpensesButtonTapped:
-                return addMockExpenses(uid: state.user.uid)
-
-            case .debugDeleteAllExpensesButtonTapped:
-                return deleteAllExpenses(uid: state.user.uid)
-
-            case .debugResetWelcomeToggleChanged(let isOn):
-                state.$showsWelcomeAtNextLaunch.withLock { $0 = isOn }
-                return .none
-            #endif
-
             case .delegate:
+                return .none
+
+            case .infoButtonTapped:
+                state.isPresentingAbout = true
                 return .none
 
             case .task:
@@ -99,26 +87,6 @@ struct Settings {
             }
         }
     }
-
-    #if DEBUG
-    private func addMockExpenses(uid: String) -> Effect<Action> {
-        .run { _ in
-            for expense in Expense.mocks {
-                try await expensesClient.save(expense: expense, uid: uid)
-            }
-        } catch: { error, _ in
-            logger.error("Adding the mock expenses failed: \(error, privacy: .public)")
-        }
-    }
-
-    private func deleteAllExpenses(uid: String) -> Effect<Action> {
-        .run { _ in
-            try await expensesClient.deleteAll(uid: uid)
-        } catch: { error, _ in
-            logger.error("Deleting all the expenses failed: \(error, privacy: .public)")
-        }
-    }
-    #endif
 
     private func subscribeToCurrency(uid: String) -> Effect<Action> {
         .run { send in

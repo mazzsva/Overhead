@@ -25,6 +25,9 @@
     ">%@" : {
 
     },
+    "About" : {
+
+    },
     "Active" : {
 
     },
@@ -92,9 +95,6 @@
 
     },
     "Edit Expense" : {
-
-    },
-    "Email" : {
 
     },
     "Enter a valid amount" : {
@@ -178,6 +178,9 @@
     "Settings" : {
 
     },
+    "Sign in with Apple" : {
+
+    },
     "Sign in with Apple to keep every expense in your account." : {
 
     },
@@ -209,9 +212,6 @@
 
     },
     "Unknown" : {
-
-    },
-    "Using Sign in with Apple" : {
 
     },
     "Welcome to" : {

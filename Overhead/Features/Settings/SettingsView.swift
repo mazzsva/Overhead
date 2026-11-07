@@ -15,20 +15,26 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
 
+    private static var aboutText: String {
+        let info = Bundle.main.infoDictionary
+        let name = info?["CFBundleName"] as? String ?? "Overhead"
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(name) \(version) (\(build))"
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Email")
+                    Label {
                         Text(store.user.email ?? String(localized: "Unknown"))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    } icon: {
+                        Image(systemName: "apple.logo")
+                            .accessibilityLabel("Sign in with Apple")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .combine)
-                } footer: {
-                    Text("Using Sign in with Apple")
                 }
                 Section {
                     Picker("Currency", selection: $store.currency.sending(\.currencyPickerChanged)) {
@@ -38,33 +44,19 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Button("Sign Out") {
+                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
                         store.send(.account(.signOutButtonTapped))
                     }
                 }
                 .listSectionSpacing(.custom(8))
                 Section {
-                    Button("Delete Account", role: .destructive) {
-                        store.send(.account(.deleteAccountButtonTapped))
-                    }
-                }
-                #if DEBUG
-                Section("Developer") {
-                    Button {
-                        store.send(.debugAddMockExpensesButtonTapped)
-                    } label: {
-                        Text(verbatim: "Save Expense.mocks")
-                    }
                     Button(role: .destructive) {
-                        store.send(.debugDeleteAllExpensesButtonTapped)
+                        store.send(.account(.deleteAccountButtonTapped))
                     } label: {
-                        Text(verbatim: "Call deleteAll(uid:)")
-                    }
-                    Toggle(isOn: $store.showsWelcomeAtNextLaunch.sending(\.debugResetWelcomeToggleChanged)) {
-                        Text(verbatim: "Reset hasDismissedWelcome")
+                        Label("Delete Account", systemImage: "trash")
+                            .foregroundStyle(.red)
                     }
                 }
-                #endif
             }
             .navigationBarBackButtonHidden()
             .scrollBounceBehavior(.basedOnSize)
@@ -79,6 +71,18 @@ struct SettingsView: View {
                     }
                     .foregroundStyle(.secondary)
                     .labelStyle(.iconOnly)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("About", systemImage: "info") {
+                        store.send(.infoButtonTapped)
+                    }
+                    .foregroundStyle(.secondary)
+                    .labelStyle(.iconOnly)
+                    .popover(isPresented: $store.isPresentingAbout.sending(\.aboutPresentationChanged)) {
+                        Text(Self.aboutText)
+                            .padding()
+                            .presentationCompactAdaptation(.popover)
+                    }
                 }
             }
             .alert($store.scope(state: \.account.alert, action: \.account.alert))
