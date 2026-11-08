@@ -12,7 +12,6 @@ extension Animation {
     static let glow = Animation.smooth(duration: 0.8)
     static let press = Animation.snappy(duration: 0.2)
     static let selection = Animation.snappy(duration: 0.25)
-    static let step = Animation.spring(duration: 0.5, bounce: 0.12)
     static let structure = Animation.spring(duration: 0.5, bounce: 0.1).delay(0.25)
     static let typing = Animation.easeOut(duration: 0.1)
     static let value = Animation.snappy(duration: 0.4)
@@ -23,10 +22,6 @@ extension Animation {
 
     static func selection(reducingMotion: Bool) -> Animation {
         reducingMotion ? .fade : .selection
-    }
-
-    static func step(reducingMotion: Bool) -> Animation {
-        reducingMotion ? .fade : .step
     }
 
     static func typing(reducingMotion: Bool) -> Animation {
