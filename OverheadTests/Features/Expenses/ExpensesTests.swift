@@ -48,7 +48,6 @@ extension BaseSuite {
             expectNoDifference(store.state.inactiveExpenses, [inactive])
         }
 
-        // The expenses stream starts with the session
         @Test
         func equalExpensesAreSortedByDateAndThenByIdentity() {
             let older = Expense(
@@ -79,6 +78,7 @@ extension BaseSuite {
             expectNoDifference([older, twin, newer].sorted(by: Expense.listOrder), [newer, twin, older])
         }
 
+        // The expenses stream starts with the session
         @Test
         func theTaskObservesTheExpenses() async {
             let expenses = AsyncThrowingStream<[Expense], any Error>.makeStream()

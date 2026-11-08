@@ -20,7 +20,6 @@ struct BudgetClient: Sendable {
         AsyncThrowingStream { _ in }
     }
 
-    var delete: @Sendable (_ uid: String) async throws -> Void
     var removeIncome: @Sendable (_ uid: String) async throws -> Void
     var removeInvestment: @Sendable (_ uid: String) async throws -> Void
     var saveIncome: @Sendable (_ income: Amount, _ removingInvestment: Bool, _ uid: String) async throws -> Void
@@ -32,9 +31,6 @@ extension BudgetClient: DependencyKey {
         BudgetClient(
             budget: { uid in
                 await AccountStorage.shared.budget(uid: uid)
-            },
-            delete: { uid in
-                try await AccountStorage.shared.deleteProfile(uid: uid)
             },
             removeIncome: { uid in
                 try await AccountStorage.shared.removeIncome(uid: uid)
@@ -58,7 +54,6 @@ extension BudgetClient: DependencyKey {
                     continuation.yield(.known(.mock))
                 }
             },
-            delete: { _ in },
             removeIncome: { _ in },
             removeInvestment: { _ in },
             saveIncome: { _, _, _ in },
