@@ -17,7 +17,6 @@ import os
 struct ExpensesClient: Sendable {
     var clearLocalData: @Sendable () async throws -> Void
     var delete: @Sendable (_ id: Expense.ID, _ uid: String) async throws -> Void
-    var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
     var expenses: @Sendable (_ uid: String) async -> AsyncThrowingStream<[Expense], any Error> = { _ in
         AsyncThrowingStream { _ in }
@@ -35,9 +34,6 @@ extension ExpensesClient: DependencyKey {
             delete: { id, uid in
                 try await AccountStorage.shared.delete(id: id, uid: uid)
             },
-            deleteAll: { uid in
-                try await AccountStorage.shared.deleteAllExpenses(uid: uid)
-            },
             expenses: { uid in
                 await AccountStorage.shared.expenses(uid: uid)
             },
@@ -51,7 +47,6 @@ extension ExpensesClient: DependencyKey {
         ExpensesClient(
             clearLocalData: {},
             delete: { _, _ in },
-            deleteAll: { _ in },
             expenses: { _ in
                 AsyncThrowingStream { continuation in
                     continuation.yield(Expense.mocks)

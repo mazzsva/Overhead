@@ -17,6 +17,20 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
+        @Test
+        func theInfoButtonPresentsTheAbout() async {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.infoButtonTapped) {
+                $0.isPresentingAbout = true
+            }
+            await store.send(.aboutPresentationChanged(false)) {
+                $0.isPresentingAbout = false
+            }
+        }
+
         // A sign out clears the local data
         @Test
         func theSignOutButtonAsksForConfirmation() async {
@@ -139,59 +153,6 @@ extension BaseSuite {
             await store.finish()
             expectNoDifference(attempts.value, 2)
         }
-
-        #if DEBUG
-        // The button fills an empty account in the debug builds
-        @Test
-        func theDebugAddMockExpensesButtonSavesTheMockExpenses() async {
-            let saved = LockIsolated<[Expense]>([])
-
-            let store = TestStore(initialState: Settings.State(user: .mock)) {
-                Settings()
-            } withDependencies: {
-                $0.expensesClient.save = { expense, uid in
-                    expectNoDifference(uid, AccountUser.mock.uid)
-                    saved.withValue { $0.append(expense) }
-                }
-            }
-
-            await store.send(.debugAddMockExpensesButtonTapped)
-            await store.finish()
-            expectNoDifference(saved.value, Expense.mocks)
-        }
-
-        // The button clears the expenses and keeps the account
-        @Test
-        func theDebugDeleteAllExpensesButtonDeletesEveryExpense() async {
-            await confirmation("Deletes all the expenses") { deletesAllExpenses in
-                let store = TestStore(initialState: Settings.State(user: .mock)) {
-                    Settings()
-                } withDependencies: {
-                    $0.expensesClient.deleteAll = { uid in
-                        expectNoDifference(uid, AccountUser.mock.uid)
-                        deletesAllExpenses()
-                    }
-                }
-
-                await store.send(.debugDeleteAllExpensesButtonTapped)
-                await store.finish()
-            }
-        }
-
-        @Test
-        func theDebugResetWelcomeToggleSetsTheFlagForTheNextLaunch() async {
-            let store = TestStore(initialState: Settings.State(user: .mock)) {
-                Settings()
-            }
-
-            await store.send(.debugResetWelcomeToggleChanged(true)) {
-                $0.$showsWelcomeAtNextLaunch.withLock { $0 = true }
-            }
-            await store.send(.debugResetWelcomeToggleChanged(false)) {
-                $0.$showsWelcomeAtNextLaunch.withLock { $0 = false }
-            }
-        }
-        #endif
 
         private struct CurrencyFailure: Error {}
     }
