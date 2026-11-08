@@ -8,35 +8,9 @@
 import ComposableArchitecture
 import SwiftUI
 
-enum SheetCancellation {
-    case back
-    case cancel
-
-    fileprivate var systemImage: String {
-        switch self {
-        case .back: "chevron.backward"
-        case .cancel: "xmark"
-        }
-    }
-
-    fileprivate var title: LocalizedStringResource {
-        switch self {
-        case .back: "Back"
-        case .cancel: "Cancel"
-        }
-    }
-}
-
-enum SheetConfirmation {
-    case button(LocalizedStringResource)
-    case checkmark
-}
-
 struct EntrySheet<Content: View, Accessory: View>: View {
     let title: Text
     let accent: Accent
-    var cancellation = SheetCancellation.cancel
-    var confirmation = SheetConfirmation.checkmark
     let canConfirm: Bool
     let locale: Locale
     let onCancellation: () -> Void
@@ -58,10 +32,6 @@ struct EntrySheet<Content: View, Accessory: View>: View {
                         Spacer(minLength: 32)
                         VStack(spacing: 12) {
                             accessory
-                            if case .button(let title) = confirmation {
-                                ProminentButton(title: title, accent: accent, action: onConfirmation)
-                                    .disabled(!canConfirm)
-                            }
                         }
                     }
                     .padding(.horizontal)
@@ -77,19 +47,17 @@ struct EntrySheet<Content: View, Accessory: View>: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if case .checkmark = confirmation {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save", systemImage: "checkmark", action: onConfirmation)
-                            .labelStyle(.iconOnly)
-                            .disabled(!canConfirm)
-                    }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", systemImage: "checkmark", action: onConfirmation)
+                        .labelStyle(.iconOnly)
+                        .disabled(!canConfirm)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: onCancellation) {
                         Label {
-                            Text(cancellation.title)
+                            Text("Cancel")
                         } icon: {
-                            Image(systemName: cancellation.systemImage)
+                            Image(systemName: "xmark")
                         }
                     }
                     .labelStyle(.iconOnly)
