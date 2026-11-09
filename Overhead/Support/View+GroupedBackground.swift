@@ -9,6 +9,6 @@ import SwiftUI
 
 extension View {
     func groupedBackground() -> some View {
-        background(Color.black.ignoresSafeArea())
+        background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
 }
