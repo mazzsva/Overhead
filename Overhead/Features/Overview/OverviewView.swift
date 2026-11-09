@@ -35,6 +35,7 @@ struct OverviewView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .groupedBackground()
+            .navigationTitle("Overhead")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarRole(.editor)
             .toolbar {
