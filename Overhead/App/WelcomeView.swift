@@ -10,6 +10,8 @@ import SwiftUI
 struct WelcomeView: View {
     let onContinue: () -> Void
 
+    @Environment(\.self) private var environment
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 56) {
@@ -39,6 +41,7 @@ struct WelcomeView: View {
             } label: {
                 Text("Continue")
                     .font(.headline)
+                    .foregroundStyle(Color.accentColor.resolve(in: environment).contrastingLabel)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
@@ -55,6 +58,7 @@ struct WelcomeView: View {
 private struct WelcomeHighlight {
     let systemImage: String
     let text: LocalizedStringResource
+    var isTinted = true
 
     static let all = [
         WelcomeHighlight(
@@ -67,7 +71,8 @@ private struct WelcomeHighlight {
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",
-            text: "Sign in with Apple to keep every expense in your account."
+            text: "Sign in with Apple to keep every expense in your account.",
+            isTinted: false
         ),
     ]
 }
@@ -82,7 +87,7 @@ private struct WelcomeHighlightRow: View {
             Image(systemName: highlight.systemImage)
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(.tint)
+                .foregroundStyle(highlight.isTinted ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .frame(width: iconSize, height: iconSize)
                 .frame(width: 44, height: 44)
                 .accessibilityHidden(true)
