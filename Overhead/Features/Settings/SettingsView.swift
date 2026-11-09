@@ -33,6 +33,7 @@ struct SettingsView: View {
                             .truncationMode(.middle)
                     } icon: {
                         Image(systemName: "apple.logo")
+                            .foregroundStyle(.primary)
                             .accessibilityLabel("Sign in with Apple")
                     }
                 }
