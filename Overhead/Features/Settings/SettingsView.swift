@@ -15,12 +15,35 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
 
+    @ScaledMetric(relativeTo: .body) private var emailRowHeight = 48
+
     private static var aboutText: String {
         let info = Bundle.main.infoDictionary
         let name = info?["CFBundleName"] as? String ?? "Overhead"
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(name) \(version) (\(build))"
+    }
+
+    private var deleteAccountButton: some View {
+        Button(role: .destructive) {
+            store.send(.account(.deleteAccountButtonTapped))
+        } label: {
+            Label("Delete Account", systemImage: "trash")
+                .font(.body.weight(.medium))
+                .frame(maxWidth: .infinity)
+        }
+        .tint(.red)
+    }
+
+    private var signOutButton: some View {
+        Button {
+            store.send(.account(.signOutButtonTapped))
+        } label: {
+            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                .font(.body.weight(.medium))
+                .frame(maxWidth: .infinity)
+        }
     }
 
     var body: some View {
@@ -36,6 +59,7 @@ struct SettingsView: View {
                             .foregroundStyle(.primary)
                             .accessibilityLabel("Sign in with Apple")
                     }
+                    .frame(maxWidth: .infinity, minHeight: emailRowHeight, alignment: .leading)
                 }
                 Section {
                     Picker("Currency", selection: $store.currency.sending(\.currencyPickerChanged)) {
@@ -44,24 +68,20 @@ struct SettingsView: View {
                         }
                     }
                 }
-                Section {
-                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
-                        store.send(.account(.signOutButtonTapped))
-                    }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 8) {
+                    signOutButton
+                    deleteAccountButton
                 }
-                .listSectionSpacing(.custom(8))
-                Section {
-                    Button(role: .destructive) {
-                        store.send(.account(.deleteAccountButtonTapped))
-                    } label: {
-                        Label("Delete Account", systemImage: "trash")
-                            .foregroundStyle(.red)
-                    }
-                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .padding(.horizontal, 16)
             }
             .navigationBarBackButtonHidden()
             .scrollBounceBehavior(.basedOnSize)
-            .listSectionSpacing(.compact)
+            .listSectionSpacing(.custom(8))
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .navigationTitle("Settings")
