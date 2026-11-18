@@ -19,7 +19,7 @@ Fixed-cost tracker in SwiftUI, TCA, and Firestore.
 
 - **Tests:** 232 tests: 206 offline unit tests and 26 integration tests on Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
-- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on each ready pull request.
+- **CI:** GitHub Actions lints with `swift format --strict`, builds with no warnings, and runs the full suite on each ready pull request, each merge to main, and every Monday.
 - **Accessibility:** Every control has a VoiceOver label, and each amount reads as one value.
 - **Localization:** Every string the app shows is ready for translation.
 
